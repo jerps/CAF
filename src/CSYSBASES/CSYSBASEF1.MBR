@@ -1,0 +1,20 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CSYSBASEF1
+
+      *  Service Program: Common System Services / Base
+      *  File           : Non-Work Day Types
+
+
+      *  Each "NWDTCODE" identifies a non-work day type.
+      *  E.g., "F" is a feast day and "W" is a week-end day.
+
+
+     A                                      UNIQUE
+     A          R NWDTREC
+     A            NWDTCODE       1          COLHDG('Code')
+     A            NWDTNAME      50          COLHDG('Name')
+     A          K NWDTCODE
+

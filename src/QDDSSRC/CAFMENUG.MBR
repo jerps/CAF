@@ -1,0 +1,169 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  Common App - Menu Groups: Work with
+
+
+      *  Indicator usage:
+
+      *   Indicators 31-69 are reserved to highlight a screen or subfile
+      *   field in error. See array "FEMap" in the program, which specifies
+      *   a mapping between field/attribute names and error indicators.
+
+      *   10 - DSPMOD(*WIDE)
+      *   21 - SFLDSPCTL
+      *   22 - SFLDSP
+      *   23 - SFLCLR
+      *   27 - Set cursor location (CSRLOC)
+      *   29 - SFLEND
+      *   30 - Global error indicator
+      *   61 - Error on subfile option field
+      *   72 - In-line updating is enabled (subfile fields are editable)
+      *   74 - Key fields are editable (only when in-line updating is enabled)
+      *   81 - Mark subfile record as "deleted" (RED, data record deleted)
+      *   82 - Mark subfile record as "stale" (BLU, may contain stale data)
+      *   88 - Disable (non-dislay / protect) option field
+      *   89 - Disable (non-dislay / protect) whole subfile record
+
+
+     A                                      REF(*LIBL/CAPPSSAMFR)
+     A                                      DSPSIZ(27 132 *WIDE 24 80 *NORMAL)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      CF01
+     A                                      CF02
+     A                                      CF03
+     A                                      CF04
+     A                                      CF05
+     A                                      CF06
+     A                                      CF07
+     A                                      CF08
+     A                                      CF09
+     A                                      CF10
+     A                                      CF11
+     A                                      CF12
+     A                                      CF13
+     A                                      CF14
+     A                                      CF15
+     A                                      CF16
+     A                                      CF17
+     A                                      CF18
+     A                                      CF19
+     A                                      CF20
+     A                                      CF21
+     A                                      CF22
+     A                                      CF23
+     A                                      CF24
+     A                                      CLEAR
+     A                                      HELP
+     A                                      PAGEUP
+     A                                      PAGEDOWN
+     A                                      PRINT
+
+      * Subfile 1: Record
+     A          R DFSFR1                    SFL
+     A            D_SFLOPT       2   B  8  2
+     A N88N89N61                            DSPATR(UL)
+     A N88N89 61                            DSPATR(RI PC)
+     A  88
+     AO 89                                  DSPATR(ND PR)
+     A            D_GROUP   R        O  8  8REFFLD(TAM_GROUP)
+     A  81                                  COLOR(RED)
+     A  82                                  COLOR(BLU)
+     A  89                                  DSPATR(ND)
+     A            D_GTEXT   R        O  8 25REFFLD(TAM_TEXT)
+     A  81                                  COLOR(RED)
+     A  82                                  COLOR(BLU)
+     A  89                                  DSPATR(ND)
+     A            D_GACT    R        O  8 78REFFLD(TAM_ACTIVE)
+     A  81                                  COLOR(RED)
+     A  82                                  COLOR(BLU)
+     A  89                                  DSPATR(ND)
+     A            D__STAT        1   H
+     A            D__PCS         1   H
+     A            D__PK1    R        H      REFFLD(TAM_GROUP)
+
+      * Subfile 1: Control
+     A          R DFSFC1                    SFLCTL(DFSFR1)
+     A                                      SFLSIZ(0017)
+     A                                      SFLPAG(0016)
+     A  *NORMAL                             SFLSIZ(0014)
+     A  *NORMAL                             SFLPAG(0013)
+     A N10                                  DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A  21                                  SFLDSPCTL
+     A  22                                  SFLDSP
+     A  23                                  SFLCLR
+     A  29                                  SFLEND
+     A            D__CURREC      4S 0H      SFLRCDNBR(CURSOR)
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+     A N10        D__SFOPTS    159   O  4  2
+     A  10        D__SFOPTSW   263   O  4  2
+     A            D__POS1F1 R        B  7  8REFFLD(TAM_GROUP)
+     A                                      DSPATR(UL)
+     A                                  6  8'Group'
+     A                                      DSPATR(HI)
+     A                                  6 25'Description'
+     A                                      DSPATR(HI)
+     A                                  6 77'Act'
+     A                                      DSPATR(HI)
+
+      * Subfile 1: No Data (*WIDE)
+     A          R DFSFND1W
+     A                                      OVERLAY
+     A                                      SLNO(8)
+     A                                      CLRL(16)
+     A                                  1  6'--- No Data ---'
+
+      * Subfile 1: No Data (*NORMAL)
+     A          R DFSFND1
+     A                                      DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A                                      SLNO(8)
+     A                                      CLRL(13)
+     A                                  1  6'--- No Data ---'
+
+      * Header
+     A          R DFHEADER
+     A N10                                  DSPMOD(*NORMAL)
+     A            D__HDPGMI     13   O  1  2
+     A            D__HDTXT1     34   O  1 50DSPATR(HI)
+     A  *NORMAL                         1 24
+     A            D__HDDATE      8   O  1115
+     A  *NORMAL                         1 63
+     A            D__HDTIME      8   O  1124
+     A  *NORMAL                         1 72
+     A            D__HDUSRI     21   O  2  2
+     A            D__HDTXT2     34   O  2 50
+     A  *NORMAL                         2 24
+     A            D__HDJOBI     17   O  2115
+     A  *NORMAL                         2 63
+
+      * Footer (*WIDE)
+     A          R DFFOOTERW
+     A                                      OVERLAY
+     A N30        D__FTMSG1W   130   O 25  2DSPATR(HI UL)
+     A  30                             25  2'>>'
+     A                                      DSPATR(RI)
+     A                                      COLOR(RED)
+     A  30        D__FTMSG2W   127   O 25  5DSPATR(HI UL)
+     A            D__FTTEXTW   263   O 26  2
+
+      * Footer (*NORMAL)
+     A          R DFFOOTER
+     A                                      DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A N30        D__FTMSG1     78   O 22  2DSPATR(HI UL)
+     A  30                             22  2'>>'
+     A                                      DSPATR(RI)
+     A                                      COLOR(RED)
+     A  30        D__FTMSG2     75   O 22  5DSPATR(HI UL)
+     A            D__FTTEXT    159   O 23  2

@@ -1,0 +1,67 @@
+
+ /*          (c) 2019 John Erps
+
+
+             API
+
+             Common Application: SubSystem AppBase
+ */
+
+             STRPGMEXP  SIGNATURE('v1')
+
+             /* RM: Resource Management */
+             EXPORT     SYMBOL('RlsSpCAPPSSAM')
+
+             /* AM: Application Messages */
+             EXPORT     SYMBOL('RtvAMsgAM')
+
+             /* XX: Miscellaneous */
+             EXPORT     SYMBOL('IsGrpSpecial')
+             EXPORT     SYMBOL('GetSpGrpText')
+
+             /* VA: Value Arrays */
+
+             /* DC: Database Commands */
+             EXPORT     SYMBOL('DC_AM_Group')
+
+             /* DQ: Database Queries */
+             EXPORT     SYMBOL('IsGrpMember')
+             EXPORT     SYMBOL('GroupExists')
+             EXPORT     SYMBOL('GetGrpText')
+             EXPORT     SYMBOL('IsGrpActive')
+             EXPORT     SYMBOL('RtvSuperGroups')
+             EXPORT     SYMBOL('IsGroupUsed')
+             EXPORT     SYMBOL('Qds_AM_GroupAll')
+
+             /* MO: Menu Operations */
+             EXPORT     SYMBOL('MenuPages')
+             EXPORT     SYMBOL('MnuLoadMenu')
+             EXPORT     SYMBOL('MnuGetSlotChoice')
+             EXPORT     SYMBOL('MnuPerformOpt')
+             EXPORT     SYMBOL('MnuLoadAuth')
+             EXPORT     SYMBOL('MnuIsLoaded')
+             EXPORT     SYMBOL('MnuIsUpdated')
+             EXPORT     SYMBOL('MnuVersionChanged')
+             EXPORT     SYMBOL('MnuMustReload')
+             EXPORT     SYMBOL('MnuSaveMenu')
+             EXPORT     SYMBOL('MnuSetMenuAttr')
+             EXPORT     SYMBOL('MnuGetPageTitle')
+             EXPORT     SYMBOL('MnuSetPageAttr')
+             EXPORT     SYMBOL('MnuIsBlankPage')
+             EXPORT     SYMBOL('MnuClearPage')
+             EXPORT     SYMBOL('MnuMovePagesRight')
+             EXPORT     SYMBOL('MnuMovePagesLeft')
+             EXPORT     SYMBOL('MnuGetOptText')
+             EXPORT     SYMBOL('MnuSetOptAttr')
+             EXPORT     SYMBOL('MnuSetOptHdr')
+             EXPORT     SYMBOL('MnuDeleteOpt')
+             EXPORT     SYMBOL('MnuSlotHasOpt')
+             EXPORT     SYMBOL('MnuSlotHasHdr')
+             EXPORT     SYMBOL('MnuMoveOptsDown')
+             EXPORT     SYMBOL('MnuMoveOptsUp')
+             EXPORT     SYMBOL('MnuValNormMenu')
+             EXPORT     SYMBOL('MnuOptAllowed')
+             EXPORT     SYMBOL('MnuUserPage')
+
+             ENDPGMEXP
+

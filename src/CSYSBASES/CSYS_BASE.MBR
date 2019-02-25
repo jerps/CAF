@@ -1,0 +1,125 @@
+
+ /*          (c) 2019 John Erps                                              +
+                                                                             +
+                                                                             +
+             API                                                             +
+                                                                             +
+             Common System: Base                                             +
+ */
+
+             STRPGMEXP  SIGNATURE('v1')
+
+             /* RM: Resource Management */
+             EXPORT     SYMBOL('RlsSpCSYSBASE')
+
+             /* WM: Work Management */
+             EXPORT     SYMBOL('JobIsInteractive')
+
+             /* CV: Conversions */
+             EXPORT     SYMBOL('CvtTxtToInt')
+             EXPORT     SYMBOL('CvtIntToTxt')
+             EXPORT     SYMBOL('CvtCCSID')
+
+             /* DF: DisplayFile */
+             EXPORT     SYMBOL('WSI@')
+             EXPORT     SYMBOL('KeyPressed')
+             EXPORT     SYMBOL('GetCursRow')
+             EXPORT     SYMBOL('GetCursCol')
+             EXPORT     SYMBOL('GetWCursRow')
+             EXPORT     SYMBOL('GetWCursCol')
+             EXPORT     SYMBOL('IsDspModeWide')
+             EXPORT     SYMBOL('IsDspModeWideSupported')
+
+             /* DT: Date/Time functions */
+             EXPORT     SYMBOL('IsoWkdayNum')
+             EXPORT     SYMBOL('IsoWkdayName')
+             EXPORT     SYMBOL('IsoWeekNum')
+             EXPORT     SYMBOL('IsoLastWeekNum')
+             EXPORT     SYMBOL('MonthName')
+             EXPORT     SYMBOL('Gdt2Wdt')
+             EXPORT     SYMBOL('Gdt2IsoNum')
+             EXPORT     SYMBOL('Wdt2Gdt')
+             EXPORT     SYMBOL('IsValidGdt')
+             EXPORT     SYMBOL('IsValidWdt')
+             EXPORT     SYMBOL('IsValidWdt1')
+             EXPORT     SYMBOL('MakeGdt')
+             EXPORT     SYMBOL('SplitGdt')
+             EXPORT     SYMBOL('MakeWdt')
+             EXPORT     SYMBOL('MakeWdt1')
+             EXPORT     SYMBOL('MakeWdt2')
+             EXPORT     SYMBOL('MakeWdt3')
+             EXPORT     SYMBOL('SplitWdt')
+             EXPORT     SYMBOL('SplitWdt1')
+             EXPORT     SYMBOL('SplitWdt2')
+             EXPORT     SYMBOL('SplitWdt3')
+             EXPORT     SYMBOL('IsLeapYear')
+             EXPORT     SYMBOL('YY2YYYY')
+             EXPORT     SYMBOL('CrtTimestamp9')
+             EXPORT     SYMBOL('IsWorkDay')
+             EXPORT     SYMBOL('AddWorkDays')
+             EXPORT     SYMBOL('GetNwdtName')
+             EXPORT     SYMBOL('RtvNwdType')
+             EXPORT     SYMBOL('IsValidGdt1')
+             EXPORT     SYMBOL('IsValidGdt2')
+             EXPORT     SYMBOL('MakeGdt1')
+
+             /* XD: XML Document */
+             EXPORT     SYMBOL('XML_R')
+             EXPORT     SYMBOL('XML_E')
+             EXPORT     SYMBOL('XML_EC')
+             EXPORT     SYMBOL('XML_D')
+             EXPORT     SYMBOL('XML_C')
+             EXPORT     SYMBOL('XML_AddE')
+             EXPORT     SYMBOL('XML_AddE2')
+             EXPORT     SYMBOL('XML_Release')
+             EXPORT     SYMBOL('XML_Iter')
+             EXPORT     SYMBOL('XML_IsRoot')
+             EXPORT     SYMBOL('XML_AsText')
+
+             /* TU: Text Utilities */
+             EXPORT     SYMBOL('ToUppercase')
+             EXPORT     SYMBOL('ToLowercase')
+             EXPORT     SYMBOL('CharIsLetter')
+             EXPORT     SYMBOL('CharIsDigit')
+             EXPORT     SYMBOL('ContainsDigitsOnly')
+             EXPORT     SYMBOL('FmtInt')
+             EXPORT     SYMBOL('SubstText')
+             EXPORT     SYMBOL('EnumValues')
+             EXPORT     SYMBOL('CharInText')
+             EXPORT     SYMBOL('ConcatText')
+             EXPORT     SYMBOL('RepeatText')
+             EXPORT     SYMBOL('RepeatCharsInText')
+             EXPORT     SYMBOL('OrdinalNumText')
+             EXPORT     SYMBOL('PluralNoun')
+             EXPORT     SYMBOL('XMLCharData')
+             EXPORT     SYMBOL('XMLCharData_S')
+
+             /* XX: Miscellaneous */
+             EXPORT     SYMBOL('RtvSysName')
+             EXPORT     SYMBOL('RtvInitWorkDir')
+             EXPORT     SYMBOL('GetSysBaseValue')
+             EXPORT     SYMBOL('MaxInt')
+             EXPORT     SYMBOL('MinInt')
+             EXPORT     SYMBOL('CondValChar')
+             EXPORT     SYMBOL('CondValInt')
+             EXPORT     SYMBOL('CondValDec')
+             EXPORT     SYMBOL('SortBytes')
+             EXPORT     SYMBOL('RtvObjText')
+             EXPORT     SYMBOL('ExecCmd')
+             EXPORT     SYMBOL('ExecCmdCE')
+             EXPORT     SYMBOL('PromptCmd')
+             EXPORT     SYMBOL('RtvMsgfText')
+             EXPORT     SYMBOL('DspStatMsg')
+             EXPORT     SYMBOL('SndPgmMsg')
+             EXPORT     SYMBOL('DataBlockAppend')
+             EXPORT     SYMBOL('DataBlockClear')
+             EXPORT     SYMBOL('DataBlockComp')
+             EXPORT     SYMBOL('GetBuffldId')
+             EXPORT     SYMBOL('CStrCrt')
+             EXPORT     SYMBOL('CStrBldInit')
+             EXPORT     SYMBOL('CStrBldAppend')
+             EXPORT     SYMBOL('CErrNoInt')
+             EXPORT     SYMBOL('CErrNoText')
+
+             ENDPGMEXP
+

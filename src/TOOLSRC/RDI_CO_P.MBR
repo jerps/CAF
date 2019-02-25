@@ -1,0 +1,33 @@
+
+             PGM        PARM(&SRCLIB &SRCFILE &SRCMBR &TGTLIB +
+                          &TGTOBJTYPE &TGTRLS &PARM1 &PARM2 &PARM3 +
+                          &OPTION)
+             DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCMBR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTOBJTYPE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTRLS) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PARM1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PARM2) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PARM3) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&OPTION) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&MSG1) TYPE(*CHAR) LEN(200)
+             DCL        VAR(&MSG2) TYPE(*CHAR) LEN(200)
+
+             CO         SRCFILE(&SRCLIB/&SRCFILE) SRCMBR(&SRCMBR) +
+                          TGTLIB(&TGTLIB) TGTOBJTYPE(&TGTOBJTYPE) +
+                          TGTRLS(&TGTRLS) PARM1(&PARM1) +
+                          PARM2(&PARM2) PARM3(&PARM3)
+             MONMSG     MSGID(CPF0000)
+
+             RCVMSG     MSG(&MSG2)
+             RCVMSG     MSG(&MSG1)
+             IF         COND(&MSG1 *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG1) MSGTYPE(*COMP))
+             IF         COND(&MSG2 *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG2) MSGTYPE(*COMP))
+
+             ENDPGM
+

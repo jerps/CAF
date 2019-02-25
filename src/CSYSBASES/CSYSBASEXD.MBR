@@ -1,0 +1,1588 @@
+
+       // (c) 2019 John Erps
+
+
+       // Module XD for *SRVPGM CSYSBASE
+
+       // Service Program: Common System Services / Base
+       // Module         : XML Document
+
+
+      /DEFINE CSYSBASE_MODULE
+      /DEFINE CSYSBASE_CSYSBASEXD
+
+      /include CSYSBASES,INCL__MODH
+
+     h CCSID(*UCS2:13488)
+
+
+      /include CSYSBASES,INCL_API
+
+      /include CSYSBASES,INCL__XD
+
+      /include CSYSBASES,INCL__MODD
+
+
+       // ----- Global Variables
+
+     dL_XML_DP_VisitNode@...
+     d                 s               *   procptr
+     dL_XML_DP_AppData@...
+     d                 s               *   procptr
+     dL_XML_DP_ProdAttrs@...
+     d                 s               *   procptr
+     dL_XML_DP_ProdContent@...
+     d                 s               *   procptr
+
+       // Array with pointers that must be deallocated, and the number
+       // of pointers it contains. Procedure "L_DeallocPtrs" is used
+       // to deallocate them.
+     dL_DeallocPtrsA   s               *   dim(32767) based(L_DeallocPtrsA@)
+     dL_DeallocPtrsA#  s             10i 0 inz(0)
+     dL_DeallocPtrsA@  s               *   inz(*null)
+
+
+       // ----- Local Prototypes
+
+       // XML_DP_AppData - AppData
+       // Prototype to call a delegate procedure with just one parameter,
+       // "appdata", and no return type.
+     dL_XML_DP_AppData...
+     d                 pr                  extproc(L_XML_DP_AppData@)
+     d   appdata                       *   const
+
+       // Prototype for "XML_Iter" to call a delegate procedure for each
+       // node that is visited.
+     dL_XML_DP_VisitNode...
+     d                 pr              n   extproc(L_XML_DP_VisitNode@)
+     d   node                          *   const
+     d   cnl                         10i 0 const
+     d   ddata                    32767          options(*varsize:*nopass)
+
+       // Prototype for "L_XML_DP_AsText" to call a delegate procedure which
+       // produces the attribute names and values.
+     dL_XML_DP_ProdAttrs...
+     d                 pr         16383c   varying
+     d                                     extproc(L_XML_DP_ProdAttrs@)
+     d   appdata                       *   const
+     d   num                         10i 0 const
+     d   name                          n   const
+
+       // Prototype for "L_XML_DP_AsText" to call a delegate procedure which
+       // produces the content.
+     dL_XML_DP_ProdContent...
+     d                 pr         16383c   varying
+     d                                     extproc(L_XML_DP_ProdContent@)
+     d   appdata                       *   const
+
+       // Local implementation of "XML_Iter".
+       // If "vnode" is *off then "node" itself is not visited.
+       // Returns *off in case of an error.
+     dL_XML_Iter       pr              n
+     d   node                          *   const
+     d   dp_visit                      *   const procptr
+     d   option                      10    const
+     d   vnode                         n   const
+     d   ddata                    32767                  options(*varsize
+     d                                                          :*nopass:*omit)
+     d   snl                         10i 0 const         options(*nopass:*omit)
+     d   mnl                         10i 0 const         options(*nopass:*omit)
+
+       // Delegate procedure for "XML_C" to produce the content.
+     dL_XML_DP_C_ProdContent...
+     d                 pr         16383c   varying
+     d   appdata                       *   const
+
+       // Delegate procedure for "XML_C" to produce the attributes.
+     dL_XML_DP_C_ProdAttrs...
+     d                 pr         16383c   varying
+     d   appdata                       *   const
+     d   num                         10i 0 const
+     d   name                          n   const
+
+       // Delegate procedure for "XML_C" to deallocate the contents
+       // of "appdata".
+     dL_XML_DP_C_Release...
+     d                 pr
+     d   appdata                       *   const
+
+       // Delegate procedure for procedure "XML_Release".
+       // This procedure de-allocates the contents of "node" and then adds
+       // pointer "node" to "L_DeallocPtrs" so that it is de-allocated later.
+     dL_XML_DP_Release...
+     d                 pr              n
+     d   node                          *   const
+     d   cnl                         10i 0 const
+
+       // Delegate procedure for procedure "XML_AsText".
+     dL_XML_DP_AsText...
+     d                 pr              n
+     d   node                          *   const
+     d   cnl                         10i 0 const
+     d   ddata                    32767          options(*varsize)
+
+       // Deallocate all pointers in array "L_DeallocPtrsA" and clear the
+       // array (i.e. release it's memory and set "L_DeallocPtrsA#" to 0).
+     dL_DeallocPtrs    pr
+
+
+       // ----- Implementation
+
+
+     p XML_R           b                   export
+     d XML_R           pi              *
+     d   tname                       50c   const varying
+     d   data                          *   const options(*nopass)
+
+     d dsroot          ds                  likeds(XML$ROOT) based(dsroot@)
+
+      /free
+
+       dsroot@ = %alloc(%size(dsroot));
+
+       clear dsroot;
+
+       dsroot.t = 0;
+
+       dsroot.tname = tname;
+
+       if %parms > 1;
+         dsroot.data = data;
+       endif;
+
+       dsroot.standalone = *on;
+
+       return dsroot@;
+
+      /end-free
+     p                 e
+
+
+     p XML_E           b                   export
+     d XML_E           pi              *
+     d   tname                       50c   const varying
+     d   data                          *   const options(*nopass)
+
+     d dselem          ds                  likeds(XML$ELEM) based(dselem@)
+
+      /free
+
+       dselem@ = %alloc(%size(dselem));
+
+       clear dselem;
+
+       dselem.t = 1;
+
+       dselem.tname    = tname;
+
+       if %parms > 1;
+         dselem.data = data;
+       endif;
+
+       return dselem@;
+
+      /end-free
+     p                 e
+
+
+     p XML_EC          b                   export
+     d XML_EC          pi              *
+     d   tname                       50c   const varying
+     d   content                  16383c   const varying options(*omit:*nopass)
+     d   attrn0                      50c   const varying options(*omit:*nopass)
+     d   attrv0                     100c   const varying options(*omit:*nopass)
+     d   attrn1                      50c   const varying options(*omit:*nopass)
+     d   attrv1                     100c   const varying options(*omit:*nopass)
+     d   attrn2                      50c   const varying options(*omit:*nopass)
+     d   attrv2                     100c   const varying options(*omit:*nopass)
+     d   attrn3                      50c   const varying options(*omit:*nopass)
+     d   attrv3                     100c   const varying options(*omit:*nopass)
+     d   attrn4                      50c   const varying options(*omit:*nopass)
+     d   attrv4                     100c   const varying options(*omit:*nopass)
+     d   attrn5                      50c   const varying options(*omit:*nopass)
+     d   attrv5                     100c   const varying options(*omit:*nopass)
+     d   attrn6                      50c   const varying options(*omit:*nopass)
+     d   attrv6                     100c   const varying options(*omit:*nopass)
+     d   attrn7                      50c   const varying options(*omit:*nopass)
+     d   attrv7                     100c   const varying options(*omit:*nopass)
+     d   attrn8                      50c   const varying options(*omit:*nopass)
+     d   attrv8                     100c   const varying options(*omit:*nopass)
+     d   attrn9                      50c   const varying options(*omit:*nopass)
+     d   attrv9                     100c   const varying options(*omit:*nopass)
+
+     d c               s          16383c   varying
+     d an              s             50c   varying dim(10)
+     d av              s            100c   varying dim(10)
+
+      /free
+
+       c = %ucs2('');
+
+       if     %parms > 1
+          and %addr(content) <> *null;
+         c = content;
+       endif;
+
+       an(*) = %ucs2('');
+       av(*) = %ucs2('');
+
+       if     %parms > 2
+          and %addr(attrn0) <> *null;
+         an( 1) = attrn0;
+       endif;
+       if     %parms > 3
+          and %addr(attrv0) <> *null;
+         av( 1) = attrv0;
+       endif;
+       if     %parms > 4
+          and %addr(attrn1) <> *null;
+         an( 2) = attrn1;
+       endif;
+       if     %parms > 5
+          and %addr(attrv1) <> *null;
+         av( 2) = attrv1;
+       endif;
+       if     %parms > 6
+          and %addr(attrn2) <> *null;
+         an( 3) = attrn2;
+       endif;
+       if     %parms > 7
+          and %addr(attrv2) <> *null;
+         av( 3) = attrv2;
+       endif;
+       if     %parms > 8
+          and %addr(attrn3) <> *null;
+         an( 4) = attrn3;
+       endif;
+       if     %parms > 9
+          and %addr(attrv3) <> *null;
+         av( 4) = attrv3;
+       endif;
+       if     %parms > 10
+          and %addr(attrn4) <> *null;
+         an( 5) = attrn4;
+       endif;
+       if     %parms > 11
+          and %addr(attrv4) <> *null;
+         av( 5) = attrv4;
+       endif;
+       if     %parms > 12
+          and %addr(attrn5) <> *null;
+         an( 6) = attrn5;
+       endif;
+       if     %parms > 13
+          and %addr(attrv5) <> *null;
+         av( 6) = attrv5;
+       endif;
+       if     %parms > 14
+          and %addr(attrn6) <> *null;
+         an( 7) = attrn6;
+       endif;
+       if     %parms > 15
+          and %addr(attrv6) <> *null;
+         av( 7) = attrv6;
+       endif;
+       if     %parms > 16
+          and %addr(attrn7) <> *null;
+         an( 8) = attrn7;
+       endif;
+       if     %parms > 17
+          and %addr(attrv7) <> *null;
+         av( 8) = attrv7;
+       endif;
+       if     %parms > 18
+          and %addr(attrn8) <> *null;
+         an( 9) = attrn8;
+       endif;
+       if     %parms > 19
+          and %addr(attrv8) <> *null;
+         av( 9) = attrv8;
+       endif;
+       if     %parms > 20
+          and %addr(attrn9) <> *null;
+         an(10) = attrn9;
+       endif;
+       if     %parms > 21
+          and %addr(attrv9) <> *null;
+         av(10) = attrv9;
+       endif;
+
+       return XML_E(tname
+                   :XML_C(c
+                         :an( 1):av( 1)
+                         :an( 2):av( 2)
+                         :an( 3):av( 3)
+                         :an( 4):av( 4)
+                         :an( 5):av( 5)
+                         :an( 6):av( 6)
+                         :an( 7):av( 7)
+                         :an( 8):av( 8)
+                         :an( 9):av( 9)
+                         :an(10):av(10)));
+
+      /end-free
+     p                 e
+
+
+     p XML_D           b                   export
+     d XML_D           pi              *
+     d   appdata                       *   const         options(*omit:*nopass)
+     d   dp_prodcont                   *   const procptr options(*omit:*nopass)
+     d   dp_prodattrs                  *   const procptr options(*omit:*nopass)
+     d   dp_reladata                   *   const procptr options(*omit:*nopass)
+
+     d dsdata          ds                  likeds(XML$DATA) based(dsdata@)
+
+      /free
+
+       dsdata@ = %alloc(%size(dsdata));
+
+       clear dsdata;
+
+       if     %parms > 0
+          and %addr(appdata) <> *null;
+         dsdata.appdata = appdata;
+       endif;
+       if     %parms > 1
+          and %addr(dp_prodcont) <> *null;
+         dsdata.dp_prodcont = dp_prodcont;
+       endif;
+       if     %parms > 2
+          and %addr(dp_prodattrs) <> *null;
+         dsdata.dp_prodattrs = dp_prodattrs;
+       endif;
+       if     %parms > 3
+          and %addr(dp_reladata) <> *null;
+         dsdata.dp_reladata = dp_reladata;
+       endif;
+
+       return dsdata@;
+
+      /end-free
+     p                 e
+
+
+     p XML_C           b                   export
+     d XML_C           pi              *
+     d   content                  16383c   const varying options(*omit:*nopass)
+     d   attrn0                      50c   const varying options(*omit:*nopass)
+     d   attrv0                     100c   const varying options(*omit:*nopass)
+     d   attrn1                      50c   const varying options(*omit:*nopass)
+     d   attrv1                     100c   const varying options(*omit:*nopass)
+     d   attrn2                      50c   const varying options(*omit:*nopass)
+     d   attrv2                     100c   const varying options(*omit:*nopass)
+     d   attrn3                      50c   const varying options(*omit:*nopass)
+     d   attrv3                     100c   const varying options(*omit:*nopass)
+     d   attrn4                      50c   const varying options(*omit:*nopass)
+     d   attrv4                     100c   const varying options(*omit:*nopass)
+     d   attrn5                      50c   const varying options(*omit:*nopass)
+     d   attrv5                     100c   const varying options(*omit:*nopass)
+     d   attrn6                      50c   const varying options(*omit:*nopass)
+     d   attrv6                     100c   const varying options(*omit:*nopass)
+     d   attrn7                      50c   const varying options(*omit:*nopass)
+     d   attrv7                     100c   const varying options(*omit:*nopass)
+     d   attrn8                      50c   const varying options(*omit:*nopass)
+     d   attrv8                     100c   const varying options(*omit:*nopass)
+     d   attrn9                      50c   const varying options(*omit:*nopass)
+     d   attrv9                     100c   const varying options(*omit:*nopass)
+
+     d appdata         ds                  based(appdata@)
+     d   content@                      *
+     d   attrnum                     10i 0
+     d   attrn                       50c   varying dim(10)
+     d   attrv                      100c   varying dim(10)
+     d dpc             s               *   procptr
+     d dpa             s               *   procptr
+     d contentf        s          16383c   varying based(content@)
+     d aname           s                   like(attrn)
+     d aval            s                   like(attrv)
+
+      /free
+
+       appdata@ = %alloc(%size(appdata));
+
+       clear appdata;
+
+       content@ = *null;
+       attrnum  = 0;
+
+       dpc = *null;
+       dpa = *null;
+
+       if     %parms > 0
+          and %addr(content) <> *null;
+         content@ = %alloc(%len(content)*2 + (%size(content)-16383*2));
+         contentf = content;
+         dpc = %paddr(L_XML_DP_C_ProdContent);
+       endif;
+
+       if     %parms > 1
+          and %addr(attrn0) <> *null
+          and attrn0 <> %ucs2('');
+         aname = attrn0;
+         if     %parms > 2
+            and %addr(attrv0) <> *null;
+           aval = attrv0;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 3
+          and %addr(attrn1) <> *null
+          and attrn1 <> %ucs2('');
+         aname = attrn1;
+         if     %parms > 4
+            and %addr(attrv1) <> *null;
+           aval = attrv1;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 5
+          and %addr(attrn2) <> *null
+          and attrn2 <> %ucs2('');
+         aname = attrn2;
+         if     %parms > 6
+            and %addr(attrv2) <> *null;
+           aval = attrv2;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 7
+          and %addr(attrn3) <> *null
+          and attrn3 <> %ucs2('');
+         aname = attrn3;
+         if     %parms > 8
+            and %addr(attrv3) <> *null;
+           aval = attrv3;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 9
+          and %addr(attrn4) <> *null
+          and attrn4 <> %ucs2('');
+         aname = attrn4;
+         if     %parms > 10
+            and %addr(attrv4) <> *null;
+           aval = attrv4;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 11
+          and %addr(attrn5) <> *null
+          and attrn5 <> %ucs2('');
+         aname = attrn5;
+         if     %parms > 12
+            and %addr(attrv5) <> *null;
+           aval = attrv5;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 13
+          and %addr(attrn6) <> *null
+          and attrn6 <> %ucs2('');
+         aname = attrn6;
+         if     %parms > 14
+            and %addr(attrv6) <> *null;
+           aval = attrv6;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 15
+          and %addr(attrn7) <> *null
+          and attrn7 <> %ucs2('');
+         aname = attrn7;
+         if     %parms > 16
+            and %addr(attrv7) <> *null;
+           aval = attrv7;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 17
+          and %addr(attrn8) <> *null
+          and attrn8 <> %ucs2('');
+         aname = attrn8;
+         if     %parms > 18
+            and %addr(attrv8) <> *null;
+           aval = attrv8;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+       if     %parms > 19
+          and %addr(attrn9) <> *null
+          and attrn9 <> %ucs2('');
+         aname = attrn9;
+         if     %parms > 20
+            and %addr(attrv9) <> *null;
+           aval = attrv9;
+         else;
+           aval = %ucs2('');
+         endif;
+         exsr add_attr;
+       endif;
+
+       if attrnum > 0;
+         dpa = %paddr(L_XML_DP_C_ProdAttrs);
+       endif;
+
+       if     dpc = *null
+          and dpa = *null;
+         return *null;
+       endif;
+
+       return XML_D(appdata@:dpc:dpa:%paddr(L_XML_DP_C_Release));
+
+       begsr add_attr;
+         attrnum = attrnum + 1;
+         attrn(attrnum) = aname;
+         attrv(attrnum) = aval;
+       endsr;
+
+      /end-free
+     p                 e
+
+
+     p XML_AddE        b                   export
+     d XML_AddE        pi              *
+     d   node                          *   const
+     d   elem01                        *   const options(*nopass)
+     d   elem02                        *   const options(*nopass)
+     d   elem03                        *   const options(*nopass)
+     d   elem04                        *   const options(*nopass)
+     d   elem05                        *   const options(*nopass)
+     d   elem06                        *   const options(*nopass)
+     d   elem07                        *   const options(*nopass)
+     d   elem08                        *   const options(*nopass)
+     d   elem09                        *   const options(*nopass)
+     d   elem10                        *   const options(*nopass)
+     d   elem11                        *   const options(*nopass)
+     d   elem12                        *   const options(*nopass)
+     d   elem13                        *   const options(*nopass)
+     d   elem14                        *   const options(*nopass)
+     d   elem15                        *   const options(*nopass)
+     d   elem16                        *   const options(*nopass)
+     d   elem17                        *   const options(*nopass)
+     d   elem18                        *   const options(*nopass)
+     d   elem19                        *   const options(*nopass)
+     d   elem20                        *   const options(*nopass)
+     d   elem21                        *   const options(*nopass)
+     d   elem22                        *   const options(*nopass)
+     d   elem23                        *   const options(*nopass)
+     d   elem24                        *   const options(*nopass)
+     d   elem25                        *   const options(*nopass)
+     d   elem26                        *   const options(*nopass)
+     d   elem27                        *   const options(*nopass)
+     d   elem28                        *   const options(*nopass)
+     d   elem29                        *   const options(*nopass)
+     d   elem30                        *   const options(*nopass)
+     d   elem31                        *   const options(*nopass)
+     d   elem32                        *   const options(*nopass)
+     d   elem33                        *   const options(*nopass)
+     d   elem34                        *   const options(*nopass)
+     d   elem35                        *   const options(*nopass)
+     d   elem36                        *   const options(*nopass)
+     d   elem37                        *   const options(*nopass)
+     d   elem38                        *   const options(*nopass)
+     d   elem39                        *   const options(*nopass)
+     d   elem40                        *   const options(*nopass)
+     d   elem41                        *   const options(*nopass)
+     d   elem42                        *   const options(*nopass)
+     d   elem43                        *   const options(*nopass)
+     d   elem44                        *   const options(*nopass)
+     d   elem45                        *   const options(*nopass)
+     d   elem46                        *   const options(*nopass)
+     d   elem47                        *   const options(*nopass)
+     d   elem48                        *   const options(*nopass)
+     d   elem49                        *   const options(*nopass)
+     d   elem50                        *   const options(*nopass)
+     d   elem51                        *   const options(*nopass)
+     d   elem52                        *   const options(*nopass)
+     d   elem53                        *   const options(*nopass)
+     d   elem54                        *   const options(*nopass)
+     d   elem55                        *   const options(*nopass)
+     d   elem56                        *   const options(*nopass)
+     d   elem57                        *   const options(*nopass)
+     d   elem58                        *   const options(*nopass)
+     d   elem59                        *   const options(*nopass)
+     d   elem60                        *   const options(*nopass)
+     d   elem61                        *   const options(*nopass)
+     d   elem62                        *   const options(*nopass)
+     d   elem63                        *   const options(*nopass)
+     d   elem64                        *   const options(*nopass)
+     d   elem65                        *   const options(*nopass)
+     d   elem66                        *   const options(*nopass)
+     d   elem67                        *   const options(*nopass)
+     d   elem68                        *   const options(*nopass)
+     d   elem69                        *   const options(*nopass)
+     d   elem70                        *   const options(*nopass)
+
+     d elems           s               *   dim(CNumElemsAddE2)
+
+      /free
+
+       elems(*) = *null;
+
+       if     %parms > 1
+          and elem01 <> *null;
+         elems( 1) = elem01;
+       endif;
+       if     %parms > 2
+          and elem02 <> *null;
+         elems( 2) = elem02;
+       endif;
+       if     %parms > 3
+          and elem03 <> *null;
+         elems( 3) = elem03;
+       endif;
+       if     %parms > 4
+          and elem04 <> *null;
+         elems( 4) = elem04;
+       endif;
+       if     %parms > 5
+          and elem05 <> *null;
+         elems( 5) = elem05;
+       endif;
+       if     %parms > 6
+          and elem06 <> *null;
+         elems( 6) = elem06;
+       endif;
+       if     %parms > 7
+          and elem07 <> *null;
+         elems( 7) = elem07;
+       endif;
+       if     %parms > 8
+          and elem08 <> *null;
+         elems( 8) = elem08;
+       endif;
+       if     %parms > 9
+          and elem09 <> *null;
+         elems( 9) = elem09;
+       endif;
+       if     %parms > 10
+          and elem10 <> *null;
+         elems(10) = elem10;
+       endif;
+       if     %parms > 11
+          and elem11 <> *null;
+         elems(11) = elem11;
+       endif;
+       if     %parms > 12
+          and elem12 <> *null;
+         elems(12) = elem12;
+       endif;
+       if     %parms > 13
+          and elem13 <> *null;
+         elems(13) = elem13;
+       endif;
+       if     %parms > 14
+          and elem14 <> *null;
+         elems(14) = elem14;
+       endif;
+       if     %parms > 15
+          and elem15 <> *null;
+         elems(15) = elem15;
+       endif;
+       if     %parms > 16
+          and elem16 <> *null;
+         elems(16) = elem16;
+       endif;
+       if     %parms > 17
+          and elem17 <> *null;
+         elems(17) = elem17;
+       endif;
+       if     %parms > 18
+          and elem18 <> *null;
+         elems(18) = elem18;
+       endif;
+       if     %parms > 19
+          and elem19 <> *null;
+         elems(19) = elem19;
+       endif;
+       if     %parms > 20
+          and elem20 <> *null;
+         elems(20) = elem20;
+       endif;
+       if     %parms > 21
+          and elem21 <> *null;
+         elems(21) = elem21;
+       endif;
+       if     %parms > 22
+          and elem22 <> *null;
+         elems(22) = elem22;
+       endif;
+       if     %parms > 23
+          and elem23 <> *null;
+         elems(23) = elem23;
+       endif;
+       if     %parms > 24
+          and elem24 <> *null;
+         elems(24) = elem24;
+       endif;
+       if     %parms > 25
+          and elem25 <> *null;
+         elems(25) = elem25;
+       endif;
+       if     %parms > 26
+          and elem26 <> *null;
+         elems(26) = elem26;
+       endif;
+       if     %parms > 27
+          and elem27 <> *null;
+         elems(27) = elem27;
+       endif;
+       if     %parms > 28
+          and elem28 <> *null;
+         elems(28) = elem28;
+       endif;
+       if     %parms > 29
+          and elem29 <> *null;
+         elems(29) = elem29;
+       endif;
+       if     %parms > 30
+          and elem30 <> *null;
+         elems(30) = elem30;
+       endif;
+       if     %parms > 31
+          and elem31 <> *null;
+         elems(31) = elem31;
+       endif;
+       if     %parms > 32
+          and elem32 <> *null;
+         elems(32) = elem32;
+       endif;
+       if     %parms > 33
+          and elem33 <> *null;
+         elems(33) = elem33;
+       endif;
+       if     %parms > 34
+          and elem34 <> *null;
+         elems(34) = elem34;
+       endif;
+       if     %parms > 35
+          and elem35 <> *null;
+         elems(35) = elem35;
+       endif;
+       if     %parms > 36
+          and elem36 <> *null;
+         elems(36) = elem36;
+       endif;
+       if     %parms > 37
+          and elem37 <> *null;
+         elems(37) = elem37;
+       endif;
+       if     %parms > 38
+          and elem38 <> *null;
+         elems(38) = elem38;
+       endif;
+       if     %parms > 39
+          and elem39 <> *null;
+         elems(39) = elem39;
+       endif;
+       if     %parms > 40
+          and elem40 <> *null;
+         elems(40) = elem40;
+       endif;
+       if     %parms > 41
+          and elem41 <> *null;
+         elems(41) = elem41;
+       endif;
+       if     %parms > 42
+          and elem42 <> *null;
+         elems(42) = elem42;
+       endif;
+       if     %parms > 43
+          and elem43 <> *null;
+         elems(43) = elem43;
+       endif;
+       if     %parms > 44
+          and elem44 <> *null;
+         elems(44) = elem44;
+       endif;
+       if     %parms > 45
+          and elem45 <> *null;
+         elems(45) = elem45;
+       endif;
+       if     %parms > 46
+          and elem46 <> *null;
+         elems(46) = elem46;
+       endif;
+       if     %parms > 47
+          and elem47 <> *null;
+         elems(47) = elem47;
+       endif;
+       if     %parms > 48
+          and elem48 <> *null;
+         elems(48) = elem48;
+       endif;
+       if     %parms > 49
+          and elem49 <> *null;
+         elems(49) = elem49;
+       endif;
+       if     %parms > 50
+          and elem50 <> *null;
+         elems(50) = elem50;
+       endif;
+       if     %parms > 51
+          and elem51 <> *null;
+         elems(51) = elem51;
+       endif;
+       if     %parms > 52
+          and elem52 <> *null;
+         elems(52) = elem52;
+       endif;
+       if     %parms > 53
+          and elem53 <> *null;
+         elems(53) = elem53;
+       endif;
+       if     %parms > 54
+          and elem54 <> *null;
+         elems(54) = elem54;
+       endif;
+       if     %parms > 55
+          and elem55 <> *null;
+         elems(55) = elem55;
+       endif;
+       if     %parms > 56
+          and elem56 <> *null;
+         elems(56) = elem56;
+       endif;
+       if     %parms > 57
+          and elem57 <> *null;
+         elems(57) = elem57;
+       endif;
+       if     %parms > 58
+          and elem58 <> *null;
+         elems(58) = elem58;
+       endif;
+       if     %parms > 59
+          and elem59 <> *null;
+         elems(59) = elem59;
+       endif;
+       if     %parms > 60
+          and elem60 <> *null;
+         elems(60) = elem60;
+       endif;
+       if     %parms > 61
+          and elem61 <> *null;
+         elems(61) = elem61;
+       endif;
+       if     %parms > 62
+          and elem62 <> *null;
+         elems(62) = elem62;
+       endif;
+       if     %parms > 63
+          and elem63 <> *null;
+         elems(63) = elem63;
+       endif;
+       if     %parms > 64
+          and elem64 <> *null;
+         elems(64) = elem64;
+       endif;
+       if     %parms > 65
+          and elem65 <> *null;
+         elems(65) = elem65;
+       endif;
+       if     %parms > 66
+          and elem66 <> *null;
+         elems(66) = elem66;
+       endif;
+       if     %parms > 67
+          and elem67 <> *null;
+         elems(67) = elem67;
+       endif;
+       if     %parms > 68
+          and elem68 <> *null;
+         elems(68) = elem68;
+       endif;
+       if     %parms > 69
+          and elem69 <> *null;
+         elems(69) = elem69;
+       endif;
+       if     %parms > 70
+          and elem70 <> *null;
+         elems(70) = elem70;
+       endif;
+
+       return XML_AddE2(node:elems);
+
+      /end-free
+     p                 e
+
+
+     p XML_AddE2       b                   export
+     d XML_AddE2       pi              *
+     d   node                          *   const
+     d   elems                         *   const dim(CNumElemsAddE2)
+
+     d dsnode          ds                  likeds(XML$ELEM) based(dsnode@)
+     d p1              s               *
+     d p2              s               *
+     d i               s             10i 0
+
+      /free
+
+       i = 1;
+       dow     i <= CNumElemsAddE2
+           and elems(i) = *null;
+         i = i + 1;
+       enddo;
+       if i > CNumElemsAddE2;
+         return node;
+       endif;
+
+       dsnode@ = node;
+
+       p1 = dsnode.first;
+       p2 = *null;
+       dow p1 <> *null;
+         p2 = p1;
+         dsnode@ = p1;
+         p1 = dsnode.next;
+       enddo;
+
+       if p2 = *null;
+         dsnode.first = elems(i);
+       else;
+         dsnode@ = p2;
+         dsnode.next = elems(i);
+       endif;
+
+       dsnode@ = elems(i);
+       dow i < CNumElemsAddE2;
+         i = i + 1;
+         if elems(i) <> *null;
+           dsnode.next = elems(i);
+           dsnode@ = elems(i);
+         endif;
+       enddo;
+
+       return node;
+
+      /end-free
+     p                 e
+
+
+     p XML_Release     b                   export
+     d XML_Release     pi
+     d   node                          *   const
+
+      /free
+
+       XML_Iter(node:%paddr(L_XML_DP_Release):'*DEPTH');
+
+       L_DeallocPtrs();
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     p XML_Iter        b                   export
+     d XML_Iter        pi              n
+     d   node                          *   const
+     d   dp_visit                      *   const procptr
+     d   option                      10    const
+     d   ddata                    32767                  options(*varsize
+     d                                                          :*nopass:*omit)
+     d   snl                         10i 0 const         options(*nopass:*omit)
+     d   mnl                         10i 0 const         options(*nopass:*omit)
+
+     d f               s               n
+
+      /free
+
+       if     option <> '*BREADTH'
+          and option <> '*DEPTH';
+         return *on;
+       endif;
+
+       if     %parms > 3
+          and %addr(ddata) <> *null;
+         if     %parms > 4
+            and %addr(snl) <> *null;
+           if     %parms > 5
+              and %addr(mnl) <> *null;
+             f = L_XML_Iter(node:dp_visit:option:*on:ddata:snl:mnl);
+           else;
+             f = L_XML_Iter(node:dp_visit:option:*on:ddata:snl);
+           endif;
+         else;
+           if     %parms > 5
+              and %addr(mnl) <> *null;
+             f = L_XML_Iter(node:dp_visit:option:*on:ddata:*omit:mnl);
+           else;
+             f = L_XML_Iter(node:dp_visit:option:*on:ddata);
+           endif;
+         endif;
+       else;
+         if     %parms > 4
+            and %addr(snl) <> *null;
+           if     %parms > 5
+              and %addr(mnl) <> *null;
+             f = L_XML_Iter(node:dp_visit:option:*on:*omit:snl:mnl);
+           else;
+             f = L_XML_Iter(node:dp_visit:option:*on:*omit:snl);
+           endif;
+         else;
+           if     %parms > 5
+              and %addr(mnl) <> *null;
+             f = L_XML_Iter(node:dp_visit:option:*on:*omit:*omit:mnl);
+           else;
+             f = L_XML_Iter(node:dp_visit:option:*on);
+           endif;
+         endif;
+       endif;
+
+       return f;
+
+      /end-free
+     p                 e
+
+
+     p XML_IsRoot      b                   export
+     d XML_IsRoot      pi              n
+     d   node                          *   const
+
+     d dsnode          ds                  likeds(XML$ELEM) based(node)
+
+      /free
+
+       return dsnode.t = 0;
+
+      /end-free
+     p                 e
+
+
+     p XML_AsText      b                   export
+     d XML_AsText      pi              *
+     d   node                          *   const
+     d   encoding                    20    const
+     d   lines                       10i 0       options(*nopass:*omit)
+     d   indent                      20    const varying
+     d                                           options(*nopass:*omit)
+
+     d doc             s               *   dim(32767) based(doc@)
+     d ddata_          ds
+     d   doc@                          *
+     d   docl                        10i 0
+     d   doca                        10i 0
+     d   ccsid                       10i 0
+     d   enctext                     20    varying
+     d   novisit                       *
+     d   indtext                     20    varying
+
+     d i               s             10i 0
+
+      /free
+
+       // Iterate over "node" in depth-first order using delegate procedure
+       // "L_XML_DP_AsText" and pass data structure "ddata".
+       // Delegate "L_XML_DP_AsText" actually builds the XML document for the
+       // visited root/elements.
+       // Subfields in "ddata":
+       //   doc@:    A pointer to the dynamically allocated array "doc" with
+       //            the null-terminated strings (without an EOL sequence) that
+       //            form the XML document.
+       //   docl:    The number of strings (elements) in the "doc@" array.
+       //   doca:    The number of allocated elements in the "doc@" array.
+       //   ccsid:   The CCSID of the strings, determined from parameter
+       //            "encoding".
+       //   enctext: The value for attribute "encoding" within the XML decla-
+       //            ration (which is used for the root element).
+       //   novisit: Pointer to the node that must be skipped, i.e. this node
+       //            is already processed.
+       //   indtext: The text that is prefixed n-times to each line, where "n"
+       //            is the nesting level.
+
+
+       doc@ = *null;
+       docl = 0;
+       doca = 0;
+
+       if      %parms > 2
+          and %addr(lines) <> *null;
+         lines = 0;
+       endif;
+
+       select;
+       when encoding = 'UTF-8';
+         ccsid = 1208;
+         enctext = 'UTF-8';
+       when encoding = 'UTF-16';
+         ccsid = 1200;
+         enctext = 'UTF-16';
+       when encoding = 'ISO-8859-1';
+         ccsid = 819;
+         enctext = 'ISO-8859-1';
+       when encoding = 'Windows-1252';
+         ccsid = 1252;
+         enctext = 'Windows-1252';
+       other;
+         ccsid = 1200;
+         enctext = 'UTF-16';
+       endsl;
+
+       novisit = *null;
+       indtext = CondValChar(%parms > 3 and %addr(indent) <> *null
+                            :indent:'');
+
+       if not XML_Iter(node:%paddr(L_XML_DP_AsText):'*DEPTH':ddata_:0:0);
+         // An error occurred; deallocate strings and return.
+         for i = 1 to docl;
+           dealloc(e) doc(i);
+         endfor;
+         dealloc(e) doc@;
+         return *null;
+       endif;
+
+       if      %parms > 2
+          and %addr(lines) <> *null;
+         lines = docl;
+       endif;
+
+       return doc@;
+
+      /end-free
+     p                 e
+
+
+       // ----- Implementation - Internal
+
+
+     pI_RlsModXD       b                   export
+     dI_RlsModXD       pi
+
+      /free
+
+       //close(e) *ALL;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+       // ----- Implementation - Local
+
+
+     pL_XML_Iter       b
+     dL_XML_Iter       pi              n
+     d   node                          *   const
+     d   dp_visit                      *   const procptr
+     d   option                      10    const
+     d   vnode                         n   const
+     d   ddata                    32767                  options(*varsize
+     d                                                          :*nopass:*omit)
+     d   snl                         10i 0 const         options(*nopass:*omit)
+     d   mnl                         10i 0 const         options(*nopass:*omit)
+
+     d dsnode          ds                  likeds(XML$ELEM) based(dsnode@)
+     d cnl             s             10i 0
+     d mnl_            s             10i 0
+     d dd              s               n
+     d f               s               n
+     d fnode           s               *
+
+      /free
+
+       dd =     %parms > 4
+            and %addr(ddata) <> *null;
+
+       cnl  = 0;
+       mnl_ = 0;
+       if     %parms > 5
+          and %addr(snl) <> *null;
+         cnl = snl;
+       endif;
+       if     %parms > 6
+          and %addr(mnl) <> *null;
+         if mnl < cnl;
+           return *on;
+         endif;
+         mnl_ = mnl;
+       else;
+         // mnl_ < cnl means "no limit".
+         mnl_ = cnl - 1;
+       endif;
+
+       L_XML_DP_VisitNode@ = dp_visit;
+
+       if vnode;
+         if dd;
+           f = L_XML_DP_VisitNode(node:cnl:ddata);
+         else;
+           f = L_XML_DP_VisitNode(node:cnl);
+         endif;
+         if not f;
+           return *off;
+         endif;
+       endif;
+
+       if cnl = mnl_;
+         return *on;
+       endif;
+
+       cnl = cnl + 1;
+
+       dsnode@ = node;
+       fnode = dsnode.first;
+
+       dsnode@ = fnode;
+       dow dsnode@ <> *null;
+         if option = '*BREADTH';
+           if dd;
+             f = L_XML_DP_VisitNode(dsnode@:cnl:ddata);
+           else;
+             f = L_XML_DP_VisitNode(dsnode@:cnl);
+           endif;
+         else;
+           if dd;
+             if mnl_ < cnl;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*on:ddata:cnl);
+             else;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*on:ddata:cnl:mnl_);
+             endif;
+           else;
+             if mnl_ < cnl;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*on:*omit:cnl);
+             else;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*on:*omit:cnl:mnl_);
+             endif;
+           endif;
+         endif;
+         if not f;
+           return *off;
+         endif;
+         dsnode@ = dsnode.next;
+       enddo;
+
+       if option = '*BREADTH';
+         dsnode@ = fnode;
+         dow dsnode@ <> *null;
+           if dd;
+             if mnl_ < cnl;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*off:ddata:cnl);
+             else;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*off:ddata:cnl:mnl_);
+             endif;
+           else;
+             if mnl_ < cnl;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*off:*omit:cnl);
+             else;
+               f = L_XML_Iter(dsnode@:dp_visit:option:*off:*omit:cnl:mnl_);
+             endif;
+           endif;
+           if not f;
+             return *off;
+           endif;
+           dsnode@ = dsnode.next;
+         enddo;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_XML_DP_C_ProdContent...
+     p                 b
+     dL_XML_DP_C_ProdContent...
+     d                 pi         16383c   varying
+     d   appdata                       *   const
+
+     d dsappdata       ds                  based(appdata)
+     d   content@                      *
+     d content         s          16383c   varying based(content@)
+
+      /free
+
+       return content;
+
+      /end-free
+     p                 e
+
+
+     pL_XML_DP_C_ProdAttrs...
+     p                 b
+     dL_XML_DP_C_ProdAttrs...
+     d                 pi         16383c   varying
+     d   appdata                       *   const
+     d   num                         10i 0 const
+     d   name                          n   const
+
+     d dsappdata       ds                  based(appdata)
+     d   content@                      *
+     d   attrnum                     10i 0
+     d   attrn                       50c   varying dim(10)
+     d   attrv                      100c   varying dim(10)
+
+      /free
+
+       if    num < 1
+          or num > attrnum;
+         return %ucs2('');
+       endif;
+
+       if name;
+         return attrn(num);
+       endif;
+
+       return attrv(num);
+
+      /end-free
+     p                 e
+
+
+     pL_XML_DP_C_Release...
+     p                 b
+     dL_XML_DP_C_Release...
+     d                 pi
+     d   appdata                       *   const
+
+     d data            ds                  based(appdata)
+     d   content@                      *
+
+      /free
+
+       dealloc(e) content@;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     pL_XML_DP_Release...
+     p                 b
+     dL_XML_DP_Release...
+     d                 pi              n
+     d   node                          *   const
+     d   cnl                         10i 0 const
+
+     d dsnode          ds                  likeds(XML$ELEM) based(dsnode@)
+     d dsdata          ds                  likeds(XML$DATA) based(dsdata@)
+
+      /free
+
+       dsnode@ = node;
+       dsdata@ = dsnode.data;
+
+       if dsdata@ <> *null;
+         if dsdata.dp_reladata <> *null;
+           L_XML_DP_AppData@ = dsdata.dp_reladata;
+           L_XML_DP_AppData(dsdata.appdata);
+         endif;
+         if dsdata.appdata <> *null;
+           dealloc(e) dsdata.appdata;
+         endif;
+         dealloc(e) dsdata@;
+       endif;
+
+       if L_DeallocPtrsA# < %elem(L_DeallocPtrsA);
+         if L_DeallocPtrsA# = 0;
+           L_DeallocPtrsA@ = %alloc(%size(L_DeallocPtrsA)*100);
+         elseif %rem(L_DeallocPtrsA#:100) = 0;
+           L_DeallocPtrsA@ = %realloc(L_DeallocPtrsA@
+                                 :%size(L_DeallocPtrsA)*(L_DeallocPtrsA#+100));
+         endif;
+         L_DeallocPtrsA# = L_DeallocPtrsA# + 1;
+         L_DeallocPtrsA(L_DeallocPtrsA#) = node;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_XML_DP_AsText  b
+     dL_XML_DP_AsText  pi              n
+     d   node                          *   const
+     d   cnl                         10i 0 const
+     d   ddata                    32767          options(*varsize)
+
+     d dsroot          ds                  likeds(XML$ROOT) based(dsroot@)
+     d dsnode          ds                  likeds(XML$ELEM) based(dsnode@)
+     d dsdata          ds                  likeds(XML$DATA) based(dsdata@)
+     d doc             s               *   dim(32767) based(doc@)
+     d ddata_          ds                  based(ddata_@)
+     d   doc@                          *
+     d   docl                        10i 0
+     d   doca                        10i 0
+     d   ccsid                       10i 0
+     d   enctext                     20    varying
+     d   novisit                       *
+     d   indtext                     20    varying
+     d ln              s          16383c   varying
+     d lnf             s          32766    based(lnf@)
+     d lncvt           s          32766    varying static
+     d t               s          16383c   varying static
+     d tx              s          16383c   varying static
+     d indent          s             10i 0
+     d haselements     s               n
+     d cvterr          s             10i 0
+     d n               s             10i 0
+
+      /free
+
+       ddata_@ = %addr(ddata);
+
+       if node = novisit;
+         novisit = *null;
+         return *on;
+       endif;
+
+       indent = cnl;
+
+       if XML_IsRoot(node);
+         dsroot@ = node;
+         ln = %ucs2('<?xml version="1.0" encoding="'                 +
+                    enctext                                          +
+                    '" standalone="'                                 +
+                    CondValChar(dsroot.standalone:'yes':'no')        +
+                    '"?>');
+         exsr addln;
+       endif;
+
+       dsnode@ = node;
+       dsdata@ = dsnode.data;
+
+       ln = %ucs2('<') + dsnode.tname;
+
+       haselements = dsnode.first <> *null;
+
+       if     dsdata@ <> *null
+          and dsdata.dp_prodattrs <> *null;
+         L_XML_DP_ProdAttrs@ = dsdata.dp_prodattrs;
+         n = 1;
+         dow 0=0;
+           t = L_XML_DP_ProdAttrs(dsdata.appdata:n:*on);
+           if t = %ucs2('');
+             leave;
+           endif;
+           XMLCharData(t:tx);
+           ln = ln + %ucs2(' ') + tx + %ucs2('="');
+           t = L_XML_DP_ProdAttrs(dsdata.appdata:n:*off);
+           XMLCharData(t:tx);
+           ln = ln + tx + %ucs2('"');
+           n = n + 1;
+         enddo;
+       endif;
+
+       if     (   dsdata@ = *null
+               or dsdata.dp_prodcont = *null)
+          and not haselements;
+         ln = ln + %ucs2('/>');
+         exsr addln;
+       else;
+         ln = ln + %ucs2('>');
+         if haselements;
+           exsr addln;
+           ln = %ucs2('');
+         endif;
+         if     dsdata@ <> *null
+            and dsdata.dp_prodcont <> *null;
+           if haselements;
+             indent = indent + 1;
+           endif;
+           L_XML_DP_ProdContent@ = dsdata.dp_prodcont;
+           t = L_XML_DP_ProdContent(dsdata.appdata);
+           XMLCharData(t:tx);
+           ln = ln + tx;
+           if haselements;
+             exsr addln;
+             ln = %ucs2('');
+             indent = indent - 1;
+           endif;
+         endif;
+       endif;
+
+       if haselements;
+         novisit = node;
+         if not XML_Iter(node:%paddr(L_XML_DP_AsText)
+                        :'*DEPTH':ddata:cnl:cnl+1);
+           return *off;
+         endif;
+         novisit = *null;
+       endif;
+
+       if        dsdata@ <> *null
+             and dsdata.dp_prodcont <> *null
+          or haselements;
+         ln = ln + %ucs2('</') + dsnode.tname + %ucs2('>');
+         exsr addln;
+       endif;
+
+       return *on;
+
+       begsr addln;
+         docl = docl + 1;
+         if docl > doca;
+           doca = doca + 50;
+           if doca = 50;
+             doc@ = %alloc(%size(doc)*doca);
+           else;
+             doc@ = %realloc(doc@:%size(doc)*doca);
+           endif;
+         endif;
+         ln = %ucs2(RepeatText(indtext:indent)) + ln;
+         lnf@ = %addr(ln) + 2;
+         if ccsid = 13488;
+           doc(docl) = CStrCrt(%subst(lnf:1:%len(ln)*2));
+         else;
+           cvterr = CvtCCSID(%subst(lnf:1:%len(ln)*2):lncvt:ccsid:13488);
+           if cvterr = 0;
+             doc(docl) = CStrCrt(lncvt);
+           else;
+             doc(docl) = CStrCrt(
+                'Error ' + %char(cvterr) + ' converting CCSID' +
+                ' 13488 to CCSID ' + %char(ccsid) + '.');
+           endif;
+         endif;
+       endsr;
+
+      /end-free
+     p                 e
+
+
+     pL_DeallocPtrs    b
+     dL_DeallocPtrs    pi
+
+     d i               s             10i 0
+
+      /free
+
+       for i = 1 to L_DeallocPtrsA#;
+         dealloc L_DeallocPtrsA(i);
+       endfor;
+
+       if L_DeallocPtrsA@ <> *null;
+         dealloc L_DeallocPtrsA@;
+         L_DeallocPtrsA@ = *null;
+       endif;
+
+       L_DeallocPtrsA# = 0;
+
+       return;
+
+      /end-free
+     p                 e
+

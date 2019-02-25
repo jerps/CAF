@@ -1,0 +1,29 @@
+             PGM        PARM(&CAFLIB &MNUADM &MNUADMGR)
+             DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADM) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADMGR) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&ADD) TYPE(*CHAR) LEN(1) VALUE('0')
+
+             DCLF       FILE(QTEMP/SETCAFAUTD)
+
+ READ:       RCVF
+             MONMSG     MSGID(CPF0864) EXEC(GOTO CMDLBL(ENDREAD))
+             IF         COND(&ODOBTP *EQ *FILE *AND %SST(&ODOBNM 1 +
+                          9) *EQ CAPPSSAMF *OR &ODOBTP *EQ *DTAARA +
+                          *AND %SST(&ODOBNM 1 9) *EQ CAPPSSAMD) +
+                          THEN(DO)
+             IF         COND(&MNUADMGR *EQ *GRT) THEN(GRTOBJAUT +
+                          OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(&MNUADM) AUT(*CHANGE))
+             ELSE       CMD(RVKOBJAUT OBJ(&ODLBNM/&ODOBNM) +
+                          OBJTYPE(&ODOBTP) USER(&MNUADM) AUT(*CHANGE))
+             ENDDO
+             GOTO       CMDLBL(READ)
+ ENDREAD:
+             IF         COND(&MNUADMGR *EQ *GRT) THEN(CHGVAR +
+                          VAR(&ADD) VALUE('1'))
+             CALL       PGM(&CAFLIB/CAPPSSAMP1) PARM(*ADMIN &MNUADM +
+                          &ADD)
+
+             ENDPGM

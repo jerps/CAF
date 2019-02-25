@@ -1,0 +1,65 @@
+/*                                                                     +
+                                                                       +
+   PARM1:                                                              +
+                                                                       +
+     Source type CMD:                                                  +
+       Command processor name.                                         +
+       If blank, the value for keyword SRCMBR is used.                 +
+                                                                       +
+     Source type CLLE, target object type *PGM:                        +
+       Activation group name.                                          +
+       -  blank    : DFTACTGRP(*NO), ACTGRP(*NEW)                      +
+       -  *DEFAULT : DFTACTGRP(*YES)                                   +
+       -  other    : DFTACTGRP(*NO), ACTGRP(&ACTGRP)                   +
+                                                                       +
+                                                                       +
+   PARM2:                                                              +
+                                                                       +
+     Source type CMD:                                                  +
+       Command processor library.                                      +
+       If blank, *LIBL is used.                                        +
+                                                                       +
+                                                                       +
+   PARM3:                                                              +
+                                                                       +
+     Not Used.                                                         +
+                                                                       +
+                                                                       +
+   --------------------                                                +
+                                                                       +
+                                                                       +
+   Set following data-area's in QTEMP for global options.              +
+   These override the options given with the command.                  +
+                                                                       +
+     CO@TRLS    (10A) : Target Release                                 +
+                                                                       +
+                                                                       +
+*/
+             CMD        PROMPT('Compile Object')
+
+             PARM       KWD(SRCFILE) TYPE(SRCFILE) MIN(1) +
+                          PROMPT('Source File')
+             PARM       KWD(SRCMBR) TYPE(*NAME) LEN(10) MIN(1) +
+                          ALWVAR(*YES) PROMPT('Source Member')
+             PARM       KWD(TGTLIB) TYPE(*NAME) LEN(10) DFT(*SRCLIB) +
+                          SPCVAL((*SRCLIB *SRCLIB)) MIN(0) +
+                          ALWVAR(*YES) PROMPT('Target Library')
+             PARM       KWD(TGTOBJTYPE) TYPE(*CHAR) LEN(10) +
+                          RSTD(*YES) DFT(*DEFAULT) VALUES(*DEFAULT +
+                          *PGM *MODULE) MIN(0) ALWVAR(*YES) +
+                          PROMPT('Target Object Type')
+             PARM       KWD(TGTRLS) TYPE(*NAME) LEN(10) +
+                          DFT(*CURRENT) SPCVAL((*CURRENT *CURRENT) +
+                          (*PRV *PRV)) MIN(0) ALWVAR(*YES) +
+                          PROMPT('Target Release')
+             PARM       KWD(PARM1) TYPE(*CHAR) LEN(10) MIN(0) +
+                          ALWVAR(*YES) PROMPT('Extra Parameter 1')
+             PARM       KWD(PARM2) TYPE(*CHAR) LEN(10) MIN(0) +
+                          ALWVAR(*YES) PROMPT('Extra Parameter 2')
+             PARM       KWD(PARM3) TYPE(*CHAR) LEN(10) MIN(0) +
+                          ALWVAR(*YES) PROMPT('Extra Parameter 3')
+
+ SRCFILE:    QUAL       TYPE(*NAME) LEN(10) MIN(1) ALWVAR(*YES)
+             QUAL       TYPE(*NAME) LEN(10) DFT(*LIBL) SPCVAL((*LIBL +
+                          *LIBL)) ALWVAR(*YES) PROMPT('Library')
+

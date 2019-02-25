@@ -1,0 +1,23 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CSYSSQLSF1
+
+      *  Service Program: Common System Services / SQL Support
+      *  File           : SQL Statements
+
+
+      *  Each "ID" identifies one SQL statement.
+      *  Use proc. "SqlsRtvStmt" to retrieve an SQL statement.
+      *  Use cmd "CSYSSQLSC1" to edit an SQL statement.
+
+
+     A                                      REF(CSYSSQLSFR)
+     A                                      UNIQUE
+     A          R SQLSREC
+     A            SQLSID    R               REFFLD(TSQLS_ID)
+     A            SQLSLINENOR               REFFLD(TSQLS_LNO)
+     A            SQLSLINE  R               REFFLD(TSQLS_LINE)
+     A          K SQLSID
+     A          K SQLSLINENO

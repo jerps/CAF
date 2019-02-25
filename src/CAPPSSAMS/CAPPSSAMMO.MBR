@@ -1,0 +1,3298 @@
+
+       // (c) 2019 John Erps
+
+
+       // Module AM for *SRVPGM CAPPSSAM
+
+       // Service Program: Common App Services / SubSystem AppMenu
+       // Module         : Menu Operations
+
+
+      /DEFINE CAPPSSAM_MODULE
+      /DEFINE CAPPSSAM_CAPPSSAMMO
+
+      /include CAPPSSAMS,INCL__MODH
+
+
+     fCAPPSSAMF1uf a e           k disk    usropn
+     fCAPPSSAMF2uf a e           k disk    usropn
+     fCAPPSSAMF4if   e           k disk    usropn
+
+
+      /include CAPPSSAMS,INCL_MO
+
+      /include CAPPSSAMS,INCL_DQ
+      /include CAPPSSAMS,INCL_AM
+      /include CAPPBASES,INCL_API
+      /include CSYSBASES,INCL_API
+
+      /include CAPPSSAMS,INCL__MO
+
+      /include CAPPSSAMS,INCL__MODD
+
+
+       // ----- Sync Data Area
+
+       // The "Sync" sata area is used to synchronize menu loads and saves,
+       // and to hold global menu data such as the version counter.
+
+     d CAPPSSAMD0      ds            50    qualified dtaara
+         // The version counter; is increased each time the menu
+         // is saved.
+     d   vcounter              1      8
+         // If pos. 9-16 contains digits, it indicates that every
+         // menu loaded with a version counter ("MenuVersion) less
+         // than "vreload" should be forced to reload the menu.
+     d   vreload               9     16
+         // The current bin number, in which the current menu definition
+         // is stored. It must be either "0" or "1", if not it is
+         // assumed to be "0". Each time the menu is saved it is saved
+         // into the other bin, and if successful the current bin number
+         // current bin stored in position 19 is flipped. This is done
+         // to ensure that if something goes wrong while saving the menu
+         // it does not corrupt the existing menu definition in the data-
+         // base (i.e. the one in the current bin).
+     d   curbin               19     19
+         // The user which last saved the menu.
+     d   suser                21     30
+
+
+       // ----- Menu Data
+
+       // The version counter of the currently loaded menu definition,
+       // read from data area CAPPSSAMD0 when the menu was loaded.
+       // If this value is less than zero then the menu is not loaded
+       // into memory (yet).
+     d MenuVersion     s              8s 0 inz(-1)
+
+       // The user for which the current menu definition is loaded,
+       // which is blank if the menu is loaded with all options,
+       // i.e. "MnuLoadMenu" was called with parameter "user"
+       // being blank or not given.
+     d MenuUser        s             10    inz(*allx'00')
+
+       // Is set to *off when the menu definition is initialized with
+       // "L_ClearMenu", or loaded with "MnuLoadMenu", or the menu is
+       // saved with "MnuSaveMenu".
+       // This module is responsible for setting "MenuUpdated" to *on
+       // whenever the loaded menu definition is updated.
+     d MenuUpdated     s               n   inz(*off)
+
+       // Array "UserPages" contains all user pages for "UserPagesUser",
+       // and is used by procedure "MnuUserPage" to quickly return a "real"
+       // menu page index into array "MenuPages" for a "user page" (index
+       // into array "UserPages") for a specific (non-blank) user. When
+       // "MnuUserPage" is called for a specific user and "DirtyUserPages"
+       // is *on, or the requested "user" is different than "UserPagesUser",
+       // local proc. "L_UpdUserPages" is called first to update the array
+       // before the array is accessed. This module is responsible for set-
+       // ting "DirtyUserPages" to *on whenever something changes with res-
+       // pect to the allowable options. E.g., when an option is removed or
+       // when the list of groups is changed, but not if an option's text
+       // is changed or a header is added.
+       // If "MnuUserPage" is called with a blank "user", then this array
+       // is not accessed at all because in this case the procedure simply
+       // returns the requested user page as there is no difference between
+       // the user pages and the "real" menu pages.
+       // Array "UserPagesInv" contains the inverse, i.e. each element
+       // contains the "user page" which belongs to a "real" page (index
+       // into "UserPagesInv").
+     d UserPages       s             10i 0 dim(CNumPages)
+     d UserPagesInv    s             10i 0 dim(CNumPages)
+
+       // The number of user pages for user "UserPagesUser", which is 0 if
+       // there are no menu pages for that user with one or more allowable
+       // options. Like "UserPages", is updated with "L_UpdUserPages".
+     d NumUserPages    s             10i 0 inz(0)
+
+       // The user for which "UserPages" contains all user pages. If this
+       // field is an asterisk ("*") it indicates that "UserPages" contains
+       // the user pages with all options defined in the menu, and not just
+       // the options for a specific user. If this field is blank, array
+       // "UserPages" is not filled (with procedure "L_UpdUserPages") and
+       // "NumUserPages" is 0.
+     d UserPagesUser   s             10    inz('')
+
+       // Must be set to *on anywhere in this module whenever the menu is
+       // changed such that it affects the number of available options on
+       // a menu page.
+     d DirtyUserPages  s               n   inz(*on)
+
+
+       // ----- Authorisation Data
+
+       // If the menu is loaded with all options for all users then all
+       // authorisation data, i.e. all members and their groups, is also
+       // loaded. Dynamic array "AuthUsers" contains all user-id's that
+       // are member of one or more active groups. A maximum of 32767
+       // user-id's and groups is supported (if there are more then these
+       // are simply ignored). For each element in dynamic array "AuthUsers",
+       // the element with the same index in dynamic array "AuthUserdata"
+       // points to an instance of ds "AuthUserds", which has subfield
+       // "groups" pointing to an instance of dynamic array "AuthGroups",
+       // containing all the active groups of which the user-id (element
+       // in "AuthUsers") is a member, either directly or indirectly through
+       // member groups. Subfield "groups#" contains the number of elements
+       // in "groups". Field "AuthUsers#" contains the number of authorised
+       // users, i.e. the number of populated elements in "AuthUsers" and
+       // "AuthUserdata". The user-id's in "AuthUsers" and the groups in
+       // "AuthGroups" must be in ASCENDING order.
+     d AuthUsers#      s             10i 0 inz(0)
+     d AuthUsers       s                   like(TAM_MBRN)     dim(32767)
+     d                                     based(AuthUsers@)  ascend
+     d AuthUserdata    s               *   dim(32767) based(AuthUserdata@)
+     d AuthUserds      ds                  qualified  based(AuthUserds@)
+     d   groups                        *
+     d   groups#                     10i 0
+     d AuthGroups      s                   like(TAM_MBRN)     dim(32767)
+     d                                     based(AuthGroups@) ascend
+
+
+       // ----- Local Prototypes
+
+       // Clear the complete menu data structure in memory.
+       // All memory that is currently allocated for these structures
+       // is released (de-allocated). After executing this procedure
+       // the menu structure represents an "empty" menu.
+       // Calling this procedure also clears the authorisation data.
+     dL_ClearMenu      pr
+
+       // Clear the menu data structure, given with parameter "mds".
+     dL_ClearMenuDs    pr
+     d   mds                               likeds(Menu)
+
+       // Release "MenuPage@" if not *null (instance of ds "MenuPage").
+     dL_RlsMenuPage    pr
+
+       // Release "MenuOption@" if not *null (instance of ds "MenuOption").
+     dL_RlsMenuOpt     pr
+
+       // Clear the authorisation data structures in memory.
+       // All memory that is currently allocated for these structures
+       // is released (de-allocated). After executing this procedure
+       // there are no loaded authorisations.
+     dL_ClearAuth      pr
+
+       // Return a shallow copy of data structure "Menu".
+     dL_CopyMenu       pr                  like(Menu)
+
+       // Return a shallow copy of the instance of data structure "MenuPage"
+       // pointed to by "MenuPage@".
+     dL_CopyPage       pr                  like(MenuPage)
+
+       // Return a shallow copy of an instance of data structure "MenuOption"
+       // pointed to by "MenuOption@".
+     dL_CopyOption     pr                  like(MenuOption)
+
+       // Return *on if "user" is a member of "group", as specified
+       // for an option (or page), else return *off. If the menu is
+       // loaded with all options (i.e. "MenuUser" = *blank) then the
+       // authorisation data loaded in memory is used, else procedure
+       // "IsGrpMember" is used which checks against the database.
+       // If parameter "option" is given with value "*CURRENT" then
+       // procedure "IsGrpMember" is always used.
+     dL_IsOptGrpMbr    pr              n
+     d   user                        10    value
+     d   group                       16    value
+     d   option                      10    value options(*nopass)
+
+       // Return *on of the instance of "MenuPage" pointed to by "pg@"
+       // represents a "blank" page, else return *off.
+       // Retain the value of "MenuPage@".
+     dL_IsBlankPage    pr              n
+     d   pg@                           *   value
+
+       // Validate and normalize "mn", an instance of data structure "Menu".
+       // Return *on if ok, else return *off and set "errmsg" and
+       // "errattr" accordingly.
+       // Normalize the menu's attributes (e.g. the title is always
+       // left aligned).
+     dL_ValNormMenu    pr              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   mn                                likeds(Menu)
+
+       // Validate and normalize the instance of ds "MenuPage" pointed
+       // to by "MenuPage@", before it's assigned to array "MenuPages".
+       // Return *on if ok, else return *off and set "errmsg" and
+       // "errattr" accordingly.
+       // Normalize the page's attributes (e.g. the title is always
+       // left aligned).
+       // Do not validate the individual slots.
+       // Do not change "MenuPage@".
+     dL_ValNormPage    pr              n
+     d   errmsg                     200
+     d   errattr                     10
+
+       // Validate and normalize the instance of ds "MenuOption" pointed
+       // to by "MenuOption@", before it's assigned to "slot" on the
+       // current page ("MenuPage@").
+       // Return *on if ok, else return *off and set "errmsg" and
+       // "errattr" accordingly.
+       // Normalize the option's attributes (e.g. the choice is always
+       // right aligned).
+       // Do not change "MenuOption@".
+     dL_ValNormOption  pr              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   slot                        10i 0 const
+
+       // Update array "UserPages" for "user".
+       // Initialize "UserPages" ("NumUserPages" := 0) if "user" is blank.
+       // Do nothing if the menu is loaded for a specific user (i.e. "MenuUser"
+       // is not blank) and "user" is different from "MenuUser".
+       // Parameter "user" can have special value "*" which indicates that
+       // all options are included in the "user pages".
+     dL_UpdUserPages   pr
+     d   user                        10    value
+
+       // Return *on if arrays "grps1" and "grps2" are the same, else
+       // return *off.
+     dL_EqualGrps      pr              n
+     d   grps1                             value like(MenuOption.groups)
+     d                                           dim(CNumGroups)
+     d   grps2                             value like(MenuOption.groups)
+     d                                           dim(CNumGroups)
+
+       // Return *on if the command strings pointed to by "cmd1" and "cmd2"
+       // are equal or if "cmd1" and "cmd2" are both *null, else return *off.
+     dL_EqualCmd       pr              n
+     d   cmd1                          *   value
+     d   cmd2                          *   value
+
+       // Read data area CAPPSSAMD0 with *LOCK, and return the version
+       // counter. If necessary, initialize the version counter in the
+       // data area with 00000000. Return -1 if an error occurred trying
+       // to access the data area.
+       // Parameter "curbin" returns the current bin (0 or 1), if given.
+     dL_SdaReadLock    pr             8s 0
+     d   curbin                       1s 0       options(*nopass)
+
+       // Write data area CAPPSSAMD0.
+       // Update and UNLOCK the data area. Return *on if successful,
+       // else return *off.
+       // If parameters "vcounter" and/or "vreload" are given the data
+       // area's version counter in pos. 1-8 and/or the "reload" version
+       // in pos. 9-16 are updated with the given values. Also, if par.
+       // "vcounter" is given, the current bin number in pos. 19 is
+       // flipped, and the current user is written to pos. 21-30. If a
+       // parameter is not given, the data area is updated with the value
+       // in data structure CAPPSSAMD0.
+     dL_SdaWrite       pr              n
+     d   vcounter                     8s 0 const options(*nopass)
+     d   vreload                      8s 0 const options(*nopass)
+
+       // Normalize the version counter data given with parameter "data"
+       // that was read from data CAPPSSAMD0. Initialize it to "00000000"
+       // if the given data contains any other character than digits.
+     dL_SdaNormVC      pr
+     d   data                         8
+
+
+       // ----- Implementation
+
+
+     p MnuLoadMenu     b                   export
+     d MnuLoadMenu     pi              n
+     d   errmsg                     200
+     d   user                        10    const options(*nopass)
+
+     d vc              s                   like(L_SdaReadLock)
+     d cb              s              1s 0
+     d em              s            200
+     d pg              s             10i 0
+     d opts            s               n
+     d mattrs          s               n
+     d mnmbr           s               n
+     d pgmbr           s               n
+     d allowed         s               n
+     d optgrp          s                   like(MenuOption.groups)
+     d n               s             10i 0
+
+      /free
+
+       errmsg = '';
+
+       L_ClearMenu();
+
+       MenuUser = '';
+       if %parms > 1;
+         MenuUser = user;
+       endif;
+
+       if not %open(CAPPSSAMF1);
+         open CAPPSSAMF1;
+       endif;
+       if not %open(CAPPSSAMF2);
+         open CAPPSSAMF2;
+       endif;
+
+       // LOCK DATA AREA
+       vc = L_SdaReadLock(cb);
+       if vc < 0;
+         errmsg = RtvAMsgAM(9901:CAmsFatal:CSyncDaName);
+         return *off;
+       endif;
+
+       mattrs = *off; // menu attrs read?
+       mnmbr  = *off; // user is member of a menu group?
+
+       pg = *loval;
+
+       MenuPage@ = *null;
+
+       setll (cb) CAPPSSAMF1;
+       reade(n) (cb) CAPPSSAMF1;
+       dow not %eof;
+         if     MENUSPAGE = 0
+            and not mattrs;
+           // Set menu attributes.
+           mattrs = *on; // menu attrs are read
+           Menu.title = MENUSTEXT;
+           Menu.specb = MENUSSPECB;
+           n = %len(%trim(MENUSCMD));
+           if n > 0;
+             Menu.command = %alloc(n+1);
+             %str(Menu.command:n+1) = %trim(MENUSCMD);
+           endif;
+           MENUSGBIN  = MENUSBIN;
+           MENUSGPAGE = MENUSPAGE;
+           MENUSGSLOT = 0;
+           n = 1;
+           setll (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+           reade(n) (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+           dow     n <= %elem(Menu.groups)
+               and not %eof;
+             if MENUSGROUP <> '';
+               optgrp = %trim(MENUSGRPFX) + MENUSGROUP;
+               if     optgrp <> ''
+                  and %lookup(optgrp:Menu.groups) = 0;
+                 if    MenuUser = ''
+                    or L_IsOptGrpMbr(MenuUser:optgrp);
+                   mnmbr = *on; // user is member of a menu group
+                 endif;
+                 Menu.groups(n) = optgrp;
+                 n = n + 1;
+               endif;
+             endif;
+             reade(n) (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+           enddo;
+         endif;
+         if     MENUSPAGE > 0
+            and MENUSPAGE <= CNumPages
+            and MENUSPAGE <> pg;
+           // New page.
+           if MenuPage@ <> *null;
+             exsr setpage;
+           endif;
+           opts  = *off; // current page has options?
+           pgmbr = *off; // user is member of a page group?
+           pg = MENUSPAGE;
+           MenuPage@ = %alloc(%size(MenuPage));
+           clear MenuPage;
+           if MENUSLOT = 0;
+             MenuPage.title = MENUSTEXT;
+             MenuPage.specb = MENUSSPECB;
+             n = %len(%trim(MENUSCMD));
+             if n > 0;
+               MenuPage.command = %alloc(n+1);
+               %str(MenuPage.command:n+1) = %trim(MENUSCMD);
+             endif;
+             MENUSGBIN  = MENUSBIN;
+             MENUSGPAGE = MENUSPAGE;
+             MENUSGSLOT = 0;
+             n = 1;
+             setll (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+             reade(n) (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+             dow     n <= %elem(MenuPage.groups)
+                 and not %eof;
+               if MENUSGROUP <> '';
+                 optgrp = %trim(MENUSGRPFX) + MENUSGROUP;
+                 if     optgrp <> ''
+                    and %lookup(optgrp:MenuPage.groups) = 0;
+                   if    MenuUser = ''
+                      or L_IsOptGrpMbr(MenuUser:optgrp);
+                     pgmbr = *on; // user is member of a page group
+                   endif;
+                   MenuPage.groups(n) = optgrp;
+                   n = n + 1;
+                 endif;
+               endif;
+               reade(n) (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+             enddo;
+           endif;
+         endif;
+         if     MENUSPAGE > 0
+            and MENUSPAGE <= CNumPages
+            and MENUSLOT >= 1
+            and MENUSLOT <= CNumSlots
+            and MenuPage@ <> *null;
+           MenuOption@ = %alloc(%size(MenuOption));
+           clear MenuOption;
+           MenuOption.text = MENUSTEXT;
+           allowed = *on;
+           if MENUSCHC <> '';
+             // A real menu option.
+             MENUSGBIN  = MENUSBIN;
+             MENUSGPAGE = MENUSPAGE;
+             MENUSGSLOT = MENUSLOT;
+             allowed = *off;
+             n = 1;
+             setll (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+             reade(n) (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+             dow     n <= %elem(MenuOption.groups)
+                 and not %eof;
+               if MENUSGROUP <> '';
+                 optgrp = %trim(MENUSGRPFX) + MENUSGROUP;
+                 if     optgrp <> ''
+                    and %lookup(optgrp:MenuOption.groups) = 0;
+                   if    MenuUser = ''
+                      or L_IsOptGrpMbr(MenuUser:optgrp);
+                     // Option is allowed.
+                     allowed = *on;
+                   endif;
+                   MenuOption.groups(n) = optgrp;
+                   n = n + 1;
+                 endif;
+               endif;
+               reade(n) (MENUSGBIN:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF2;
+             enddo;
+             if    mnmbr
+                or pgmbr;
+               // This option is allowed according to the groups specified
+               // for the menu or the page.
+               allowed = *on;
+             endif;
+             if    MenuUser = ''
+                or allowed;
+               opts = *on; // page has options
+               MenuOption.choice = MENUSCHC;
+               MenuOption.specb  = MENUSSPECB;
+               n = %len(%trim(MENUSCMD));
+               if n > 0;
+                 MenuOption.command = %alloc(n+1);
+                 %str(MenuOption.command:n+1) = %trim(MENUSCMD);
+               endif;
+             else;
+               L_RlsMenuOpt();
+             endif;
+           endif;
+           if allowed;
+             MenuPage.slots(MENUSLOT) = MenuOption@;
+           endif;
+         endif;
+         reade(n) (cb) CAPPSSAMF1;
+       enddo;
+
+       if MenuPage@ <> *null;
+         exsr setpage;
+       endif;
+
+       close(e) CAPPSSAMF1;
+       close(e) CAPPSSAMF2;
+
+       // UNLOCK DATA AREA
+       if not L_SdaWrite();
+         L_ClearMenu();
+         errmsg = RtvAMsgAM(9901:CAmsFatal:CSyncDaName);
+         return *off;
+       endif;
+
+       MenuVersion = vc;
+
+       if     MenuUser = ''
+          and not MnuLoadAuth(em);
+         L_ClearMenu();
+         errmsg = em;
+         return *off;
+       endif;
+
+       if MenuUser <> '';
+         L_UpdUserPages(MenuUser);
+       endif;
+
+       return *on;
+
+       begsr setpage;
+         if    MenuUser = ''
+            or opts;
+           MenuPages(pg) = MenuPage@;
+         elseif MenuPage@ <> *null;
+           // No options found for page and menu is loaded for a specific user.
+           // Remove (deallocate) new instance of ds "MenuPage".
+           L_RlsMenuPage();
+         endif;
+       endsr;
+
+      /end-free
+     p                 e
+
+
+     p MnuGetSlotChoice...
+     p                 b                   export
+     d MnuGetSlotChoice...
+     d                 pi            10i 0
+     d   pag                         10i 0 const
+     d   choice                       2    const
+     d   count                       10i 0       options(*nopass)
+
+     d s               s             10i 0
+     d ss              s             10i 0
+
+      /free
+
+       if %parms > 2;
+         count = 0;
+       endif;
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > %elem(MenuPages)
+          or choice = '';
+         return 0;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       ss = 0;
+       for s = 1 to %elem(MenuPage.slots);
+         MenuOption@ = MenuPage.slots(s);
+         if     MenuOption@ <> *null
+            and MenuOption.choice = choice;
+           count = count + 1;
+           if ss = 0;
+             ss = s;
+           endif;
+         endif;
+       endfor;
+
+       if count > 1;
+         return 0;
+       endif;
+
+       return ss;
+
+      /end-free
+     p                 e
+
+
+     p MnuPerformOpt   b                   export
+     d MnuPerformOpt   pi              n
+     d   errmsg                     200
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+     d s               s             10i 0
+     d ss              s             10i 0
+     d em              s            200
+
+      /free
+
+       errmsg  = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if MnuIsBlankPage(pag);
+         errmsg = RtvAMsgAM(3004:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if    slot < 1
+          or slot > %elem(MenuPage.slots);
+         errmsg = RtvAMsgAM(3002:CAmsFatal:%char(slot));
+         return *off;
+       endif;
+
+       if not MnuSlotHasOpt(pag:slot);
+         errmsg = RtvAMsgAM(2122:CAmsFatal);
+         return *off;
+       endif;
+
+       MenuPage@   = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if    MenuOption.command = *null
+          or %str(MenuOption.command) = '';
+         errmsg = RtvAMsgAM(1901:CAmsFatal);
+         return *off;
+       endif;
+
+       if        MenuUser <> ''
+             and PSI.curuser <> MenuUser
+          or     MenuUser <> ''
+             and not MnuOptAllowed(PSI.curuser:pag:slot:'*CURRENT');
+         errmsg = RtvAMsgAM(1990:CAmsFatal
+                           :%trim(MenuOption.text):%trimr(PSI.curuser));
+         return *off;
+       endif;
+
+       if    %scan(CMsbDftEH:Menu.specb) > 0
+          or %scan(CMsbDftEH:MenuPage.specb) > 0
+          or %scan(CMsbDftEH:MenuOption.specb) > 0;
+
+         // Perform option; use default error handler.
+
+         if     Menu.command <> *null
+            and %str(Menu.command) <> '';
+           ExecCmd(%str(Menu.command));
+         endif;
+         if     MenuPage.command <> *null
+            and %str(MenuPage.command) <> '';
+           ExecCmd(%str(MenuPage.command));
+         endif;
+
+         ExecCmd(%str(MenuOption.command));
+
+       else;
+
+         // Perform option; catch exceptions.
+
+         if     Menu.command <> *null
+            and %str(Menu.command) <> '';
+           if not ExecCmdCE(em:%str(Menu.command));
+             errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
+             return *off;
+           endif;
+         endif;
+         if     MenuPage.command <> *null
+            and %str(MenuPage.command) <> '';
+           if not ExecCmdCE(em:%str(MenuPage.command));
+             errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
+             return *off;
+           endif;
+         endif;
+
+         if not ExecCmdCE(em:%str(MenuOption.command));
+           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
+           return *off;
+         endif;
+
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuLoadAuth     b                   export
+     d MnuLoadAuth     pi              n
+     d   errmsg                     200
+
+     d chunksz         c                   20
+     d usr             s                   like(TAM_MBRN)
+     d grps            s                   like(TAM_GROUP) dim(32767)
+     d grps#           s             10i 0
+     d supergroups     s               *
+     d supergroups#    s             10i 0
+     d grp             s                   like(TAM_GROUP) based(grp@)
+     d g               s             10i 0
+
+      /free
+
+       errmsg = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1012:CAmsFatal);
+         return *off;
+       endif;
+
+       L_ClearAuth();
+
+       if not %open(CAPPSSAMF4);
+         open CAPPSSAMF4;
+       endif;
+
+       grps(*) = *allx'FF';
+       grps#   = 0;
+
+       usr = *loval;
+
+       setll (1) CAPPSSAMF4;
+       reade (1) CAPPSSAMF4;
+       dow not %eof;
+         if IsGrpActive(MENUMGROUP);
+           if MENUMGMBRN <> usr;
+             if AuthUsers# >= %elem(AuthUsers);
+               leave;
+             endif;
+             // New user.
+             exsr read_grps;
+             usr = MENUMGMBRN;
+             if AuthUsers# = 0;
+               AuthUsers@    =    %alloc(
+                   %size(AuthUsers)    *chunksz);
+               AuthUserdata@ =    %alloc(
+                   %size(AuthUserdata) *chunksz);
+             elseif %rem(AuthUsers#:chunksz) = 0;
+               AuthUsers@    = %realloc(AuthUsers@:
+                   %size(AuthUsers)    *(chunksz+AuthUsers#));
+               AuthUserdata@ = %realloc(AuthUserdata@:
+                   %size(AuthUserdata) *(chunksz+AuthUsers#));
+             endif;
+             AuthUsers# = AuthUsers# + 1;
+             AuthUsers(AuthUsers#) = MENUMGMBRN;
+             AuthUserds@ = %alloc(%size(AuthUserds));
+             AuthUserdata(AuthUsers#) = AuthUserds@;
+             clear AuthUserds;
+             AuthGroups@ = %alloc(%size(AuthGroups)*chunksz);
+             AuthUserds.groups  = AuthGroups@;
+             AuthUserds.groups# = 0;
+           endif;
+           // The next direct group of the current user (MENUMGMBRN)
+           // has been read. Add this group and all it's direct and
+           // indirect predecessors to array "grps".
+           if     grps# < %elem(grps)
+              and %lookup(MENUMGROUP:grps:1:grps#) = 0;
+             grps# = grps# + 1;
+             grps(grps#) = MENUMGROUP;
+           endif;
+           supergroups# = RtvSuperGroups(MENUMGROUP:supergroups:*on);
+           if     supergroups# > 0
+              and supergroups <> *null;
+             grp@ = supergroups;
+             dow supergroups# > 0;
+               if grps# >= %elem(grps);
+                 leave;
+               endif;
+               if %lookup(grp:grps:1:grps#) = 0;
+                 grps# = grps# + 1;
+                 grps(grps#) = grp;
+               endif;
+               grp@ = grp@ + %size(grp);
+               supergroups# = supergroups# - 1;
+             enddo;
+           endif;
+           if supergroups <> *null;
+             dealloc(e) supergroups;
+           endif;
+         endif;
+         reade (1) CAPPSSAMF4;
+       enddo;
+
+       exsr read_grps;
+
+       close(e) CAPPSSAMF4;
+
+       if UserPagesUser <> '';
+         L_UpdUserPages(UserPagesUser);
+       endif;
+
+       return *on;
+
+       begsr read_grps;
+         if grps# <= 0;
+           leavesr;
+         endif;
+         sorta grps;
+         for g = 1 to grps#;
+           if %rem(AuthUserds.groups#:chunksz) = 0;
+             AuthGroups@ = %realloc(AuthGroups@:
+                 %size(AuthGroups) *(chunksz+AuthUserds.groups#));
+             AuthUserds.groups = AuthGroups@;
+           endif;
+           AuthUserds.groups# = AuthUserds.groups# + 1;
+           AuthGroups(AuthUserds.groups#) = grps(g);
+         endfor;
+         grps(*) = *allx'FF';
+         grps#   = 0;
+       endsr;
+
+      /end-free
+     p                 e
+
+
+     p MnuIsLoaded     b                   export
+     d MnuIsLoaded     pi              n
+
+      /free
+
+       return MenuVersion >= 0;
+
+      /end-free
+     p                 e
+
+
+     p MnuIsUpdated    b                   export
+     d MnuIsUpdated    pi              n
+
+      /free
+
+       return MnuIsLoaded() and MenuUpdated;
+
+      /end-free
+     p                 e
+
+
+     p MnuVersionChanged...
+     p                 b                   export
+     d MnuVersionChanged...
+     d                 pi              n
+
+      /free
+
+       if not MnuIsLoaded();
+         return *off;
+       endif;
+
+       in(e) CAPPSSAMD0;
+       if %error;
+         return *off;
+       endif;
+
+       L_SdaNormVC(CAPPSSAMD0.vcounter);
+
+       return CvtTxtToInt(CAPPSSAMD0.vcounter) <> MenuVersion;
+
+      /end-free
+     p                 e
+
+
+     p MnuMustReload   b                   export
+     d MnuMustReload   pi              n
+
+      /free
+
+       if not MnuIsLoaded();
+         return *off;
+       endif;
+
+       in(e) CAPPSSAMD0;
+       if %error;
+         return *off;
+       endif;
+
+       L_SdaNormVC(CAPPSSAMD0.vreload);
+
+       return MenuVersion < CvtTxtToInt(CAPPSSAMD0.vreload);
+
+      /end-free
+     p                 e
+
+
+     p MnuSaveMenu     b                   export
+     d MnuSaveMenu     pi              n
+     d   errmsg                     200
+     d   option                      10    const options(*nopass:*omit)
+     d   errattr                     10          options(*nopass)
+     d   errpage                     10i 0       options(*nopass)
+     d   errslot                     10i 0       options(*nopass)
+
+     d emsg            s                   like(errmsg)
+     d eattr           s                   like(errattr)
+     d epage           s                   like(errpage)
+     d eslot           s                   like(errslot)
+     d vc              s                   like(L_SdaReadLock)
+     d cb              s              1s 0
+     d ob              s              1s 0
+     d f               s               n
+     d p               s             10i 0
+     d s               s             10i 0
+     d g               s             10i 0
+
+      /free
+
+       errmsg = '';
+       if %parms > 2;
+         errattr = '';
+       endif;
+       if %parms > 3;
+         errpage = 0;
+       endif;
+       if %parms > 4;
+         errslot = 0;
+       endif;
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if not MnuValNormMenu(emsg:eattr:epage:eslot);
+         // The menu is not valid.
+         errmsg = emsg;
+         if %parms > 2;
+           errattr = eattr;
+         endif;
+         if %parms > 3;
+           errpage = epage;
+         endif;
+         if %parms > 4;
+           errslot = eslot;
+         endif;
+         return *off;
+       endif;
+
+       if not %open(CAPPSSAMF1);
+         open CAPPSSAMF1;
+       endif;
+       if not %open(CAPPSSAMF2);
+         open CAPPSSAMF2;
+       endif;
+
+       // LOCK DATA AREA
+       vc = L_SdaReadLock(cb);
+       if vc < 0;
+         errmsg = RtvAMsgAM(9902:CAmsFatal:CSyncDaName);
+         return *off;
+       endif;
+
+       // Save to the other bin ("ob").
+       if cb = 0;
+         ob = 1;
+       else;
+         ob = 0;
+       endif;
+
+       // First, delete all records in the other bin.
+       setll (ob) CAPPSSAMF2;
+       reade (ob) CAPPSSAMF2;
+       dow not %eof;
+         delete(e) MENUSGREC;
+         if %error;
+           exsr exit_with_db_error;
+         endif;
+         reade (ob) CAPPSSAMF2;
+       enddo;
+       setll (ob) CAPPSSAMF1;
+       reade (ob) CAPPSSAMF1;
+       dow not %eof;
+         delete(e) MENUSREC;
+         if %error;
+           exsr exit_with_db_error;
+         endif;
+         reade (ob) CAPPSSAMF1;
+       enddo;
+
+       // Then, write new records to the other bin.
+       clear *all MENUSREC;
+       MENUSBIN   = ob;
+       MENUSPAGE  = 0;
+       MENUSLOT   = 0;
+       MENUSTEXT  = Menu.title;
+       MENUSSPECB = Menu.specb;
+       if Menu.command <> *null;
+         MENUSCMD = %trim(%str(Menu.command));
+       endif;
+       g = 1;
+       dow     g <= %elem(Menu.groups)
+           and Menu.groups(g) = '';
+         g = g + 1;
+       enddo;
+       if    g <= %elem(Menu.groups)
+          or MENUSTEXT  <> ''
+          or MENUSSPECB <> ''
+          or MENUSCMD   <> '';
+         // Write menu attributes.
+         write(e) MENUSREC;
+         if %error;
+           exsr exit_with_db_error;
+         endif;
+         // Write groups for the menu (page 0, slot 0)
+         for g = 1 to %elem(Menu.groups);
+           if Menu.groups(g) <> '';
+             clear *all MENUSGREC;
+             MENUSGBIN  = ob;
+             MENUSGPAGE = 0;
+             MENUSGSLOT = 0;
+             if %subst(Menu.groups(g):1:1) = CCharGrpInv;
+               MENUSGROUP = %subst(Menu.groups(g):2);
+               MENUSGRPFX = CCharGrpInv;
+             else;
+               MENUSGROUP = Menu.groups(g);
+             endif;
+             write(e) MENUSGREC;
+             if %error;
+               exsr exit_with_db_error;
+             endif;
+           endif;
+         endfor;
+       endif;
+       for p = 1 to %elem(MenuPages);
+         if not MnuIsBlankPage(p);
+           MenuPage@ = MenuPages(p);
+           // Write page p (slot 0)
+           clear *all MENUSREC;
+           MENUSBIN   = ob;
+           MENUSPAGE  = p;
+           MENUSLOT   = 0;
+           MENUSTEXT  = MenuPage.title;
+           MENUSSPECB = MenuPage.specb;
+           if MenuPage.command <> *null;
+             MENUSCMD = %trim(%str(MenuPage.command));
+           endif;
+           write(e) MENUSREC;
+           if %error;
+             exsr exit_with_db_error;
+           endif;
+           // Write groups for page p (slot 0)
+           for g = 1 to %elem(MenuPage.groups);
+             if MenuPage.groups(g) <> '';
+               clear *all MENUSGREC;
+               MENUSGBIN  = ob;
+               MENUSGPAGE = p;
+               MENUSGSLOT = 0;
+               if %subst(MenuPage.groups(g):1:1) = CCharGrpInv;
+                 MENUSGROUP = %subst(MenuPage.groups(g):2);
+                 MENUSGRPFX = CCharGrpInv;
+               else;
+                 MENUSGROUP = MenuPage.groups(g);
+               endif;
+               write(e) MENUSGREC;
+               if %error;
+                 exsr exit_with_db_error;
+               endif;
+             endif;
+           endfor;
+           for s = 1 to %elem(MenuPage.slots);
+             if MenuPage.slots(s) <> *null;
+               MenuOption@ = MenuPage.slots(s);
+               // Write page p, slot s
+               clear *all MENUSREC;
+               MENUSBIN   = ob;
+               MENUSPAGE  = p;
+               MENUSLOT   = s;
+               MENUSCHC   = MenuOption.choice;
+               MENUSTEXT  = MenuOption.text;
+               MENUSSPECB = MenuOption.specb;
+               if MenuOption.command <> *null;
+                 MENUSCMD = %trim(%str(MenuOption.command));
+               endif;
+               write(e) MENUSREC;
+               if %error;
+                 exsr exit_with_db_error;
+               endif;
+               // Write groups for page p, slot s
+               for g = 1 to %elem(MenuOption.groups);
+                 if MenuOption.groups(g) <> '';
+                   clear *all MENUSGREC;
+                   MENUSGBIN  = ob;
+                   MENUSGPAGE = p;
+                   MENUSGSLOT = s;
+                   if %subst(MenuOption.groups(g):1:1) = CCharGrpInv;
+                     MENUSGROUP = %subst(MenuOption.groups(g):2);
+                     MENUSGRPFX = CCharGrpInv;
+                   else;
+                     MENUSGROUP = MenuOption.groups(g);
+                   endif;
+                   write(e) MENUSGREC;
+                   if %error;
+                     exsr exit_with_db_error;
+                   endif;
+                 endif;
+               endfor;
+             endif;
+           endfor;
+         endif;
+       endfor;
+
+       // Update the data area (the current bin number is flipped).
+       if     %parms > 1
+          and %addr(option) <> *null
+          and option = '*RELOAD';
+         L_SdaWrite(vc+1:vc+1);
+       else;
+         L_SdaWrite(vc+1);
+       endif;
+
+       MenuUpdated = *off;
+
+       if not MnuLoadAuth(emsg);
+         errmsg = emsg;
+         return *off;
+       endif;
+
+       return *on;
+
+       begsr exit_with_db_error;
+         L_SdaWrite();
+         errmsg = RtvAMsgAM(9903:CAmsFatal);
+         return *off;
+       endsr;
+
+      /end-free
+     p                 e
+
+
+     p MnuSetMenuAttr  b                   export
+     d MnuSetMenuAttr  pi              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   mtitle                            const like(Menu.title)
+     d                                           options(*nopass:*omit)
+     d   mgroups                           const like(Menu.groups)
+     d                                           dim(CNumGroups)
+     d                                           options(*nopass:*omit)
+     d   mspecb                            const like(Menu.specb)
+     d                                           options(*nopass:*omit)
+     d   mcommand                   500    const options(*nopass:*omit)
+
+     d emsg            s                   like(errmsg)
+     d eattr           s                   like(errattr)
+     d mn              ds                  likeds(Menu)
+     d n               s             10i 0
+
+      /free
+
+       errmsg  = '';
+       errattr = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       // First initialize data structure "mn", as a copy of data structure
+       // "Menu", which replaces the existing "Menu" data structure.
+       mn = L_CopyMenu();
+
+       // Then, update the attributes of "mn".
+       if     %parms > 2
+          and %addr(mtitle) <> *null;
+         mn.title = mtitle;
+       endif;
+       if     %parms > 3
+          and %addr(mgroups) <> *null;
+         mn.groups = mgroups;
+       endif;
+       if     %parms > 4
+          and %addr(mspecb) <> *null;
+         mn.specb = mspecb;
+       endif;
+       if     %parms > 5
+          and %addr(mcommand) <> *null;
+         if mn.command <> *null;
+           dealloc(e) mn.command;
+           mn.command = *null;
+         endif;
+         if mcommand <> '';
+           n = %len(%trimr(mcommand)) + 1;
+           mn.command = %alloc(n);
+           %str(mn.command:n) = %trimr(mcommand);
+         endif;
+       endif;
+
+       // Validate/normalize "mn".
+       if not L_ValNormMenu(emsg:eattr:mn);
+         // "mn" is not valid; release it and return.
+         L_ClearMenuDs(mn);
+         errmsg  = emsg;
+         errattr = eattr;
+         return *off;
+       endif;
+
+       if    mn.title <> Menu.title
+          or mn.specb <> Menu.specb
+          or not L_EqualCmd(mn.command:Menu.command);
+         MenuUpdated = *on;
+       endif;
+
+       if not L_EqualGrps(mn.groups:Menu.groups);
+         MenuUpdated = *on;
+         DirtyUserPages = *on;
+       endif;
+
+       // The contents of "mn" replaces the contents of "Menu".
+       L_ClearMenuDs(Menu);
+       Menu = mn;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuGetPageTitle...
+     p                 b                   export
+     d MnuGetPageTitle...
+     d                 pi                  like(MenuPage.title)
+     d   pag                         10i 0 const
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null;
+         return '';
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       return MenuPage.title;
+
+      /end-free
+     p                 e
+
+
+     p MnuSetPageAttr  b                   export
+     d MnuSetPageAttr  pi              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   pag                         10i 0 const
+     d   ptitle                            const like(MenuPage.title)
+     d                                           options(*nopass:*omit)
+     d   pgroups                           const like(MenuPage.groups)
+     d                                           dim(CNumGroups)
+     d                                           options(*nopass:*omit)
+     d   pspecb                            const like(MenuPage.specb)
+     d                                           options(*nopass:*omit)
+     d   pcommand                   500    const options(*nopass:*omit)
+
+     d emsg            s                   like(errmsg)
+     d eattr           s                   like(errattr)
+     d mp              ds                  likeds(MenuPage) based(mp@)
+     d n               s             10i 0
+
+      /free
+
+       errmsg  = '';
+       errattr = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       // First create a new "MenuPage" instance, "mp", as a copy
+       // of the existing page. If the element is empty it becomes
+       // the new page.
+       mp@ = %alloc(%size(mp));
+       if MenuPage@ = *null;
+         // New page.
+         clear mp;
+       else;
+         // Copy existing page; the copy replaces the existing page.
+         mp = L_CopyPage();
+       endif;
+
+       // Then, update the attributes of "mp".
+       if     %parms > 3
+          and %addr(ptitle) <> *null;
+         mp.title = ptitle;
+       endif;
+       if     %parms > 4
+          and %addr(pgroups) <> *null;
+         mp.groups = pgroups;
+       endif;
+       if     %parms > 5
+          and %addr(pspecb) <> *null;
+         mp.specb = pspecb;
+       endif;
+       if     %parms > 6
+          and %addr(pcommand) <> *null;
+         if mp.command <> *null;
+           dealloc(e) mp.command;
+           mp.command = *null;
+         endif;
+         if pcommand <> '';
+           n = %len(%trimr(pcommand)) + 1;
+           mp.command = %alloc(n);
+           %str(mp.command:n) = %trimr(pcommand);
+         endif;
+       endif;
+
+       // Validate/normalize "mp".
+       MenuPage@ = mp@;
+       if not L_ValNormPage(emsg:eattr);
+         // "mp" is not valid; release it (but not it's "slots") and return.
+         MenuPage.slots(*) = *null;
+         L_RlsMenuPage();
+         errmsg  = emsg;
+         errattr = eattr;
+         return *off;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       if         MenuPage@ = *null
+              and not L_IsBlankPage(mp@)
+          or      MenuPage@ <> *null
+              and (   mp.title <> MenuPage.title
+                   or mp.specb <> MenuPage.specb
+                   or not L_EqualCmd(mp.command:MenuPage.command));
+         MenuUpdated = *on;
+       endif;
+
+       if        MenuPage@ = *null
+             and not L_EqualGrps(mp.groups:'')
+          or     MenuPage@ <> *null
+             and not L_EqualGrps(mp.groups:MenuPage.groups);
+         MenuUpdated = *on;
+         DirtyUserPages = *on;
+       endif;
+
+       if MenuPage@ <> *null;
+         // New instance "mp" replaces the existing page.
+         // Release the exsisting page (but not it's "slots").
+         MenuPage.slots(*) = *null;
+         L_RlsMenuPage();
+       endif;
+
+       MenuPages(pag) = mp@;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuIsBlankPage  b                   export
+     d MnuIsBlankPage  pi              n
+     d   pag                         10i 0 const
+
+     d i               s             10i 0
+
+      /free
+
+       if not MnuIsLoaded();
+         return *on;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null;
+         return *on;
+       endif;
+
+       return L_IsBlankPage(MenuPages(pag));
+
+      /end-free
+     p                 e
+
+
+     p MnuClearPage    b                   export
+     d MnuClearPage    pi              n
+     d   pag                         10i 0 const
+
+     d s               s             10i 0
+
+      /free
+
+       if    not MnuIsLoaded()
+          or MenuUser <> ''
+          or pag < 1
+          or pag > %elem(MenuPages);
+         return *off;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       if MenuPage@ <> *null;
+         for s = 1 to %elem(MenuPage.slots);
+           if MenuPage.slots(s) <> *null;
+             MenuOption@ = MenuPage.slots(s);
+             if MenuOption.choice <> '';
+               DirtyUserPages = *on;
+               leave;
+             endif;
+           endif;
+         endfor;
+         L_RlsMenuPage();
+         MenuPages(pag) = *null;
+         MenuUpdated = *on;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuMovePagesRight...
+     p                 b                   export
+     d MnuMovePagesRight...
+     d                 pi              n
+     d   errmsg                     200
+     d   pag                         10i 0 const
+
+     d pg              s             10i 0
+     d p1              s               *
+     d p2              s               *
+
+      /free
+
+       errmsg  = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if MnuIsBlankPage(pag);
+         errmsg = RtvAMsgAM(3004:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if pag = CNumPages;
+         errmsg = RtvAMsgAM(2154:CAmsFatal);
+         return *off;
+       endif;
+
+       if not MnuIsBlankPage(CNumPages);
+         // The page is not blank.
+         errmsg = RtvAMsgAM(2151:CAmsFatal:%char(CNumPages));
+         return *off;
+       endif;
+
+       MnuClearPage(CNumPages);
+
+       p1 = *null;
+       for pg = pag to CNumPages;
+         p2 = MenuPages(pg);
+         MenuPages(pg) = p1;
+         p1 = p2;
+       endfor;
+
+       MenuUpdated = *on;
+
+       DirtyUserPages = *on;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuMovePagesLeft...
+     p                 b                   export
+     d MnuMovePagesLeft...
+     d                 pi              n
+     d   errmsg                     200
+     d   pag                         10i 0 const
+
+     d pg              s             10i 0
+     d pp              s             10i 0
+     d p1              s               *
+     d p2              s               *
+
+      /free
+
+       errmsg  = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if MnuIsBlankPage(pag);
+         errmsg = RtvAMsgAM(3004:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+
+       if pag = 1;
+         errmsg = RtvAMsgAM(2152:CAmsFatal);
+         return *off;
+       endif;
+
+       pp = pag - 1; // previous page
+
+       if not MnuIsBlankPage(pp);
+         // The previous page is not blank.
+         errmsg = RtvAMsgAM(2153:CAmsFatal:%char(pag):%char(pp));
+         return *off;
+       endif;
+
+       MnuClearPage(pp);
+
+       p1 = *null;
+       for pg = CNumPages downto pp;
+         p2 = MenuPages(pg);
+         MenuPages(pg) = p1;
+         p1 = p2;
+       endfor;
+
+       MenuUpdated = *on;
+
+       DirtyUserPages = *on;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuGetOptText   b                   export
+     d MnuGetOptText   pi                  like(MenuOption.text)
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null
+          or slot < 1
+          or slot > %elem(MenuPage.slots);
+         return '';
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if MenuOption@ = *null;
+         return '';
+       endif;
+
+       return MenuOption.text;
+
+      /end-free
+     p                 e
+
+
+     p MnuSetOptAttr   b                   export
+     d MnuSetOptAttr   pi              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+     d   ochoice                           const like(MenuOption.choice)
+     d                                           options(*nopass:*omit)
+     d   otext                             const like(MenuOption.text)
+     d                                           options(*nopass:*omit)
+     d   ogroups                           const like(MenuOption.groups)
+     d                                           dim(CNumGroups)
+     d                                           options(*nopass:*omit)
+     d   ospecb                            const like(MenuOption.specb)
+     d                                           options(*nopass:*omit)
+     d   ocommand                   500    const options(*nopass:*omit)
+
+     d emsg            s                   like(errmsg)
+     d eattr           s                   like(errattr)
+     d opt             ds                  likeds(MenuOption) based(opt@)
+     d n               s             10i 0
+
+      /free
+
+       errmsg  = '';
+       errattr = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if    slot < 1
+          or slot > %elem(MenuPage.slots);
+         errmsg = RtvAMsgAM(3002:CAmsFatal:%char(slot));
+         return *off;
+       endif;
+
+       if MenuPages(pag) = *null;
+         // No page; create blank page first.
+         if not MnuSetPageAttr(emsg:eattr:pag);
+           errmsg = RtvAMsgAM(3003:CAmsFatal:%char(pag));
+         endif;
+       endif;
+
+       MenuPage@   = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       // First create a new "MenuOption" instance, "opt", as a copy
+       // of the existing option. If the slot is empty it becomes the
+       // new option.
+       opt@ = %alloc(%size(opt));
+       if MenuOption@ = *null;
+         // New option.
+         clear opt;
+       else;
+         // Copy existing option; the copy replaces the existing option.
+         opt = L_CopyOption();
+       endif;
+
+       // Then, update the attributes of "opt".
+       if     %parms > 4
+          and %addr(ochoice) <> *null;
+         opt.choice = ochoice;
+       endif;
+       if     %parms > 5
+          and %addr(otext) <> *null;
+         opt.text = otext;
+       endif;
+       if     %parms > 6
+          and %addr(ogroups) <> *null;
+         opt.groups = ogroups;
+       endif;
+       if     %parms > 7
+          and %addr(ospecb) <> *null;
+         opt.specb = ospecb;
+       endif;
+       if     %parms > 8
+          and %addr(ocommand) <> *null;
+         if opt.command <> *null;
+           dealloc(e) opt.command;
+           opt.command = *null;
+         endif;
+         if ocommand <> '';
+           n = %len(%trimr(ocommand)) + 1;
+           opt.command = %alloc(n);
+           %str(opt.command:n) = %trimr(ocommand);
+         endif;
+       endif;
+
+       // Validate/normalize "opt".
+       MenuOption@ = opt@;
+       if not L_ValNormOption(emsg:eattr:slot);
+         // "opt" is not valid; release it and return.
+         L_RlsMenuOpt();
+         errmsg  = emsg;
+         errattr = eattr;
+         return *off;
+       endif;
+
+       MenuPage@   = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if    MenuOption@ = *null
+          or      MenuOption@ <> *null
+              and (   opt.text  <> MenuOption.text
+                   or opt.specb <> MenuOption.specb
+                   or not L_EqualCmd(opt.command:MenuOption.command));
+         MenuUpdated = *on;
+       endif;
+
+       if        MenuOption@ = *null
+             and opt.choice <> ''
+             and not L_EqualGrps(opt.groups:'')
+          or     MenuOption@ <> *null
+             and (        MenuOption.choice = ''
+                      and opt.choice <> ''
+                  or      MenuOption.choice <> ''
+                      and opt.choice = ''
+                  or not L_EqualGrps(opt.groups:MenuOption.groups));
+         MenuUpdated = *on;
+         DirtyUserPages = *on;
+       endif;
+
+       if MenuOption@ <> *null;
+         // New instance "opt" replaces the existing option.
+         // Release the exsisting option.
+         L_RlsMenuOpt();
+       endif;
+
+       MenuPage.slots(slot) = opt@;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuSetOptHdr    b                   export
+     d MnuSetOptHdr    pi              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+     d   otext                             const like(MenuOption.text)
+
+      /free
+
+       return
+
+           MnuSetOptAttr(
+               errmsg:errattr:
+               pag:slot:
+               '':
+               otext:
+               '':'':'');
+
+      /end-free
+     p                 e
+
+
+     p MnuDeleteOpt    b                   export
+     d MnuDeleteOpt    pi              n
+     d   errmsg                     200
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+     d n               s             10i 0
+     d s               s             10i 0
+     d p1              s               *
+     d p2              s               *
+
+      /free
+
+       errmsg  = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if MnuIsBlankPage(pag);
+         errmsg = RtvAMsgAM(3004:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if    slot < 1
+          or slot > %elem(MenuPage.slots);
+         errmsg = RtvAMsgAM(3002:CAmsFatal:%char(slot));
+         return *off;
+       endif;
+
+       MenuPage@   = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if MenuOption@ = *null;
+         // Slot does not contain an option or a header.
+         errmsg = RtvAMsgAM(2121:CAmsFatal);
+         return *off;
+       endif;
+
+       if MenuOption.choice <> '';
+         DirtyUserPages = *on;
+       endif;
+
+       L_RlsMenuOpt();
+       MenuPage.slots(slot) = *null;
+
+       MenuUpdated = *on;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuSlotHasOpt   b                   export
+     d MnuSlotHasOpt   pi              n
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null
+          or slot < 1
+          or slot > %elem(MenuPage.slots);
+         return *off;
+       endif;
+
+       MenuPage@   = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if    MenuOption@ = *null
+          or MenuOption.choice = '';
+         return *off;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuSlotHasHdr   b                   export
+     d MnuSlotHasHdr   pi              n
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null
+          or slot < 1
+          or slot > %elem(MenuPage.slots);
+         return *off;
+       endif;
+
+       MenuPage@   = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if    MenuOption@ = *null
+          or MenuOption.choice <> '';
+         return *off;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuMoveOptsDown...
+     p                 b                   export
+     d MnuMoveOptsDown...
+     d                 pi              n
+     d   errmsg                     200
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+     d n               s             10i 0
+     d s               s             10i 0
+     d f               s               n
+     d p1              s               *
+     d p2              s               *
+
+      /free
+
+       errmsg = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages);
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if MnuIsBlankPage(pag);
+         errmsg = RtvAMsgAM(3004:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if    slot < 1
+          or slot > %elem(MenuPage.slots);
+         errmsg = RtvAMsgAM(3002:CAmsFatal:%char(slot));
+         return *off;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       n = %div(slot-1:CNumVSlots)*CNumVSlots+CNumVSlots;
+
+       if MenuPage.slots(n) <> *null;
+         // The last slot on the vertical strip ("n") is not empty.
+         errmsg = RtvAMsgAM(2111:CAmsFatal);
+         return *off;
+       endif;
+
+       f = *off;
+       p1 = *null;
+       for s = slot to n;
+         p2 = MenuPage.slots(s);
+         if p2 <> *null;
+           f = *on;
+         endif;
+         MenuPage.slots(s) = p1;
+         p1 = p2;
+       endfor;
+
+       if f;
+         MenuUpdated = *on;
+       else;
+         errmsg = RtvAMsgAM(2116:CAmsFatal);
+         return *off;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuMoveOptsUp   b                   export
+     d MnuMoveOptsUp   pi              n
+     d   errmsg                     200
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+     d n               s             10i 0
+     d s               s             10i 0
+     d f               s               n
+     d p1              s               *
+     d p2              s               *
+
+      /free
+
+       errmsg = '';
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+       if MenuUser <> '';
+         errmsg = RtvAMsgAM(1011:CAmsFatal);
+         return *off;
+       endif;
+
+       if    pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null;
+         errmsg = RtvAMsgAM(3001:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if MnuIsBlankPage(pag);
+         errmsg = RtvAMsgAM(3004:CAmsFatal:%char(pag));
+         return *off;
+       endif;
+       if    slot < 1
+          or slot > %elem(MenuPage.slots);
+         errmsg = RtvAMsgAM(3002:CAmsFatal:%char(slot));
+         return *off;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+
+       if     MenuPage.slots(slot) <> *null
+          and %rem(slot:CNumVSlots) = 1;
+         // Already at top.
+         errmsg = RtvAMsgAM(2112:CAmsFatal);
+         return *off;
+       endif;
+
+       if     MenuPage.slots(slot) <> *null
+          and MenuPage.slots(slot-1) <> *null;
+         // No room to move options up.
+         errmsg = RtvAMsgAM(2113:CAmsFatal);
+         return *off;
+       endif;
+
+       if     MenuPage.slots(slot) <> *null
+          and (   %rem(slot:CNumVSlots) > 2
+               or %rem(slot:CNumVSlots) = 0)
+          and MenuPage.slots(slot-2) <> *null;
+         MenuOption@ = MenuPage.slots(slot-2);
+         if MenuOption.choice = '';
+           // Blank line must follow header.
+           errmsg = RtvAMsgAM(2114:CAmsFatal);
+           return *off;
+         else;
+           MenuOption@ = MenuPage.slots(slot);
+           if MenuOption.choice = '';
+             // Blank line must precede header.
+             errmsg = RtvAMsgAM(2115:CAmsFatal);
+             return *off;
+           endif;
+         endif;
+       endif;
+
+       if     MenuPage.slots(slot) = *null
+          and %rem(slot:CNumVSlots) > 1
+          and %rem(slot:CNumVSlots) <> 0
+          and MenuPage.slots(slot-1) <> *null
+          and MenuPage.slots(slot+1) <> *null;
+         MenuOption@ = MenuPage.slots(slot-1);
+         if MenuOption.choice = '';
+           // Blank line must follow header.
+           errmsg = RtvAMsgAM(2114:CAmsFatal);
+           return *off;
+         else;
+           MenuOption@ = MenuPage.slots(slot+1);
+           if MenuOption.choice = '';
+             // Blank line must precede header.
+             errmsg = RtvAMsgAM(2115:CAmsFatal);
+             return *off;
+           endif;
+         endif;
+       endif;
+
+       n = %rem(slot:CNumVSlots);
+       if n = 0;
+         n = slot;
+       else;
+         n = slot + CNumVSlots - n;
+       endif;
+
+       p1 = *null;
+       for s = n downto slot;
+         p2 = MenuPage.slots(s);
+         if p2 <> *null;
+           f = *on;
+         endif;
+         MenuPage.slots(s) = p1;
+         p1 = p2;
+       endfor;
+       if     p1 <> *null
+          and %div(slot:CNumVSlots) <> 1;
+         MenuPage.slots(slot-1) = p1;
+       endif;
+
+       if f;
+         MenuUpdated = *on;
+       else;
+         errmsg = RtvAMsgAM(2116:CAmsFatal);
+         return *off;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuValNormMenu  b                   export
+     d MnuValNormMenu  pi              n
+     d   errmsg                     200
+     d   errattr                     10    options(*nopass)
+     d   errpage                     10i 0 options(*nopass)
+     d   errslot                     10i 0 options(*nopass)
+
+     d emsg            s                   like(errmsg)
+     d eattr           s                   like(errattr)
+     d epage           s                   like(errpage)
+     d eslot           s                   like(errslot)
+     d p               s             10i 0
+     d s               s             10i 0
+
+      /free
+
+       errmsg  = '';
+       if %parms > 1;
+         errattr = '';
+       endif;
+       if %parms > 2;
+         errpage = 0;
+       endif;
+       if %parms > 3;
+         errslot = 0;
+       endif;
+
+       if not MnuIsLoaded();
+         errmsg = RtvAMsgAM(1001:CAmsFatal);
+         return *off;
+       endif;
+
+       if not L_ValNormMenu(emsg:eattr:Menu);
+         errmsg = emsg;
+         if %parms > 1;
+           errattr = eattr;
+         endif;
+         return *off;
+       endif;
+
+       for p = 1 to %elem(MenuPages);
+         if MenuPages(p) <> *null;
+           MenuPage@ = MenuPages(p);
+           if not L_ValNormPage(emsg:eattr);
+             errmsg = emsg;
+             if %parms > 1;
+               errattr = eattr;
+             endif;
+             if %parms > 2;
+               errpage = p;
+             endif;
+             return *off;
+           endif;
+           for s = 1 to %elem(MenuPage.slots);
+             if MenuPage.slots(s) <> *null;
+               MenuOption@ = MenuPage.slots(s);
+               if not L_ValNormOption(emsg:eattr:s);
+                 errmsg = emsg;
+                 if %parms > 1;
+                   errattr = eattr;
+                 endif;
+                 if %parms > 2;
+                   errpage = p;
+                 endif;
+                 if %parms > 3;
+                   errslot = s;
+                 endif;
+                 return *off;
+               endif;
+             endif;
+           endfor;
+         endif;
+       endfor;
+
+       // Menu ok.
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     p MnuOptAllowed   b                   export
+     d MnuOptAllowed   pi              n
+     d   user                        10    const
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+     d   option                      10    const options(*nopass)
+
+     d cur             s             10
+     d g               s             10i 0
+
+      /free
+
+       if    not MnuIsLoaded()
+          or user = ''
+          or     MenuUser <> ''
+             and MenuUser <> user
+          or pag < 0
+          or pag > %elem(MenuPages)
+          or     pag > 0
+             and MnuIsBlankPage(pag)
+          or %abs(slot) > %elem(MenuPage.slots);
+         return *off;
+       endif;
+
+       if pag > 0;
+         MenuPage@ = MenuPages(pag);
+       endif;
+
+       if slot <> 0;
+         MenuOption@ = MenuPage.slots(%abs(slot));
+         if    MenuOption@ = *null
+            or MenuOption.choice = '';
+           // Slot is empty or contains a header.
+           return *off;
+         endif;
+       endif;
+
+       if     %parms > 3
+          and option = '*CURRENT';
+         cur = '*CURRENT';
+       else;
+         cur = '';
+         if     user = MenuUser
+            and slot <> 0;
+           return *on;
+         endif;
+       endif;
+
+       if    pag = 0
+          or slot > 0;
+         // Check whether the user is a member of one of the groups
+         // specified for the menu.
+         for g = 1 to %elem(Menu.groups);
+           if     Menu.groups(g) <> ''
+              and L_IsOptGrpMbr(user:Menu.groups(g):cur);
+             return *on;
+           endif;
+         endfor;
+         if pag = 0;
+           return *off;
+         endif;
+       endif;
+
+       if slot >= 0;
+         // Check whether the user is a member of one of the groups
+         // specified for the page.
+         for g = 1 to %elem(MenuPage.groups);
+           if     MenuPage.groups(g) <> ''
+              and L_IsOptGrpMbr(user:MenuPage.groups(g):cur);
+             return *on;
+           endif;
+         endfor;
+         if slot = 0;
+           return *off;
+         endif;
+       endif;
+
+       // Check whether the user is a member of one of the groups
+       // specified for the option.
+       for g = 1 to %elem(MenuOption.groups);
+         if     MenuOption.groups(g) <> ''
+            and L_IsOptGrpMbr(user:MenuOption.groups(g):cur);
+           return *on;
+         endif;
+       endfor;
+
+       return *off;
+
+      /end-free
+     p                 e
+
+
+     p MnuUserPage     b                   export
+     d MnuUserPage     pi            10i 0
+     d   user                        10    const
+     d   userpage                    10i 0 const options(*nopass)
+
+      /free
+
+       if     not MnuIsLoaded()
+          or     MenuUser <> ''
+             and MenuUser <> user;
+         return 0;
+       endif;
+
+       if user = '';
+         if %parms > 1;
+           if    userpage = 0
+              or %abs(userpage) > %elem(MenuPages);
+             return 0;
+           endif;
+           return %abs(userpage);
+         endif;
+         return %elem(MenuPages);
+       endif;
+
+       if    DirtyUserPages
+          or user <> UserPagesUser;
+         L_UpdUserPages(user);
+       endif;
+
+       if %parms > 1;
+         if    userpage = 0
+            or     userpage > 0
+               and userpage > NumUserPages
+            or     userpage < 0
+               and %abs(userpage) > CNumPages;
+           return 0;
+         endif;
+         if userpage > 0;
+           return UserPages(userpage);
+         else;
+           return UserPagesInv(%abs(userpage));
+         endif;
+       endif;
+
+       return NumUserPages;
+
+      /end-free
+     p                 e
+
+
+       // ----- Implementation - Internal
+
+
+     pI_GetCurBin      b                   export
+     dI_GetCurBin      pi             1s 0
+
+      /free
+
+       in(e) CAPPSSAMD0;
+       if %error;
+         return 0;
+       endif;
+
+       if CAPPSSAMD0.curbin = '1';
+         return 1;
+       endif;
+
+       return 0;
+
+      /end-free
+     p                 e
+
+
+     pI_RlsModMO       b                   export
+     dI_RlsModMO       pi
+
+      /free
+
+       L_ClearMenu();
+       L_ClearAuth();
+
+       close(e) *ALL;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+       // ----- Implementation - Local
+
+
+     pL_ClearMenu      b
+     dL_ClearMenu      pi
+
+     d pg              s             10i 0
+     d s               s             10i 0
+
+      /free
+
+       for pg = 1 to %elem(MenuPages);
+         MenuPage@ = MenuPages(pg);
+         L_RlsMenuPage();
+         MenuPages(pg) = *null;
+       endfor;
+
+       L_ClearMenuDs(Menu);
+
+       MenuVersion  = -1;
+       MenuPages(*) = *null;
+       MenuUpdated  = *off;
+
+       L_ClearAuth();
+
+       if UserPagesUser <> '';
+         L_UpdUserPages(UserPagesUser);
+       endif;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     pL_ClearMenuDs    b
+     dL_ClearMenuDs    pi
+     d   mds                               likeds(Menu)
+
+      /free
+
+       if mds.command <> *null;
+         dealloc(e) mds.command;
+       endif;
+
+       clear mds;
+
+      /end-free
+     p                 e
+
+
+     pL_RlsMenuPage    b
+     dL_RlsMenuPage    pi
+
+     d i               s             10i 0
+
+      /free
+
+       if MenuPage@ = *null;
+         return;
+       endif;
+       for i = 1 to %elem(MenuPage.slots);
+         MenuOption@ = MenuPage.slots(i);
+         L_RlsMenuOpt();
+       endfor;
+       if MenuPage.command <> *null;
+         dealloc(e) MenuPage.command;
+       endif;
+       dealloc(e) MenuPage@;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     pL_RlsMenuOpt     b
+     dL_RlsMenuOpt     pi
+
+      /free
+
+       if MenuOption@ = *null;
+         return;
+       endif;
+       if MenuOption.command <> *null;
+         dealloc(e) MenuOption.command;
+       endif;
+       dealloc(e) MenuOption@;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     pL_ClearAuth      b
+     dL_ClearAuth      pi
+
+     d u               s             10i 0
+
+      /free
+
+       for u = 1 to AuthUsers#;
+         AuthUserds@ = AuthUserdata(u);
+         dealloc(e) AuthUserds.groups;
+         dealloc(e) AuthUserds@;
+       endfor;
+       if AuthUsers# > 0;
+         dealloc(e) AuthUserdata@;
+         dealloc(e) AuthUsers@;
+       endif;
+       AuthUsers# = 0;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     pL_CopyMenu       b
+     dL_CopyMenu       pi                  like(Menu)
+
+     d c               ds                  likeds(Menu)
+     d n               s             10i 0
+
+      /free
+
+       c = Menu;
+       if Menu.command <> *null;
+         n = %len(%str(Menu.command)) + 1;
+         c.command = %alloc(n);
+         %str(c.command:n) = %str(Menu.command);
+       endif;
+
+       return c;
+
+      /end-free
+     p                 e
+
+
+     pL_CopyPage       b
+     dL_CopyPage       pi                  like(MenuPage)
+
+     d c               ds                  likeds(MenuPage)
+     d n               s             10i 0
+
+      /free
+
+       c = MenuPage;
+       if MenuPage.command <> *null;
+         n = %len(%str(MenuPage.command)) + 1;
+         c.command = %alloc(n);
+         %str(c.command:n) = %str(MenuPage.command);
+       endif;
+
+       return c;
+
+      /end-free
+     p                 e
+
+
+     pL_CopyOption     b
+     dL_CopyOption     pi                  like(MenuOption)
+
+     d c               ds                  likeds(MenuOption)
+     d n               s             10i 0
+
+      /free
+
+       c = MenuOption;
+       if MenuOption.command <> *null;
+         n = %len(%str(MenuOption.command)) + 1;
+         c.command = %alloc(n);
+         %str(c.command:n) = %str(MenuOption.command);
+       endif;
+
+       return c;
+
+      /end-free
+     p                 e
+
+
+     pL_IsOptGrpMbr    b
+     dL_IsOptGrpMbr    pi              n
+     d   user                        10    value
+     d   group                       16    value
+     d   option                      10    value options(*nopass)
+
+     d grp             s             15
+     d n               s               n
+     d g               s               n
+     d i               s             10i 0
+
+      /free
+
+       if %subst(group:1:1) = CCharGrpInv;
+         grp = %subst(group:2);
+         n = *on;
+       else;
+         grp = group;
+         n = *off;
+       endif;
+
+       if     MenuUser = ''
+          and (   %parms < 3
+               or option <> '*CURRENT');
+         i = %lookup(user:AuthUsers:1:AuthUsers#);
+         if i > 0;
+           AuthUserds@ = AuthUserdata(i);
+           AuthGroups@ = AuthUserds.groups;
+           i = %lookup(grp:AuthGroups:1:AuthUserds.groups#);
+         endif;
+         g = i > 0;
+       else;
+         g = IsGrpMember(user:*off:grp);
+       endif;
+
+       if n;
+         g = not g;
+       endif;
+
+       return g;
+
+      /end-free
+     p                 e
+
+
+     pL_IsBlankPage    b
+     dL_IsBlankPage    pi              n
+     d   pg@                           *   value
+
+     d p@              s               *
+     d i               s             10i 0
+
+      /free
+
+       p@ = MenuPage@;
+
+       MenuPage@ = pg@;
+
+       // Check slots.
+       for i = 1 to %elem(MenuPage.slots);
+         if MenuPage.slots(i) <> *null;
+           MenuPage@ = p@;
+           return *off;
+         endif;
+       endfor;
+
+       // Check groups.
+       for i = 1 to %elem(MenuPage.groups);
+         if MenuPage.groups(i) <> '';
+           MenuPage@ = p@;
+           return *off;
+         endif;
+       endfor;
+
+       // Check other attributes.
+       if    MenuPage.title <> ''
+          or MenuPage.specb <> ''
+          or     MenuPage.command <> *null
+             and %str(MenuPage.command) = '';
+         MenuPage@ = p@;
+         return *off;
+       endif;
+
+       MenuPage@ = p@;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_ValNormMenu    b
+     dL_ValNormMenu    pi              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   mn                                likeds(Menu)
+
+
+     d cmd             s                   like(TAM_CMD)
+     d grp             s                   like(Menu.groups)
+     d grps            s                   like(Menu.groups)
+     d                                     dim(%elem(Menu.groups))
+     d n               s             10i 0
+     d i               s             10i 0
+
+      /free
+
+       errmsg  = '';
+       errattr = '';
+
+       // Normalize title (trim blanks).
+       mn.title = %trim(mn.title);
+
+       // Normalize special behavior (remove leading and in-between blanks).
+       n = 0;
+       for i = 1 to %len(mn.specb);
+         if %subst(mn.specb:i:1) <> ' ';
+           n = n + 1;
+           %subst(mn.specb:n:1) = %subst(mn.specb:i:1);
+           if i > n;
+             %subst(mn.specb:i:1) = '';
+           endif;
+         endif;
+       endfor;
+
+       // Normalize command (trim blanks).
+       if mn.command <> *null;
+         n = %len(%trim(%str(mn.command)));
+         if n <= %size(cmd) - 2;
+           cmd = %trim(%str(mn.command));
+           dealloc(e) mn.command;
+           if cmd = '';
+             mn.command = *null;
+           else;
+             mn.command = %alloc(n+1);
+             %str(mn.command:n+1) = cmd;
+           endif;
+         endif;
+       endif;
+
+       // Normalize groups (trim blanks, remove in-between blank groups
+       // and sort).
+       grps(*) = *hival;
+       n = 0;
+       for i = 1 to %elem(Menu.groups);
+         if Menu.groups(i) <> '';
+           Menu.groups(i) = %trim(Menu.groups(i));
+           n = n + 1;
+           if %subst(Menu.groups(i):1:1) = CCharGrpInv;
+             grps(n) = %subst(Menu.groups(i):2);
+             %subst(grps(n):%len(grp)) = %subst(Menu.groups(i):1:1);
+           else;
+             grps(n) = %trim(Menu.groups(i));
+           endif;
+         endif;
+       endfor;
+       sorta grps;
+       for i = 1 to %elem(Menu.groups);
+         if i > n;
+           Menu.groups(i) = '';
+         else;
+           Menu.groups(i) = %trim(%subst(grps(i):%len(grp))+grps(i));
+         endif;
+       endfor;
+
+       // Validate menu attributes.
+
+       n = %check(' '+CMsbMenu:mn.specb);
+       if n > 0;
+         // Special behavior not supported.
+         errmsg  = RtvAMsgAM(2007:CAmsFatal:%subst(mn.specb:n:1));
+         errattr = CEfAMMSPECB;
+         return *off;
+       endif;
+
+       if     mn.command <> *null
+          and %len(%trim(%str(mn.command))) > %size(cmd) - 2;
+         // Command is too long.
+         errmsg  = RtvAMsgAM(2004:CAmsFatal:%char(%size(cmd)-2));
+         errattr = CEfAMMCOMMAND;
+         return *off;
+       endif;
+
+       n = 0;
+       grps(*) = '';
+       for i = 1 to %elem(Menu.groups);
+         if Menu.groups(i) <> '';
+           if %subst(Menu.groups(i):1:1) = CCharGrpInv;
+             grp = %subst(Menu.groups(i):2);
+             if %subst(grp:1:1) = ' ';
+               // Group inversion character not directly followed by a group.
+               errmsg  = RtvAMsgAM(2010:CAmsFatal);
+               errattr = CEfAMMGROUP + %char(i);
+               return *off;
+             endif;
+           else;
+             grp = Menu.groups(n);
+           endif;
+           if %lookup(grp:grps) > 0;
+             // Group occurs more than once.
+             errmsg  = RtvAMsgAM(2008:CAmsFatal:%trim(grp));
+             errattr = CEfAMMGROUP + %char(i);
+             return *off;
+           endif;
+           n = n + 1;
+           grps(n) = grp;
+           if not GroupExists(grp);
+             // Group does not exist.
+             errmsg  = RtvAMsgAM(2009:CAmsFatal:%trim(grp));
+             errattr = CEfAMMGROUP + %char(i);
+             return *off;
+           endif;
+         endif;
+       endfor;
+
+       // Menu attributes ok.
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_ValNormPage    b
+     dL_ValNormPage    pi              n
+     d   errmsg                     200
+     d   errattr                     10
+
+     d cmd             s                   like(TAM_CMD)
+     d grp             s                   like(MenuOption.groups)
+     d grps            s                   like(MenuOption.groups)
+     d                                     dim(%elem(MenuOption.groups))
+     d n               s             10i 0
+     d i               s             10i 0
+
+      /free
+
+       errmsg  = '';
+       errattr = '';
+
+       // Normalize title (trim blanks).
+       MenuPage.title = %trim(MenuPage.title);
+
+       // Normalize special behavior (remove leading and in-between blanks).
+       n = 0;
+       for i = 1 to %len(MenuPage.specb);
+         if %subst(MenuPage.specb:i:1) <> ' ';
+           n = n + 1;
+           %subst(MenuPage.specb:n:1) = %subst(MenuPage.specb:i:1);
+           if i > n;
+             %subst(MenuPage.specb:i:1) = '';
+           endif;
+         endif;
+       endfor;
+
+       // Normalize command (trim blanks).
+       if MenuPage.command <> *null;
+         n = %len(%trim(%str(MenuPage.command)));
+         if n <= %size(cmd) - 2;
+           cmd = %trim(%str(MenuPage.command));
+           dealloc(e) MenuPage.command;
+           if cmd = '';
+             MenuPage.command = *null;
+           else;
+             MenuPage.command = %alloc(n+1);
+             %str(MenuPage.command:n+1) = cmd;
+           endif;
+         endif;
+       endif;
+
+       // Normalize groups (trim blanks, remove in-between blank groups
+       // and sort).
+       grps(*) = *hival;
+       n = 0;
+       for i = 1 to %elem(MenuPage.groups);
+         if MenuPage.groups(i) <> '';
+           MenuPage.groups(i) = %trim(MenuPage.groups(i));
+           n = n + 1;
+           if %subst(MenuPage.groups(i):1:1) = CCharGrpInv;
+             grps(n) = %subst(MenuPage.groups(i):2);
+             %subst(grps(n):%len(grp)) = %subst(MenuPage.groups(i):1:1);
+           else;
+             grps(n) = %trim(MenuPage.groups(i));
+           endif;
+         endif;
+       endfor;
+       sorta grps;
+       for i = 1 to %elem(MenuPage.groups);
+         if i > n;
+           MenuPage.groups(i) = '';
+         else;
+           MenuPage.groups(i) = %trim(%subst(grps(i):%len(grp))+grps(i));
+         endif;
+       endfor;
+
+       // Validate page attributes.
+
+       n = %check(' '+CMsbPage:MenuPage.specb);
+       if n > 0;
+         // Special behavior not supported.
+         errmsg  = RtvAMsgAM(2006:CAmsFatal:%subst(MenuPage.specb:n:1));
+         errattr = CEfAMPSPECB;
+         return *off;
+       endif;
+
+       if     MenuPage.command <> *null
+          and %len(%trim(%str(MenuPage.command))) > %size(cmd) - 2;
+         // Command is too long.
+         errmsg  = RtvAMsgAM(2004:CAmsFatal:%char(%size(cmd)-2));
+         errattr = CEfAMPCOMMAND;
+         return *off;
+       endif;
+
+       n = 0;
+       grps(*) = '';
+       for i = 1 to %elem(MenuPage.groups);
+         if MenuPage.groups(i) <> '';
+           if %subst(MenuPage.groups(i):1:1) = CCharGrpInv;
+             grp = %subst(MenuPage.groups(i):2);
+             if %subst(grp:1:1) = ' ';
+               // Group inversion character not directly followed by a group.
+               errmsg  = RtvAMsgAM(2010:CAmsFatal);
+               errattr = CEfAMPGROUP + %char(i);
+               return *off;
+             endif;
+           else;
+             grp = MenuPage.groups(i);
+           endif;
+           if %lookup(grp:grps) > 0;
+             // Group occurs more than once.
+             errmsg  = RtvAMsgAM(2008:CAmsFatal:%trim(grp));
+             errattr = CEfAMPGROUP + %char(i);
+             return *off;
+           endif;
+           n = n + 1;
+           grps(n) = grp;
+           if not GroupExists(grp);
+             // Group does not exist.
+             errmsg  = RtvAMsgAM(2009:CAmsFatal:%trim(grp));
+             errattr = CEfAMPGROUP + %char(i);
+             return *off;
+           endif;
+         endif;
+       endfor;
+
+       // Page ok.
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_ValNormOption  b
+     dL_ValNormOption  pi              n
+     d   errmsg                     200
+     d   errattr                     10
+     d   slot                        10i 0 const
+
+     d cmd             s                   like(TAM_CMD)
+     d grp             s                   like(MenuOption.groups)
+     d grps            s                   like(MenuOption.groups)
+     d                                     dim(%elem(MenuOption.groups))
+     d n               s             10i 0
+     d i               s             10i 0
+     d ptr             s               *
+
+      /free
+
+       errmsg  = '';
+       errattr = '';
+
+       if MenuOption.text = '';
+         // An option must have a text.
+         errmsg  = RtvAMsgAM(2001:CAmsFatal);
+         errattr = CEfAMOTEXT;
+         return *off;
+       endif;
+
+       if  MenuOption.choice = '';
+
+         // Validate header.
+
+         if        %rem(slot:CNumVSlots) > 0
+               and MenuPage.slots(slot+1) <> *null
+            or     %rem(slot:CNumVSlots) <> 1
+               and MenuPage.slots(slot-1) <> *null;
+           // A header can not be directly preceded or followed
+           // by a non-empty slot.
+           errmsg  = RtvAMsgAM(2002:CAmsFatal);
+           errattr = CEfAMOCHOICE;
+           return *off;
+         endif;
+
+         // Check if this header has any other attributes, which
+         // is not allowed.
+
+         if MenuOption.specb <> '';
+           errmsg  = RtvAMsgAM(2003:CAmsFatal);
+           errattr = CEfAMOSPECB;
+           return *off;
+         endif;
+
+         if     MenuOption.command <> *null
+            and %str(MenuOption.command) <> '';
+           errmsg  = RtvAMsgAM(2003:CAmsFatal);
+           errattr = CEfAMOCOMMAND;
+           return *off;
+         endif;
+
+         for n = 1 to %elem(MenuOption.groups);
+           if MenuOption.groups(n) <> '';
+             errmsg  = RtvAMsgAM(2003:CAmsFatal);
+             errattr = CEfAMOGROUP + %char(n);
+             return *off;
+           endif;
+         endfor;
+
+         // Header ok.
+         return *on;
+
+       endif;
+
+       // This option is for real.
+
+       // Normalize choice (right adjust).
+       evalr MenuOption.choice = %trim(MenuOption.choice);
+
+       // Normalize special behavior (remove leading and in-between blanks).
+       n = 0;
+       for i = 1 to %len(MenuOption.specb);
+         if %subst(MenuOption.specb:i:1) <> ' ';
+           n = n + 1;
+           %subst(MenuOption.specb:n:1) = %subst(MenuOption.specb:i:1);
+           if i > n;
+             %subst(MenuOption.specb:i:1) = '';
+           endif;
+         endif;
+       endfor;
+
+       // Normalize command (trim blanks).
+       if MenuOption.command <> *null;
+         n = %len(%trim(%str(MenuOption.command)));
+         if n <= %size(cmd) - 2;
+           cmd = %trim(%str(MenuOption.command));
+           dealloc(e) MenuOption.command;
+           if cmd = '';
+             MenuOption.command = *null;
+           else;
+             MenuOption.command = %alloc(n+1);
+             %str(MenuOption.command:n+1) = cmd;
+           endif;
+         endif;
+       endif;
+
+       // Normalize groups (trim blanks, remove in-between blank groups
+       // and sort).
+       grps(*) = *hival;
+       n = 0;
+       for i = 1 to %elem(MenuOption.groups);
+         if MenuOption.groups(i) <> '';
+           MenuOption.groups(i) = %trim(MenuOption.groups(i));
+           n = n + 1;
+           if %subst(MenuOption.groups(i):1:1) = CCharGrpInv;
+             grps(n) = %subst(MenuOption.groups(i):2);
+             %subst(grps(n):%len(grp)) = %subst(MenuOption.groups(i):1:1);
+           else;
+             grps(n) = %trim(MenuOption.groups(i));
+           endif;
+         endif;
+       endfor;
+       sorta grps;
+       for i = 1 to %elem(MenuOption.groups);
+         if i > n;
+           MenuOption.groups(i) = '';
+         else;
+           MenuOption.groups(i) = %trim(%subst(grps(i):%len(grp))+grps(i));
+         endif;
+       endfor;
+
+       // Validate option attributes.
+
+       if     %rem(slot:CNumVSlots) > 0
+          and MenuPage.slots(slot+1) <> *null;
+         ptr = MenuOption@;
+         MenuOption@ = MenuPage.slots(slot+1);
+         if MenuOption.choice = '';
+           // An option can not be directly followed by a header.
+           errmsg  = RtvAMsgAM(2013:CAmsFatal);
+           return *off;
+         endif;
+         MenuOption@ = ptr;
+       endif;
+       if     %rem(slot:CNumVSlots) <> 1
+          and MenuPage.slots(slot-1) <> *null;
+         ptr = MenuOption@;
+         MenuOption@ = MenuPage.slots(slot-1);
+         if MenuOption.choice = '';
+           // An option can not be directly preceded by a header.
+           errmsg  = RtvAMsgAM(2013:CAmsFatal);
+           return *off;
+         endif;
+         MenuOption@ = ptr;
+       endif;
+
+       if MenuOption.command = *null;
+         // Command
+         errmsg  = RtvAMsgAM(2012:CAmsFatal);
+         errattr = CEfAMOCOMMAND;
+         return *off;
+       endif;
+
+       n = %check(' '+CMsbOption:MenuOption.specb);
+       if n > 0;
+         // Special behavior not supported.
+         errmsg  = RtvAMsgAM(2005:CAmsFatal:%subst(MenuOption.specb:n:1));
+         errattr = CEfAMOSPECB;
+         return *off;
+       endif;
+
+       if     MenuOption.command <> *null
+          and %len(%trim(%str(MenuOption.command))) > %size(cmd) - 2;
+         // Command is too long.
+         errmsg  = RtvAMsgAM(2004:CAmsFatal:%char(%size(cmd)-2));
+         errattr = CEfAMOCOMMAND;
+         return *off;
+       endif;
+
+       n = 0;
+       grps(*) = '';
+       for i = 1 to %elem(MenuOption.groups);
+         if MenuOption.groups(i) <> '';
+           if %subst(MenuOption.groups(i):1:1) = CCharGrpInv;
+             grp = %subst(MenuOption.groups(i):2);
+             if %subst(grp:1:1) = ' ';
+               // Group inversion character not directly followed by a group.
+               errmsg  = RtvAMsgAM(2010:CAmsFatal);
+               errattr = CEfAMOGROUP + %char(i);
+               return *off;
+             endif;
+           else;
+             grp = MenuOption.groups(i);
+           endif;
+           if %lookup(grp:grps) > 0;
+             // Group occurs more than once.
+             errmsg  = RtvAMsgAM(2008:CAmsFatal:%trim(grp));
+             errattr = CEfAMOGROUP + %char(i);
+             return *off;
+           endif;
+           if not GroupExists(grp);
+             // Group does not exist.
+             errmsg  = RtvAMsgAM(2009:CAmsFatal:%trim(grp));
+             errattr = CEfAMOGROUP + %char(i);
+             return *off;
+           endif;
+           n = n + 1;
+           grps(n) = grp;
+         endif;
+       endfor;
+       if n = 0;
+         // An option must have at least one group specified for it.
+         errmsg  = RtvAMsgAM(2011:CAmsFatal);
+         errattr = CEfAMOGROUP + '1';
+         return *off;
+       endif;
+
+       // Option ok.
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_UpdUserPages   b
+     dL_UpdUserPages   pi
+     d   user                        10    value
+
+     d mnmbr           s               n
+     d pgmbr           s               n
+     d p               s             10i 0
+     d s               s             10i 0
+
+      /free
+
+       if     user = ''
+          or     MenuUser <> ''
+             and MenuUser <> user;
+         return;
+       endif;
+
+       DirtyUserPages = *off;
+
+       UserPages(*)    = 0;
+       UserPagesInv(*) = 0;
+       NumUserPages    = 0;
+       UserPagesUser   = user;
+
+       // Collect all pages with one or more (allowed) options.
+       // Check whether an option is allowed for "user" with procedure
+       // "MnuOptAllowed", but only if the menu is loaded with all options
+       // for all users and "user" is not an asterisk.
+       // Simply collect all pages with one or more loaded options if the
+       // menu has been loaded for a specific "user" ("MenuUser" <> ''),
+       // or if "user" is "*".
+
+
+       if     MenuUser = ''
+          and user <> '*'
+          and not MnuOptAllowed(user:0:0);
+         return;
+       endif;
+
+       for p = 1 to %elem(MenuPages);
+         if    MenuUser <> ''
+            or user = '*'
+            or MnuOptAllowed(user:p:0);
+           MenuPage@ = MenuPages(p);
+           if MenuPage@ <> *null;
+             for s = 1 to %elem(MenuPage.slots);
+               MenuOption@ = MenuPage.slots(s);
+               if     MenuOption@ <> *null
+                  and MenuOption.choice <> ''
+                  and (   MenuUser <> ''
+                       or user = '*'
+                       or MnuOptAllowed(user:p:0-s));
+                 NumUserPages = NumUserPages + 1;
+                 UserPages(NumUserPages) = p;
+                 UserPagesInv(p) = NumUserPages;
+                 leave;
+               endif;
+             endfor;
+           endif;
+         endif;
+       endfor;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     pL_EqualGrps      b
+     dL_EqualGrps      pi              n
+     d   grps1                             value like(MenuOption.groups)
+     d                                           dim(CNumGroups)
+     d   grps2                             value like(MenuOption.groups)
+     d                                           dim(CNumGroups)
+
+     d g               s             10i 0
+
+      /free
+
+       for g = 1 to %elem(grps1);
+         if grps1(g) <> grps2(g);
+           return *off;
+         endif;
+       endfor;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_EqualCmd       b
+     dL_EqualCmd       pi              n
+     d   cmd1                          *   value
+     d   cmd2                          *   value
+
+     d g               s             10i 0
+
+      /free
+
+       return
+
+              cmd1 = cmd2
+           or     cmd1 = *null
+              and %trim(%str(cmd2)) = ''
+           or     cmd2 = *null
+              and %trim(%str(cmd1)) = ''
+           or     cmd1 <> *null
+              and cmd2 <> *null
+              and %trim(%str(cmd1)) = %trim(%str(cmd2));
+
+      /end-free
+     p                 e
+
+
+     pL_SdaReadLock    b
+     dL_SdaReadLock    pi             8s 0
+     d   curbin                       1s 0       options(*nopass)
+
+      /free
+
+       if %parms > 0;
+         curbin = 0;
+       endif;
+
+       in(e) *LOCK CAPPSSAMD0;
+       if %error;
+         return -1;
+       endif;
+
+       L_SdaNormVC(CAPPSSAMD0.vcounter);
+
+       if %parms > 0;
+         if CAPPSSAMD0.curbin = '1';
+           curbin = 1;
+         else;
+           curbin = 0;
+         endif;
+       endif;
+
+       return CvtTxtToInt(CAPPSSAMD0.vcounter);
+
+      /end-free
+     p                 e
+
+
+     pL_SdaWrite       b
+     dL_SdaWrite       pi              n
+     d   vcounter                     8s 0 const options(*nopass)
+     d   vreload                      8s 0 const options(*nopass)
+
+      /free
+
+       if %parms > 1;
+         CAPPSSAMD0.vreload  = %editc(vreload :'X');
+       endif;
+       if %parms > 0;
+         CAPPSSAMD0.vcounter = %editc(vcounter:'X');
+         if CAPPSSAMD0.curbin = '1';
+           CAPPSSAMD0.curbin = '0';
+         else;
+           CAPPSSAMD0.curbin = '1';
+         endif;
+         CAPPSSAMD0.suser = PSI.curuser;
+         out(e) CAPPSSAMD0;
+       else;
+         unlock(e) CAPPSSAMD0;
+       endif;
+       if %error;
+         return *off;
+       endif;
+
+       return *on;
+
+      /end-free
+     p                 e
+
+
+     pL_SdaNormVC      b
+     dL_SdaNormVC      pi
+     d   data                         8
+
+      /free
+
+       if %check('0123456789':data) <> 0;
+         data = *all'0';
+       endif;
+
+       return;
+
+      /end-free
+     p                 e
+

@@ -1,0 +1,67 @@
+
+ /*          (c) 2019 John Erps                                              +
+                                                                             +
+                                                                             +
+             API                                                             +
+                                                                             +
+             Common Application: Base                                        +
+ */
+
+             STRPGMEXP  SIGNATURE('v1')
+
+             /* RM: Resource Management */
+             EXPORT     SYMBOL('RlsSpCAPPBASE')
+
+             /* AM: Application Messages */
+             EXPORT     SYMBOL('RtvAMsgAB')
+
+             /* MS: Message Support */
+             EXPORT     SYMBOL('IsAMsgFatal')
+             EXPORT     SYMBOL('IsAMsgWarning')
+             EXPORT     SYMBOL('IsAMsgInfo')
+             EXPORT     SYMBOL('SetAMsgFatal')
+             EXPORT     SYMBOL('SetAMsgWarning')
+             EXPORT     SYMBOL('SetAMsgInfo')
+             EXPORT     SYMBOL('DspMsg')
+             EXPORT     SYMBOL('DspMsgList')
+             EXPORT     SYMBOL('ClrDspMsgs')
+             EXPORT     SYMBOL('AddToDspMsgList')
+             EXPORT     SYMBOL('DropDspMsgs')
+             EXPORT     SYMBOL('PopDspMsgs')
+             EXPORT     SYMBOL('PushDspMsgs')
+             EXPORT     SYMBOL('AssocDspMsgData')
+             EXPORT     SYMBOL('GetAssocDspMsgData')
+             EXPORT     SYMBOL('GetDspMsgListCount')
+             EXPORT     SYMBOL('AddDCVMsg')
+             EXPORT     SYMBOL('AddDCVMsg2')
+             EXPORT     SYMBOL('AddDCVMsgQdsDs')
+             EXPORT     SYMBOL('GetDCVFlds')
+
+             /* XX: Miscellaneous */
+             EXPORT     SYMBOL('NumSepDec')
+             EXPORT     SYMBOL('NumSepGrp')
+             EXPORT     SYMBOL('SetQdsDs')
+             EXPORT     SYMBOL('SetQdsDsMsg')
+             EXPORT     SYMBOL('AddToAppOpts')
+             EXPORT     SYMBOL('GetAppOptsArray')
+             EXPORT     SYMBOL('GetAppOptsPart')
+             EXPORT     SYMBOL('CalleeSpcBhvr')
+
+             /* VA: Value Arrays */
+
+             /* IR: Interpret Raw input */
+             EXPORT     SYMBOL('IrNumber')
+             EXPORT     SYMBOL('IrWkDate')
+
+             /* PT: Presentation Texts */
+             EXPORT     SYMBOL('PtNumber')
+             EXPORT     SYMBOL('PtWeekdate')
+             EXPORT     SYMBOL('PtWeekdate2')
+             EXPORT     SYMBOL('PtDate')
+             EXPORT     SYMBOL('PtDateNI')
+             EXPORT     SYMBOL('PtTime')
+             EXPORT     SYMBOL('PtPgmRtncd')
+             EXPORT     SYMBOL('PtPgmResult')
+
+             ENDPGMEXP
+

@@ -1,0 +1,50 @@
+
+      /IF DEFINED(CSYSSQLS_INCL_DECL)
+      /EOF
+      /ENDIF
+      /DEFINE CSYSSQLS_INCL_DECL
+
+
+       // (c) 2019 John Erps
+
+
+       // INCLUDE: *SRVPGM CSYSSQLS
+
+       // Declarations
+
+
+       // ----- Prerequisite Service Program Declarations
+
+      /include CSYSBASES,INCL_DECL
+
+
+       // ----- Constants
+
+       // Maximum # allocated connections and (total) cursors.
+     dCSqlsMaxConn     c                   1
+     dCSqlsMaxCurs     c                   99
+
+
+       // ----- Public Record Formats
+
+       // This section defines PUBLIC record formats that are relevant
+       // for this service program as external data structures.
+
+       // Private record formats should be defined in member INCL__MODD.
+
+       // Each format's name is equal to the physical file name, prefixed
+       // with "Erf".
+
+       // Each external data structure that defines a database record format
+       // is conditioned with a condition-name that begins with "ERF_", which
+       // is followed by the physical file name. This ensures that the same
+       // external record format is only defined once.
+
+      /IF NOT DEFINED(ERF_CSYSSQLSFR)
+      /DEFINE ERF_CSYSSQLSFR
+     dErfCSYSSQLSFR  e ds                  extname(CSYSSQLSFR)
+      /ENDIF
+
+
+       // ----- Data Structures
+

@@ -1,0 +1,132 @@
+
+ /*          (c) 2019 John Erps                                              +
+                                                                             +
+                                                                             +
+             BUILD PREREQS                                                   +
+ */
+
+
+             PGM        PARM(&TGTLIB &SRCLIB)
+             DCL        VAR(&TGTLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10) +
+                          VALUE(CAPPSSAMS)
+
+             DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
+             DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
+
+             DCL        VAR(&ERRORSW_) TYPE(*LGL)
+             DCL        VAR(&MSGID_) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&MSG_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGDTA_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGF_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MSGFLIB_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&KEYVAR_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&KEYVAR2_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&RTNTYPE_) TYPE(*CHAR) LEN(2)
+
+             DCL        VAR(&INID0) TYPE(*LGL)
+             DCL        VAR(&INIF3) TYPE(*LGL)
+             DCL        VAR(&INIF4) TYPE(*LGL)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(STDERR1))
+
+             CHGVAR     VAR(&TLIB) VALUE(&TGTLIB)
+             CHGVAR     VAR(&SLIB) VALUE(&SRCLIB)
+             MONMSG     MSGID(MCH3601)
+             IF         COND(&SLIB *EQ ' ') THEN(CHGVAR VAR(&SLIB) +
+                          VALUE(&TLIB))
+
+
+             /*----- BUILD BEGIN -----*/
+
+             /* FIELD REFERENCE FILE */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMFR) +
+                          TGTLIB(&TLIB)
+
+             CHGVAR     VAR(&INID0) VALUE('0')
+             CHGVAR     VAR(&INIF3) VALUE('0')
+             CHGVAR     VAR(&INIF4) VALUE('0')
+
+             /* DATA AREA CAPPSSAMD0 */
+             CHKOBJ     OBJ(&TLIB/CAPPSSAMD0) OBJTYPE(*DTAARA)
+             MONMSG     MSGID(CPF9801) EXEC(DO)
+             CHGVAR     VAR(&INID0) VALUE('1')
+             CRTDTAARA  DTAARA(&TLIB/CAPPSSAMD0) TYPE(*CHAR) LEN(50) +
+                          TEXT('CAPPSSAM/DataArea 0: Sync access / +
+                          Global data')
+             ENDDO
+
+             /* FILE CAPPSSAMF1 */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMF1) +
+                          TGTLIB(&TLIB)
+
+             /* FILE CAPPSSAMF2 */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMF2) +
+                          TGTLIB(&TLIB)
+
+             /* FILE CAPPSSAMF3 */
+             CHKOBJ     OBJ(&TLIB/CAPPSSAMF3) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(CHGVAR VAR(&INIF3) +
+                          VALUE('1'))
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMF3) +
+                          TGTLIB(&TLIB)
+
+             /* FILE CAPPSSAMF4 */
+             CHKOBJ     OBJ(&TLIB/CAPPSSAMF4) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(CHGVAR VAR(&INIF4) +
+                          VALUE('1'))
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMF4) +
+                          TGTLIB(&TLIB)
+
+             /* FILE CAPPSSAMF5 */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMF5) +
+                          TGTLIB(&TLIB)
+
+             /* FILE CAPPSSAMF6 */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMF6) +
+                          TGTLIB(&TLIB)
+
+             /* PGM CAPPSSAMP0 */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMP0) +
+                          TGTLIB(&TLIB)
+
+             /* INITIAL DATA LOAD */
+             IF         COND(&INID0 *OR &INIF3 *OR &INIF4) THEN(CALL +
+                          PGM(CAPPSSAMP0) PARM(&INID0 &INIF3 &INIF4))
+
+             /*----- BUILD END -----*/
+
+
+             RETURN
+
+ STDERR1:
+             IF         COND(&ERRORSW_) THEN(SNDPGMMSG +
+                          MSGID(CPF9871) MSGF(QCPFMSG) +
+                          MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW_) VALUE('1')
+             RCVMSG     MSGTYPE(*EXCP) RMV(*NO) KEYVAR(&KEYVAR_)
+
+ STDERR2:    RCVMSG     MSGTYPE(*PRV) MSGKEY(&KEYVAR_) RMV(*NO) +
+                          KEYVAR(&KEYVAR2_) MSG(&MSG_) +
+                          MSGDTA(&MSGDTA_) MSGID(&MSGID_) +
+                          RTNTYPE(&RTNTYPE_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             IF         COND(&RTNTYPE_ *NE '02') THEN(GOTO +
+                          CMDLBL(STDERR3))
+             IF         COND(&MSGID_ *NE ' ') THEN(SNDPGMMSG +
+                          MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*DIAG))
+             IF         COND(&MSGID_ *EQ ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*DIAG))
+             RMVMSG     MSGKEY(&KEYVAR2_)
+
+ STDERR3:    RCVMSG     MSGKEY(&KEYVAR_) MSGDTA(&MSGDTA_) +
+                          MSGID(&MSGID_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             SNDPGMMSG  MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*ESCAPE)
+
+             ENDPGM
+

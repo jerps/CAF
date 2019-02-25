@@ -1,0 +1,27 @@
+             PGM        PARM(&SLIB &TLIB)
+             DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&A50) TYPE(*CHAR) LEN(50)
+
+             RTVDTAARA  DTAARA(&SLIB/CAPPSSAMD0 *ALL) RTNVAR(&A50)
+             CHGDTAARA  DTAARA(&TLIB/CAPPSSAMD0 *ALL) VALUE(&A50)
+
+             CPYF       FROMFILE(&SLIB/CSYSBASEF0) +
+                          TOFILE(&TLIB/CSYSBASEF0) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CSYSBASEF1) +
+                          TOFILE(&TLIB/CSYSBASEF1) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CSYSBASEF2) +
+                          TOFILE(&TLIB/CSYSBASEF2) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CSYSSQLSF1) +
+                          TOFILE(&TLIB/CSYSSQLSF1) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CAPPSSAMF1) +
+                          TOFILE(&TLIB/CAPPSSAMF1) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CAPPSSAMF2) +
+                          TOFILE(&TLIB/CAPPSSAMF2) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CAPPSSAMF3) +
+                          TOFILE(&TLIB/CAPPSSAMF3) MBROPT(*REPLACE)
+             CPYF       FROMFILE(&SLIB/CAPPSSAMF4) +
+                          TOFILE(&TLIB/CAPPSSAMF4) MBROPT(*REPLACE)
+
+             ENDPGM

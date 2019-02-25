@@ -1,0 +1,20 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CSYSBASEF0
+
+      *  Service Program: Common System Services / Base
+      *  File           : SysBase Values
+
+
+      *  This file stores arbitrary values identified by a key.
+
+
+     A                                      UNIQUE
+     A          R SBVREC
+     A            SBVKEY        10          COLHDG('Key')
+     A            SBVVALUE     100          COLHDG('Value')
+     A            SBVDESCR     100          COLHDG('Description')
+     A          K SBVKEY
+

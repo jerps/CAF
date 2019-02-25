@@ -1,0 +1,44 @@
+
+/*                                                                           +
+ *           (c) 2019 John Erps                                              +
+ *                                                                           +
+ *           Common App - Non-Work Day Types                                 +
+ *                                                                           +
+ *           CAFNWDT Cmd Processor                                           +
+*/
+
+             PGM        PARM(&MODE &SPCBHVR)
+             DCL        VAR(&MODE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SPCBHVR) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&RTNCD) TYPE(*DEC) LEN(2 0)
+             DCL        VAR(&RTNMSG1) TYPE(*CHAR) LEN(100)
+             DCL        VAR(&RTNMSG2) TYPE(*CHAR) LEN(100)
+             DCL        VAR(&RC) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&SELNWDT) TYPE(*CHAR) LEN(1)
+
+             CALL       PGM(CAFNWDT) PARM(&MODE &SPCBHVR &RTNCD +
+                          &RTNMSG1 &RTNMSG2 &SELNWDT)
+
+             IF         COND(&RTNCD *LT 30) THEN(DO)
+             IF         COND(&MODE *EQ *SELECT *AND &RTNCD *EQ 10) +
+                          THEN(SNDPGMMSG MSG('Selected key:' *BCAT +
+                          &SELNWDT))
+             IF         COND(&RTNMSG1 *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&RTNMSG1))
+             IF         COND(&RTNMSG2 *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&RTNMSG2))
+             ENDDO
+             ELSE       CMD(DO)
+             IF         COND(&RTNMSG1 *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&RTNMSG1) MSGTYPE(*DIAG))
+             IF         COND(&RTNMSG2 *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&RTNMSG2) MSGTYPE(*DIAG))
+             CHGVAR     VAR(&RC) VALUE(&RTNCD)
+             SNDPGMMSG  MSG('Returncode = ' *CAT &RC) MSGTYPE(*DIAG)
+             SNDPGMMSG  MSGID(CPF0001) MSGF(QCPFMSG) +
+                          MSGDTA('CAFNWDT') MSGTYPE(*ESCAPE)
+             ENDDO
+
+             ENDPGM
+

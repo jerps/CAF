@@ -1,0 +1,35 @@
+
+      /IF DEFINED(CAPPSSAM_INCL__MO)
+      /EOF
+      /ENDIF
+      /DEFINE CAPPSSAM_INCL__MO
+
+
+       // (c) 2019 John Erps
+
+
+       // INCLUDE: *SRVPGM CAPPSSAM
+
+       // Module MO: Menu Operations
+
+       // Internal
+
+
+       // ----- Prototypes
+
+       // I_GetCurBin - Get Current Bin
+       // Return the current bin number, 0 or 1.
+       // Return 0 if the sync data area ("CSyncDaName") could not be
+       // accessed, or if the stored current bin number is not "0" or "1".
+     dI_GetCurBin      pr             1s 0 extproc('I_GetCurBin')
+
+       // I_RlsModMO - Release Module MO
+       // Release all resources (such as Open Data Paths and dynamically
+       // allocated memory) used by this module. If it's not called then
+       // these resources are automatically released when the activation
+       // group in which the module has been activated is released.
+       // Use this procedure to ensure that these resources are *properly*
+       // released. If they are automatically released it's possible that
+       // not all resources are completely and properly released.
+     dI_RlsModMO       pr                  extproc('I_RlsModMO')
+

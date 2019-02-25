@@ -1,0 +1,40 @@
+             PGM        PARM(&CAFLIB &PUBAUTNF &PUBAUTPFLF &INCLMDAUT)
+             DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTNF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTPFLF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLMDAUT) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&MNUDTA) TYPE(*CHAR) LEN(1)
+
+             DCLF       FILE(QTEMP/SETCAFAUTD)
+
+ READ:       RCVF
+             MONMSG     MSGID(CPF0864) EXEC(GOTO CMDLBL(ENDREAD))
+             IF         COND(&ODOBTP *EQ *FILE *AND %SST(&ODOBNM 1 +
+                          9) *EQ CAPPSSAMF *OR &ODOBTP *EQ *DTAARA +
+                          *AND %SST(&ODOBNM 1 9) *EQ CAPPSSAMD) +
+                          THEN(CHGVAR VAR(&MNUDTA) VALUE('1'))
+             ELSE       CMD(CHGVAR VAR(&MNUDTA) VALUE('0'))
+             IF         COND(&INCLMDAUT *EQ *YES *OR &INCLMDAUT *EQ +
+                          *NO *AND &MNUDTA *EQ '0' *OR &INCLMDAUT +
+                          *EQ *ONLY *AND &MNUDTA *EQ '1') THEN(DO)
+             IF         COND(&PUBAUTNF *NE *SAME *AND &ODOBTP *NE +
+                          *FILE) THEN(DO)
+             RVKOBJAUT  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(*PUBLIC) AUT(*ALL)
+             GRTOBJAUT  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(*PUBLIC) AUT(&PUBAUTNF)
+             ENDDO
+             IF         COND(&PUBAUTPFLF *NE *SAME *AND &ODOBTP *EQ +
+                          *FILE *AND (&ODOBAT *EQ PF *OR &ODOBAT +
+                          *EQ LF)) THEN(DO)
+             RVKOBJAUT  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(*PUBLIC) AUT(*ALL)
+             GRTOBJAUT  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(*PUBLIC) AUT(&PUBAUTPFLF)
+             ENDDO
+             ENDDO
+             GOTO       CMDLBL(READ)
+ ENDREAD:
+
+             ENDPGM

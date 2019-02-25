@@ -1,0 +1,44 @@
+
+      /IF DEFINED(CAPPDISP_INCL_DECL)
+      /EOF
+      /ENDIF
+      /DEFINE CAPPDISP_INCL_DECL
+
+
+       // (c) 2019 John Erps
+
+
+       // INCLUDE: *SRVPGM CAPPDISP
+
+       // Declarations
+
+
+       // ----- Prerequisite Service Program Declarations
+
+      /include CAPPSSAMS,INCL_DECL
+      /include CAPPBASES,INCL_DECL
+      /include CSYSSQLSS,INCL_DECL
+      /include CSYSBASES,INCL_DECL
+
+
+       // ----- Constants
+
+
+       // ----- Public Record Formats
+
+       // This section defines PUBLIC record formats that are relevant
+       // for this service program as external data structures.
+
+       // Private record formats should be defined in member INCL__MODD.
+
+       // Each format's name is equal to the physical file name, prefixed
+       // with "Erf".
+
+       // Each external data structure that defines a database record format
+       // is conditioned with a condition-name that begins with "ERF_", which
+       // is followed by the physical file name. This ensures that the same
+       // external record format is only defined once.
+
+
+       // ----- Data Structures
+

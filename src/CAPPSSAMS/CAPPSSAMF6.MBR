@@ -1,0 +1,16 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CAPPSSAMF6
+
+      *  Service Program: Common System Services / SubSystem AppMenu
+      *  File:          : Index on CAPPSSAMF4
+
+
+     A                                      UNIQUE
+     A          R MENUMGREC                 PFILE(CAPPSSAMF4)
+     A          K MENUMGROUP
+     A          K MENUMGMBRT
+     A          K MENUMGMBRN
+

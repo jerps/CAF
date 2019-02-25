@@ -1,0 +1,115 @@
+
+ /*                                                                   +
+      ENSURE CORRECT LIBRARYLIST BEFORE RUNNING THIS PROGRAM!         +
+                                                                      +
+      A existing PF is changed with CHGPF.                            +
+                                                                      +
+      A existing LF, however, is first deleted with DLTF and then     +
+      created again with CRTLF. If something goes wrong inbetween     +
+      then this is signalled with *DIAG message "LF HAS BEEN DELETED  +
+      BUT NOT RECREATED DUE TO AN ERROR! SEE THE JOBLOG.".            +
+ */
+
+             PGM        PARM(&SRCLIB &SRCFILE &SRCMBR &TGTLIB)
+             DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCMBR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTLIB) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&LFDEL) TYPE(*LGL) VALUE('0')
+
+             DCL        VAR(&ERRORSW_) TYPE(*LGL)
+             DCL        VAR(&MSGID_) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&MSG_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGDTA_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGF_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MSGFLIB_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&KEYVAR_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&KEYVAR2_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&RTNTYPE_) TYPE(*CHAR) LEN(2)
+
+             DCL        VAR(&SRCTYPE) TYPE(*CHAR) LEN(10)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(STDERR1))
+
+
+             /*----- BEGIN -----*/
+
+             RTVMBRD    FILE(&SRCLIB/&SRCFILE) MBR(&SRCMBR) +
+                          SRCTYPE(&SRCTYPE)
+
+             CHKOBJ     OBJ(&TGTLIB/&SRCMBR) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(GOTO CMDLBL(CREATE))
+
+             IF         COND(&SRCTYPE *EQ PF) THEN(DO)
+             CHGPF      FILE(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) OPTION(*LIST +
+                          *EVENTF)
+      /*     MONMSG     MSGID(CPF7304)    */
+             ENDDO
+
+             IF         COND(&SRCTYPE *EQ LF) THEN(DO)
+             DLTF       FILE(&TGTLIB/&SRCMBR)
+             CHGVAR     VAR(&LFDEL) VALUE('1')
+             CRTLF      FILE(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) OPTION(*LIST +
+                          *EVENTF)
+             CHGVAR     VAR(&LFDEL) VALUE('0')
+             ENDDO
+
+             GOTO       CMDLBL(END)
+
+ CREATE:
+             IF         COND(&SRCTYPE *EQ PF) THEN(CRTPF +
+                          FILE(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) OPTION(*LIST +
+                          *EVENTF))
+
+             IF         COND(&SRCTYPE *EQ LF) THEN(CRTLF +
+                          FILE(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) OPTION(*LIST +
+                          *EVENTF))
+ END:
+
+             /*----- END -----*/
+
+
+             RCVMSG     MSGTYPE(*COMP) MSG(&MSG_)
+             IF         COND(&MSG_ *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*COMP))
+
+             RETURN
+
+ STDERR1:
+             IF         COND(&ERRORSW_) THEN(SNDPGMMSG +
+                          MSGID(CPF9871) MSGF(QCPFMSG) +
+                          MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW_) VALUE('1')
+             RCVMSG     MSGTYPE(*EXCP) RMV(*NO) KEYVAR(&KEYVAR_)
+
+ STDERR2:    RCVMSG     MSGTYPE(*PRV) MSGKEY(&KEYVAR_) RMV(*NO) +
+                          KEYVAR(&KEYVAR2_) MSG(&MSG_) +
+                          MSGDTA(&MSGDTA_) MSGID(&MSGID_) +
+                          RTNTYPE(&RTNTYPE_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             IF         COND(&RTNTYPE_ *NE '02') THEN(GOTO +
+                          CMDLBL(STDERR3))
+             IF         COND(&MSGID_ *NE ' ') THEN(SNDPGMMSG +
+                          MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*DIAG))
+             IF         COND(&MSGID_ *EQ ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*DIAG))
+             RMVMSG     MSGKEY(&KEYVAR2_)
+
+ STDERR3:    RCVMSG     MSGKEY(&KEYVAR_) MSGDTA(&MSGDTA_) +
+                          MSGID(&MSGID_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             IF         COND(&LFDEL *EQ '1') THEN(SNDPGMMSG +
+                          MSGID(CPF9897) MSGF(QCPFMSG) MSGDTA('LF +
+                          HAS BEEN DELETED BUT NOT RECREATED DUE TO +
+                          AN ERROR! SEE THE JOBLOG.') MSGTYPE(*DIAG))
+             SNDPGMMSG  MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*ESCAPE)
+
+             ENDPGM
+

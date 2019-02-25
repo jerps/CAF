@@ -1,0 +1,29 @@
+
+      /IF DEFINED(CAPPSSAM_INCL_API)
+      /EOF
+      /ENDIF
+      /DEFINE CAPPSSAM_INCL_API
+
+
+       // (c) 2019 John Erps
+
+
+       // INCLUDE: *SRVPGM CAPPSSAM
+
+       // API
+
+
+       // AppMenu
+
+       // Implements the application menu.
+
+
+      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_MO
+      /include CAPPSSAMS,INCL_DC
+      /include CAPPSSAMS,INCL_DQ
+      /include CAPPSSAMS,INCL_XX
+      /include CAPPSSAMS,INCL_VA
+      /include CAPPSSAMS,INCL_AM
+      /include CAPPSSAMS,INCL_RM
+

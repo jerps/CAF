@@ -1,0 +1,30 @@
+/*                                                                             +
+                                                                               +
+     Copy CAF Data                                                             +
+                                                                               +
+     This command copies all data contained in physical files and              +
+     data areas from one CAF library (source) to another (target),             +
+     replacing the data in the target library.                                 +
+                                                                               +
+     The following data is copied:                                             +
+                                                                               +
+     * Data area's                                                             +
+       CAPPSSAMD0                                                              +
+                                                                               +
+     * Physical files                                                          +
+       CSYSBASEF0                                                              +
+       CSYSBASEF1                                                              +
+       CSYSBASEF2                                                              +
+       CSYSSQLSF1                                                              +
+       CAPPSSAMF1                                                              +
+       CAPPSSAMF2                                                              +
+       CAPPSSAMF3                                                              +
+       CAPPSSAMF4                                                              +
+                                                                               +
+*/
+             CMD        PROMPT('CAF - Copy Data')
+             PARM       KWD(SLIB) TYPE(*CHAR) LEN(10) MIN(1) +
+                          PROMPT('Source library')
+             PARM       KWD(TLIB) TYPE(*CHAR) LEN(10) MIN(1) +
+                          PROMPT('Target library')
+

@@ -1,0 +1,215 @@
+ /*                                                                   +
+      ENSURE CORRECT LIBRARYLIST BEFORE RUNNING THIS PROGRAM!         +
+ */
+
+             PGM        PARM(&QSRCFILE &SRCMBR &TGTLIB &TGTOBJTYPE +
+                          &TGTRLS &PARM1 &PARM2 &PARM3)
+             DCL        VAR(&QSRCFILE) TYPE(*CHAR) LEN(20)
+             DCL        VAR(&SRCMBR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTOBJTYPE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTRLS) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PARM1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PARM2) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PARM3) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&ERRORSW_) TYPE(*LGL)
+             DCL        VAR(&MSGID_) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&MSG_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGDTA_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGF_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MSGFLIB_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&KEYVAR_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&KEYVAR2_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&RTNTYPE_) TYPE(*CHAR) LEN(2)
+
+             DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCTYPE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PSCCA) TYPE(*LGL) VALUE('0')
+             DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TRLS) TYPE(*CHAR) LEN(10)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(STDERR1))
+
+             CHGVAR     VAR(&SRCFILE) VALUE(%SST(&QSRCFILE 1 10))
+             CHGVAR     VAR(&SRCLIB) VALUE(%SST(&QSRCFILE 11 10))
+
+             IF         COND(&TGTLIB *EQ *SRCLIB) THEN(DO)
+             IF         COND(&SRCLIB *EQ *LIBL) THEN(SNDPGMMSG +
+                          MSGID(CPF9897) MSGF(QCPFMSG) +
+                          MSGDTA('Target library ' *CAT &TGTLIB +
+                          *TCAT ' not allowed for source library ' +
+                          *CAT &SRCLIB *TCAT '.') MSGTYPE(*ESCAPE))
+             ELSE       CMD(CHGVAR VAR(&TGTLIB) VALUE(&SRCLIB))
+             ENDDO
+
+             CHGVAR     VAR(&TRLS) VALUE(&TGTRLS)
+             CHKOBJ     OBJ(QTEMP/CO@TRLS) OBJTYPE(*DTAARA)
+             MONMSG     MSGID(CPF9801) EXEC(GOTO CMDLBL(NOCOTRLS))
+             RTVDTAARA  DTAARA(QTEMP/CO@TRLS *ALL) RTNVAR(&TRLS)
+NOCOTRLS:
+
+
+             /*----- BEGIN -----*/
+
+             RTVOBJD    OBJ(&SRCLIB/&SRCFILE) OBJTYPE(*FILE) +
+                          RTNLIB(&SLIB)
+
+             RTVMBRD    FILE(&SLIB/&SRCFILE) MBR(&SRCMBR) +
+                          SRCTYPE(&SRCTYPE)
+
+             SNDPGMMSG  MSGID(CPF9897) MSGF(QCPFMSG) +
+                          MSGDTA('Compiling from source ' *CAT +
+                          &SRCMBR *TCAT ', type ' *CAT &SRCTYPE +
+                          *TCAT ', file ' *CAT &SLIB *TCAT '/' *CAT +
+                          &SRCFILE *TCAT ', tlib ' *CAT &TGTLIB +
+                          *TCAT ' . . .') TOPGMQ(*EXT) MSGTYPE(*STATUS)
+
+             /* Process source compile commands BEFORE */
+             CALL       PGM(COPSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
+                          &SRCMBR B)
+             CHGVAR     VAR(&PSCCA) VALUE('1')
+
+             /* PF LF */
+             IF         COND(&SRCTYPE *EQ PF *OR &SRCTYPE *EQ LF) +
+                          THEN(DO)
+             IF         COND(&TGTOBJTYPE *NE *DEFAULT) +
+                          THEN(SNDPGMMSG MSGID(CPF9897) +
+                          MSGF(QCPFMSG) MSGDTA('Target object type +
+                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
+                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          MSGTYPE(*ESCAPE))
+             CALL       PGM(COPFLF) PARM(&SLIB &SRCFILE &SRCMBR +
+                          &TGTLIB)
+             ENDDO
+
+             ELSE       CMD(DO)
+
+             /* DSPF */
+             IF         COND(&SRCTYPE *EQ DSPF) THEN(DO)
+             IF         COND(&TGTOBJTYPE *NE *DEFAULT) +
+                          THEN(SNDPGMMSG MSGID(CPF9897) +
+                          MSGF(QCPFMSG) MSGDTA('Target object type +
+                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
+                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          MSGTYPE(*ESCAPE))
+             CALL       PGM(CODSPF) PARM(&SLIB &SRCFILE &SRCMBR +
+                          &TGTLIB)
+             ENDDO
+
+             ELSE       CMD(DO)
+
+             /* CMD (uses &PARM1/&PARM2 for cmd processor name/lib) */
+             IF         COND(&SRCTYPE *EQ CMD) THEN(DO)
+             IF         COND(&TGTOBJTYPE *NE *DEFAULT) +
+                          THEN(SNDPGMMSG MSGID(CPF9897) +
+                          MSGF(QCPFMSG) MSGDTA('Target object type +
+                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
+                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          MSGTYPE(*ESCAPE))
+             CALL       PGM(COCMD) PARM(&SLIB &SRCFILE &SRCMBR +
+                          &TGTLIB &PARM1 &PARM2)
+             ENDDO
+
+             ELSE       CMD(DO)
+
+             /* CLP CLLE (uses &PARM1 for actgrp name) */
+             IF         COND(&SRCTYPE *EQ CLP *OR &SRCTYPE *EQ CLLE) +
+                          THEN(DO)
+             IF         COND(&TGTOBJTYPE *NE *DEFAULT *AND +
+                          &TGTOBJTYPE *NE *MODULE *AND &TGTOBJTYPE +
+                          *NE *PGM) THEN(SNDPGMMSG MSGID(CPF9897) +
+                          MSGF(QCPFMSG) MSGDTA('Target object type +
+                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
+                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          MSGTYPE(*ESCAPE))
+             IF         COND(&TGTOBJTYPE *EQ *MODULE) THEN(CALL +
+                          PGM(COCLMOD) PARM(&SLIB &SRCFILE &SRCMBR +
+                          &TGTLIB &TRLS))
+             ELSE       CMD(CALL PGM(COCLPGM) PARM(&SLIB &SRCFILE +
+                          &SRCMBR &TGTLIB &TRLS &PARM1))
+             ENDDO
+
+             ELSE       CMD(DO)
+
+             /* RPG RPGLE */
+             IF         COND(&SRCTYPE *EQ RPG *OR &SRCTYPE *EQ +
+                          RPGLE) THEN(DO)
+             IF         COND(&TGTOBJTYPE *NE *DEFAULT *AND +
+                          &TGTOBJTYPE *NE *MODULE *AND &TGTOBJTYPE +
+                          *NE *PGM) THEN(SNDPGMMSG MSGID(CPF9897) +
+                          MSGF(QCPFMSG) MSGDTA('Target object type +
+                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
+                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          MSGTYPE(*ESCAPE))
+             IF         COND(&TGTOBJTYPE *EQ *MODULE) THEN(CALL +
+                          PGM(CORPGMOD) PARM(&SLIB &SRCFILE &SRCMBR +
+                          &TGTLIB &TRLS))
+             ELSE       CMD(CALL PGM(CORPGPGM) PARM(&SLIB &SRCFILE +
+                          &SRCMBR &TGTLIB &TRLS))
+             ENDDO
+
+             ELSE       CMD(DO)
+
+             SNDPGMMSG  MSGID(CPF9897) MSGF(QCPFMSG) MSGDTA('Source +
+                          type ' *CAT &SRCTYPE *TCAT ' not +
+                          recognized.') MSGTYPE(*ESCAPE)
+
+             ENDDO
+             ENDDO
+             ENDDO
+             ENDDO
+             ENDDO
+
+             /* Process source compile commands AFTER */
+             CHGVAR     VAR(&PSCCA) VALUE('0')
+             CALL       PGM(COPSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
+                          &SRCMBR A)
+
+             /*----- END -----*/
+
+
+             SNDPGMMSG  MSGID(CPF9897) MSGF(QCPFMSG) MSGDTA(' ') +
+                          TOPGMQ(*EXT) MSGTYPE(*STATUS)
+
+             RCVMSG     MSGTYPE(*COMP) MSG(&MSG_)
+             IF         COND(&MSG_ *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*COMP))
+
+             RETURN
+
+ STDERR1:
+             IF         COND(&ERRORSW_) THEN(SNDPGMMSG +
+                          MSGID(CPF9871) MSGF(QCPFMSG) +
+                          MSGTYPE(*ESCAPE))
+             IF         COND(&PSCCA) THEN(DO)
+             CHGVAR     VAR(&PSCCA) VALUE('0')
+             CALL       PGM(COPSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
+                          &SRCMBR A)
+             ENDDO
+             CHGVAR     VAR(&ERRORSW_) VALUE('1')
+             RCVMSG     MSGTYPE(*EXCP) RMV(*NO) KEYVAR(&KEYVAR_)
+
+ STDERR2:    RCVMSG     MSGTYPE(*PRV) MSGKEY(&KEYVAR_) RMV(*NO) +
+                          KEYVAR(&KEYVAR2_) MSG(&MSG_) +
+                          MSGDTA(&MSGDTA_) MSGID(&MSGID_) +
+                          RTNTYPE(&RTNTYPE_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             IF         COND(&RTNTYPE_ *NE '02') THEN(GOTO +
+                          CMDLBL(STDERR3))
+             IF         COND(&MSGID_ *NE ' ') THEN(SNDPGMMSG +
+                          MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*DIAG))
+             IF         COND(&MSGID_ *EQ ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*DIAG))
+             RMVMSG     MSGKEY(&KEYVAR2_)
+
+ STDERR3:    RCVMSG     MSGKEY(&KEYVAR_) MSGDTA(&MSGDTA_) +
+                          MSGID(&MSGID_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             SNDPGMMSG  MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*ESCAPE)
+
+             ENDPGM
+

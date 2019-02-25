@@ -1,0 +1,41 @@
+             PGM        PARM(&CAFLIB &OWNER &AUTLNF &AUTLNFGR +
+                          &AUTLPFLF &AUTLPFLFGR &PUBAUTNF +
+                          &PUBAUTPFLF &INCLMDAUT &MNUADM &MNUADMGR)
+             DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&OWNER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLNF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLNFGR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLPFLF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLPFLFGR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTNF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTPFLF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLMDAUT) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADM) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADMGR) TYPE(*CHAR) LEN(10)
+
+             DLTF       FILE(QTEMP/SETCAFAUTD)
+             MONMSG     MSGID(CPF0000)
+             DSPOBJD    OBJ(&CAFLIB/*ALL) OBJTYPE(*ALL) +
+                          OUTPUT(*OUTFILE) OUTFILE(QTEMP/SETCAFAUTD)
+
+             IF         COND(&OWNER *NE *SAME) THEN(CALL +
+                          PGM(&CAFLIB/SETCAFAUT1) PARM(&CAFLIB &OWNER))
+
+             IF         COND(&AUTLNF *NE *SAME *OR &AUTLPFLF *NE +
+                          *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT2) +
+                          PARM(&CAFLIB &AUTLNF &AUTLNFGR &AUTLPFLF +
+                          &AUTLPFLFGR &INCLMDAUT))
+
+             IF         COND(&PUBAUTNF *NE *SAME *OR &PUBAUTPFLF *NE +
+                          *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT3) +
+                          PARM(&CAFLIB &PUBAUTNF &PUBAUTPFLF +
+                          &INCLMDAUT))
+
+             IF         COND(&MNUADM *NE *SAME) THEN(CALL +
+                          PGM(&CAFLIB/SETCAFAUT4) PARM(&CAFLIB +
+                          &MNUADM &MNUADMGR))
+
+             DLTF       FILE(QTEMP/SETCAFAUTD)
+             MONMSG     MSGID(CPF0000)
+
+             ENDPGM

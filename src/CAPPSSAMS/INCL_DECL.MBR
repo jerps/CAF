@@ -1,0 +1,109 @@
+
+      /IF DEFINED(CAPPSSAM_INCL_DECL)
+      /EOF
+      /ENDIF
+      /DEFINE CAPPSSAM_INCL_DECL
+
+
+       // (c) 2019 John Erps
+
+
+       // INCLUDE: *SRVPGM CAPPSSAM
+
+       // Declarations
+
+
+       // ----- Prerequisite Service Program Declarations
+
+      /include CAPPBASES,INCL_DECL
+      /include CSYSBASES,INCL_DECL
+
+
+       // ----- Constants
+
+       // Subsystem id: AM (AppMenu)
+       // THE SUBSYSTEM ID *MUST* CONSIST OF *EXACTLY* TWO LETTERS !
+       //                  ~~~~~~            ~~~~~~~~~             ~
+     dCSsIdAM          c                   'AM'
+
+       // Special (built-in) groups
+     dCSgAdmin         c                   '*ADMIN'
+     dCSgAll           c                   '*ALL'
+     dCSgNone          c                   '*NONE'
+
+       // Group inverse character
+     dCCharGrpInv      c                   '!'
+
+       // All special behavior codes that are supported for
+       // an option, a page or the menu.
+     dCMsbOption       c                   'CE'
+     dCMsbPage         c                   'CE'
+     dCMsbMenu         c                   'CE'
+
+       // Special behavior codes.
+       // - Confirm perform option (option/page)
+     dCMsbConfPO       c                   'C'
+       // - Use default error handler (option/page)
+     dCMsbDftEH        c                   'E'
+
+       // Number of pages that can be defined for the menu.
+     dCNumPages        c                   999
+       // Number of slots on a page (3 strips).
+     dCNumSlots        c                   45
+       // Number of slots on a vertical strip.
+     dCNumVSlots       c                   15
+       // Number of groups that can be specified for an option,
+       // a page or the menu.
+     dCNumGroups       c                   9
+       // Number of members that can be specified for a group.
+     dCNumGrpMembers   c                   200
+
+       // Name of sync data area.
+     dCSyncDaName      c                   'CAPPSSAMD0'
+
+       // Each constant below ("CEf..*" where .. is the subsystem id)
+       // defines a (database) field or (logical) attribute name which
+       // can be associated with a message that is produced within
+       // this service program (e.g. with procedure "AddToDspMsgList"
+       // or "SetQdsDs" in CAPPBASE).
+     dCEfAMGROUP       c                   'AMGROUP'
+     dCEfAMTEXT        c                   'AMTEXT'
+     dCEfAMACTIVE      c                   'AMACTIVE'
+     dCEfAMMBRT        c                   'AMMBRT'
+     dCEfAMMBRN        c                   'AMMBRN'
+     dCEfAMMGROUP      c                   'AMMGROUP'
+     dCEfAMMCOMMAND    c                   'AMMCOMMAND'
+     dCEfAMMSPECB      c                   'AMMSPECB'
+     dCEfAMPGROUP      c                   'AMPGROUP'
+     dCEfAMPCOMMAND    c                   'AMPCOMMAND'
+     dCEfAMPSPECB      c                   'AMPSPECB'
+     dCEfAMOGROUP      c                   'AMOGROUP'
+     dCEfAMOCOMMAND    c                   'AMOCOMMAND'
+     dCEfAMOSPECB      c                   'AMOSPECB'
+     dCEfAMOTEXT       c                   'AMOTEXT'
+     dCEfAMOCHOICE     c                   'AMOCHOICE'
+
+
+       // ----- Public Record Formats
+
+       // This section defines PUBLIC record formats that are relevant
+       // for this subsystem as external data structures.
+
+       // Private record formats should be defined in member INCL__MODD.
+
+       // Each format's name is equal to the physical file name, prefixed
+       // with "Erf".
+
+       // Each external data structure that defines a database record format
+       // is conditioned with a condition-name that begins with "ERF_", which
+       // is followed by the physical file name. This ensures that the same
+       // external record format is only defined once.
+
+      /IF NOT DEFINED(ERF_CAPPSSAMFR)
+      /DEFINE ERF_CAPPSSAMFR
+     dErfCAPPSSAMFR  e ds                  extname(CAPPSSAMFR)
+      /ENDIF
+
+
+       // ----- Data Structures
+

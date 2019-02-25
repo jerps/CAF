@@ -1,0 +1,34 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CAPPSSAMF3
+
+      *  Service Program: Common System Services / SubSystem AppMenu
+      *  File:          : Groups
+
+
+      *  Attributes:
+
+      *   MENUGROUP  - Group (non-blank)
+      *                Must start with a capital letter ("A" - "Z").
+
+      *   MENUGTEXT  - Group description (non-blank)
+
+      *   MENUGACT   - Active? (Y/N)
+
+
+      * Remarks:
+
+      *   A group can not be deleted if it's still referenced in tables
+      *   CAPPSSAMF2 (but only in the current bin!!) or CAPPSSAMF4.
+
+
+     A                                      REF(CAPPSSAMFR)
+     A                                      UNIQUE
+     A          R MENUGREC
+     A            MENUGROUP R               REFFLD(TAM_GROUP)
+     A            MENUGTEXT R               REFFLD(TAM_TEXT)
+     A            MENUGACT  R               REFFLD(TAM_ACTIVE)
+     A          K MENUGROUP
+

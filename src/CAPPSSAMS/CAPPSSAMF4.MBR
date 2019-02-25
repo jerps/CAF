@@ -1,0 +1,67 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CAPPSSAMF3
+
+      *  Service Program: Common System Services / SubSystem AppMenu
+      *  File:          : Members/Groups (Group Members)
+
+
+      *  Attributes:
+
+      *   MENUMGMBRT - Member Type (0 or 1)
+      *                  0 = Group (subgroup)
+      *                      - In graph terminology, MENUMGMBRN is a direct
+      *                        successor node of MENUMGROUP (subgroup) and
+      *                        MENUMGROUP is a direct predecessor node (super-
+      *                        group) of MENUMGMBRN.
+      *                      - If not a special group, MENUMGMBRN must
+      *                        exist in table CAPPSSAMF3.
+      *                      - MENUMGMBRN can not be equal to MENUMGROUP.
+      *                      - The graph consisting of all the groups as nodes
+      *                        can not have cycles. As a consequence, there can
+      *                        be no record R in this table where:
+      *                        . MENUMGROUP is a direct or indirect successor
+      *                          node of this record's MENUMGROUP,
+      *                        . and MENUMGMBRT is 0,
+      *                        . and MENUMGMBRN is equal to this record's
+      *                          MENUMGROUP.
+      *                        Or:
+      *                        . MENUMGROUP is a direct or indirect predecessor
+      *                          node of this record's MENUMGROUP,
+      *                        . and there is another record (such as this one)
+      *                          where:
+      *                          . MENUMGROUP is a direct or indirect successor
+      *                            node of this record's MENUMGROUP,
+      *                          . and MENUMGMBRT is 0,
+      *                          . and MENUMGMBRN is equal to R's MENUMGROUP.
+      *                  1 = User-id
+      *                      Does not have to exist.
+      *                      Can not start with a hyphen ("-").
+
+      *   MENUMGMBRN - Member Name (non-blank)
+
+      *   MENUMGROUP - Group (non-blank)
+      *                Must exist in table CAPPSSAMF3.
+
+      *   A member (group or user-id) is considered to be a member of a
+      *   group if:
+      *   - A record in this table exists for that member and group, or
+      *     one of the group's successors (i.e. subgroups).
+      *   - And, the groups along the shortest path from the group, it's
+      *     direct successor, the next successor, etc, until the first group
+      *     with the member is reached, must all exist in table CAPPSSAMF3
+      *     and must be active (MENUGACT).
+
+
+     A                                      REF(CAPPSSAMFR)
+     A                                      UNIQUE
+     A          R MENUMGREC
+     A            MENUMGMBRTR               REFFLD(TAM_MBRT)
+     A            MENUMGMBRNR               REFFLD(TAM_MBRN)
+     A            MENUMGROUPR               REFFLD(TAM_GROUP)
+     A          K MENUMGMBRT
+     A          K MENUMGMBRN
+     A          K MENUMGROUP
+

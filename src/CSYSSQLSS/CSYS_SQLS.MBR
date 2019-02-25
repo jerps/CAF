@@ -1,0 +1,31 @@
+
+ /*          (c) 2019 John Erps                                              +
+                                                                             +
+                                                                             +
+             API                                                             +
+                                                                             +
+             Common System: SQL Support                                      +
+ */
+
+             STRPGMEXP  SIGNATURE('v1')
+
+             /* RM: Resource Management */
+             EXPORT     SYMBOL('RlsSpCSYSSQLS')
+
+             /* SS: SQL Storage */
+             EXPORT     SYMBOL('SqlsRtvStmt')
+
+             /* CI: Call Interface */
+             EXPORT     SYMBOL('SqlsStatus')
+             EXPORT     SYMBOL('SqlsDBExec')
+             EXPORT     SYMBOL('SqlsBindCols')
+             EXPORT     SYMBOL('SqlsFetch')
+             EXPORT     SYMBOL('SqlsUnbindAllCols')
+             EXPORT     SYMBOL('SqlsColIsNull')
+             EXPORT     SYMBOL('SqlsColIsNTS')
+             EXPORT     SYMBOL('SqlsCloseConn')
+             EXPORT     SYMBOL('SqlsCloseCurs')
+             EXPORT     SYMBOL('SqlsStatusAsChar')
+
+             ENDPGMEXP
+

@@ -1,0 +1,54 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CSYSBASEF2
+
+      *  Service Program: Common System Services / Base
+      *  File           : Non-Work Days
+
+
+      *  Each record represents a (recurring) non-work day.
+      *  The date of a non-work day is specified with field "NWDYEAR" in
+      *  combination with either "NWDMONTH" (1-12) and "NWDDAY" (1-31) to
+      *  specify a gregorian date or "NWDWEEK" (1-53) and "NWDDNUM" (1-7)
+      *  to specify a week date.
+      *  Either "NWDDAY" or "NWDDNUM" should be greater than 0, but not
+      *  both. If "NWDDAY" is greater than 0 then "NWDWEEK" and "NWDDNUM"
+      *  must be both ignored. If "NWDDAY" is 0 then "NWDDNUM" must be
+      *  greater than 0.
+      *  Fields "NWDYEAR", "NWDMONTH" or "NWDWEEK" can be 0 to specify a
+      *  recurring non-work day such as christmas, or week-end days.
+      *  E.g., christmas day can be represented with a record where field
+      *  "NWDDAY" has value 25 and field "NWDMONTH" has value 12. Field
+      *  "NWDYEAR" has value 0 to specify it's recurring every year.
+      *  Week-end days can be represented with two records where field
+      *  "NWDDNUM" has value 6 (saturday) and 7 (sunday), respectively,
+      *  and fields "NWDYEAR" and "NWDWEEK" have value 0.
+      *  If two records specify overlapping time frames, the more specific
+      *  one (the one which spans the least days) always overrules the other
+      *  one. E.g., if one record specifies only a day (NWDYEAR and NWDMONTH
+      *  are both 0), and the other one specifies a day and a month (only
+      *  NWDYEAR is 0) then the latter one overrules the former. A week date
+      *  is considered to be more specific as a gregorian date.
+      *  All fields with a value less than 0 (which should not happen) must
+      *  be treated as having value 0.
+      *  Field "NWDTYPE" identifies the type of non-work day, e.g. "F" for
+      *  a generic feast day like christmas, or "W" for a week-end day.
+      *  Field "NWDTYPE" must exist in table CSYSBASEF1 (NWDTCODE).
+
+
+     A                                      UNIQUE
+     A          R NWDREC
+     A            NWDYEAR        4S 0       COLHDG('Year')
+     A            NWDMONTH       2S 0       COLHDG('Month')
+     A            NWDDAY         2S 0       COLHDG('Day')
+     A            NWDWEEK        2S 0       COLHDG('Week #')
+     A            NWDDNUM        1S 0       COLHDG('Day #')
+     A            NWDTYPE        1          COLHDG('Type')
+     A          K NWDYEAR
+     A          K NWDMONTH
+     A          K NWDDAY
+     A          K NWDWEEK
+     A          K NWDDNUM
+

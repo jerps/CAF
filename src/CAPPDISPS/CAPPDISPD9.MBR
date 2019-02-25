@@ -1,0 +1,79 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  DisplayFile CAPPDISPD9
+
+      *  Service Program: Common App Services / Display
+      *  Display File   : Miscellaneous
+
+
+      *  Used in module HD
+
+
+     A                                      DSPSIZ(24 80 *NORMAL 27 132 *WIDE)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      CF01
+     A                                      CF02
+     A                                      CF03
+     A                                      CF04
+     A                                      CF05
+     A                                      CF06
+     A                                      CF07
+     A                                      CF08
+     A                                      CF09
+     A                                      CF10
+     A                                      CF11
+     A                                      CF12
+     A                                      CF13
+     A                                      CF14
+     A                                      CF15
+     A                                      CF16
+     A                                      CF17
+     A                                      CF18
+     A                                      CF19
+     A                                      CF20
+     A                                      CF21
+     A                                      CF22
+     A                                      CF23
+     A                                      CF24
+     A                                      CLEAR
+     A                                      HELP
+     A                                      PAGEUP
+     A                                      PAGEDOWN
+     A                                      PRINT
+
+      * Confirmation window
+     A          R DFWINDOW1
+     A  10                                  DSPMOD(*WIDE)
+     A                                      OVERLAY
+     A                                      KEEP
+     A                                      WINDOW(&D__WDWROW &D__WDWCOL
+     A                                             7 41
+     A                                             *NOMSGLIN *RSTCSR)
+     A                                      WDWBORDER((*COLOR BLU))
+     A                                      WDWTITLE((*TEXT 'CONFIRM (Y/N)')
+     A                                               (*COLOR WHT)
+     A                                               *CENTER)
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A            D__WDWROW      2S 0P
+     A            D__WDWCOL      3S 0P
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+     A            D_W1TEXT      41   O  2  1DSPATR(HI)
+     A                                  4  2'Enter "Y" to confirm, or F12 to -
+     A                                      cancel'
+     A            D_W1YN         1   B  6 21DSPATR(UL)
+     A    N61                               DSPATR(HI)
+     A     61                               DSPATR(RI)
+
+     A          R DUMMY9
+     A                                      ASSUME
+     A            DUMMYFLD       1   O  2  1
+

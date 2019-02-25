@@ -1,0 +1,105 @@
+
+ /*                                                                   +
+      ENSURE CORRECT LIBRARYLIST BEFORE RUNNING THIS PROGRAM!         +
+                                                                      +
+      If the source type is not CLLE then &ACTGRPNAME is ignored.     +
+                                                                      +
+      If the source type is CLLE and &ACTGRPNAME is blank then        +
+      the program is compiled with DFTACTGRP(*NO) and ACTGRP(*NEW),   +
+      else if &ACTGRPNAME is *DEFAULT the program is compiled with    +
+      DFTACTGRP(*YES), else it is compiled with DFTACTGRP(*NO) and    +
+      ACTGRP(&ACTGRPNAME)                                             +
+                                                                      +
+ */
+
+             PGM        PARM(&SRCLIB &SRCFILE &SRCMBR &TGTLIB +
+                          &TGTRLS &ACTGRPNAME)
+             DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SRCMBR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&TGTRLS) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ACTGRPNAME) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&ERRORSW_) TYPE(*LGL)
+             DCL        VAR(&MSGID_) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&MSG_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGDTA_) TYPE(*CHAR) LEN(512)
+             DCL        VAR(&MSGF_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MSGFLIB_) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&KEYVAR_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&KEYVAR2_) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&RTNTYPE_) TYPE(*CHAR) LEN(2)
+
+             DCL        VAR(&SRCTYPE) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ACTGRP) TYPE(*CHAR) LEN(10)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(STDERR1))
+
+
+             /*----- BEGIN -----*/
+
+             RTVMBRD    FILE(&SRCLIB/&SRCFILE) MBR(&SRCMBR) +
+                          SRCTYPE(&SRCTYPE)
+
+             IF         COND(&SRCTYPE *EQ CLLE) THEN(DO)
+             IF         COND(&ACTGRPNAME *EQ *DEFAULT) THEN(DO)
+             CRTBNDCL   PGM(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) DFTACTGRP(*YES) +
+                          OPTION(*EVENTF) REPLACE(*YES) +
+                          TGTRLS(&TGTRLS) DBGVIEW(*ALL)
+             ENDDO
+             ELSE       CMD(DO)
+             IF         COND(&ACTGRPNAME *EQ ' ') THEN(CHGVAR +
+                          VAR(&ACTGRP) VALUE(*NEW))
+             ELSE       CMD(CHGVAR VAR(&ACTGRP) VALUE(&ACTGRPNAME))
+             CRTBNDCL   PGM(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) DFTACTGRP(*NO) +
+                          ACTGRP(&ACTGRP) OPTION(*EVENTF) +
+                          REPLACE(*YES) DBGVIEW(*ALL)
+             ENDDO
+             ENDDO
+
+             IF         COND(&SRCTYPE *EQ CLP) THEN(CRTCLPGM +
+                          PGM(&TGTLIB/&SRCMBR) +
+                          SRCFILE(&SRCLIB/&SRCFILE) OPTION(*LSTDBG) +
+                          REPLACE(*YES))
+
+             /*----- END -----*/
+
+
+             RCVMSG     MSGTYPE(*COMP) MSG(&MSG_)
+             IF         COND(&MSG_ *NE ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*COMP))
+
+             RETURN
+
+ STDERR1:
+             IF         COND(&ERRORSW_) THEN(SNDPGMMSG +
+                          MSGID(CPF9871) MSGF(QCPFMSG) +
+                          MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW_) VALUE('1')
+             RCVMSG     MSGTYPE(*EXCP) RMV(*NO) KEYVAR(&KEYVAR_)
+
+ STDERR2:    RCVMSG     MSGTYPE(*PRV) MSGKEY(&KEYVAR_) RMV(*NO) +
+                          KEYVAR(&KEYVAR2_) MSG(&MSG_) +
+                          MSGDTA(&MSGDTA_) MSGID(&MSGID_) +
+                          RTNTYPE(&RTNTYPE_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             IF         COND(&RTNTYPE_ *NE '02') THEN(GOTO +
+                          CMDLBL(STDERR3))
+             IF         COND(&MSGID_ *NE ' ') THEN(SNDPGMMSG +
+                          MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*DIAG))
+             IF         COND(&MSGID_ *EQ ' ') THEN(SNDPGMMSG +
+                          MSG(&MSG_) MSGTYPE(*DIAG))
+             RMVMSG     MSGKEY(&KEYVAR2_)
+
+ STDERR3:    RCVMSG     MSGKEY(&KEYVAR_) MSGDTA(&MSGDTA_) +
+                          MSGID(&MSGID_) MSGF(&MSGF_) +
+                          SNDMSGFLIB(&MSGFLIB_)
+             SNDPGMMSG  MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
+                          MSGDTA(&MSGDTA_) MSGTYPE(*ESCAPE)
+
+             ENDPGM
+

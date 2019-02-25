@@ -1,0 +1,21 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CSYSSQLSFR
+
+      *  Service Program: Common System Services / SQL Support
+      *  File:          : Field Reference File
+
+
+      *  Defines the attribute types for this subsystem.
+
+      *  Each attribute type's name must start with "TSQLS_".
+
+
+     A          R CSYSSQLSFR
+
+     A            TSQLS_ID      20          COLHDG('Stmt ID')
+     A            TSQLS_LNO      3S 0       COLHDG('Stmt Lineno')
+     A            TSQLS_LINE    70          COLHDG('Stmt Line')
+

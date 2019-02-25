@@ -1,0 +1,18 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CAPPDISPF1
+
+      *  Service Program: Common System Services / Display
+      *  File:          : Help Texts
+
+
+     A                                      UNIQUE
+     A          R HLPTREC
+     A            HLPTCNTX      20          COLHDG('Context')
+     A            HLPTSEQ#       3S 0       COLHDG('Seq#')
+     A            HLPTEXT       60          COLHDG('Text')
+     A          K HLPTCNTX
+     A          K HLPTSEQ#
+

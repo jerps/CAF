@@ -1,0 +1,332 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  Common App - Menu
+
+
+      *  Indicator usage:
+
+      *   Indicators 31-69 are reserved to highlight a screen or subfile
+      *   field in error. See array "FEMap" in the program, which specifies
+      *   a mapping between field/attribute names and error indicators.
+
+      *   Indicators 75 and 76 are exclusive; only one is *on.
+
+      *   10 - DSPMOD(*WIDE)
+      *   27 - Set cursor location (CSRLOC)
+      *   30 - Global error indicator
+      *   75 - *UPDATE mode
+      *   76 - *UPDATE mode and "SimDisplay" is *on
+      *   91 - Set cursor on "page no"
+      *   92 - Set cursor on "simulated user"
+      *   93 - Set cursor on "choice"
+
+
+     A                                      DSPSIZ(27 132 *WIDE 24 80 *NORMAL)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      CF01
+     A                                      CF02
+     A                                      CF03
+     A                                      CF04
+     A                                      CF05
+     A                                      CF06
+     A                                      CF07
+     A                                      CF08
+     A                                      CF09
+     A                                      CF10
+     A                                      CF11
+     A                                      CF12
+     A                                      CF13
+     A                                      CF14
+     A                                      CF15
+     A                                      CF16
+     A                                      CF17
+     A                                      CF18
+     A                                      CF19
+     A                                      CF20
+     A                                      CF21
+     A                                      CF22
+     A                                      CF23
+     A                                      CF24
+     A                                      CLEAR
+     A                                      HELP
+     A                                      PAGEUP
+     A                                      PAGEDOWN
+     A                                      PRINT
+
+      * Screen 1 (menu)
+     A          R DFSCREEN1
+     A                                      CHGINPDFT
+     A N10                                  DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+     A  76                              3  2'SIMULATE'
+     A                                      DSPATR(RI)
+     A  76                              3 11': User:'
+     A  76                              4 11'  *=all opts'
+     A  76        D_SIMUSER     10   B  3 19
+     A    N31                               DSPATR(HI UL)
+     A     31                               DSPATR(RI)
+     A     31
+     AO       93                            DSPATR(PC)
+     A            D_PAGENO      20   O  3112
+     A  *NORMAL                         3 60
+     A            D_PTITLE      34   B  4 50CHECK(LC)
+     A  *NORMAL                         4 24
+     A    N32                               DSPATR(HI)
+     A  75N32                               DSPATR(UL)
+     A  75 32                               DSPATR(RI)
+     A  75 32
+     AO 75    91                            DSPATR(PC)
+     A N75                                  DSPATR(PR)
+     A            D_NEWPAGE      5   I  4127CHECK(ER)
+     A  *NORMAL                         4 75
+     A        92                            DSPATR(PC)
+
+      * Left strip
+     A            D_OPT101      39   O  6  2
+     A            D_OPT102      39   O  7  2
+     A            D_OPT103      39   O  8  2
+     A            D_OPT104      39   O  9  2
+     A            D_OPT105      39   O 10  2
+     A            D_OPT106      39   O 11  2
+     A            D_OPT107      39   O 12  2
+     A            D_OPT108      39   O 13  2
+     A            D_OPT109      39   O 14  2
+     A            D_OPT110      39   O 15  2
+     A            D_OPT111      39   O 16  2
+     A            D_OPT112      39   O 17  2
+     A            D_OPT113      39   O 18  2
+     A            D_OPT114      39   O 19  2
+     A            D_OPT115      39   O 20  2
+
+      * Middle strip
+     A            D_OPT201      39   O  6 42
+     A            D_OPT202      39   O  7 42
+     A            D_OPT203      39   O  8 42
+     A            D_OPT204      39   O  9 42
+     A            D_OPT205      39   O 10 42
+     A            D_OPT206      39   O 11 42
+     A            D_OPT207      39   O 12 42
+     A            D_OPT208      39   O 13 42
+     A            D_OPT209      39   O 14 42
+     A            D_OPT210      39   O 15 42
+     A            D_OPT211      39   O 16 42
+     A            D_OPT212      39   O 17 42
+     A            D_OPT213      39   O 18 42
+     A            D_OPT214      39   O 19 42
+     A            D_OPT215      39   O 20 42
+
+      * Right strip
+     A            D_OPT301      39   O  6 82
+     A            D_OPT302      39   O  7 82
+     A            D_OPT303      39   O  8 82
+     A            D_OPT304      39   O  9 82
+     A            D_OPT305      39   O 10 82
+     A            D_OPT306      39   O 11 82
+     A            D_OPT307      39   O 12 82
+     A            D_OPT308      39   O 13 82
+     A            D_OPT309      39   O 14 82
+     A            D_OPT310      39   O 15 82
+     A            D_OPT311      39   O 16 82
+     A            D_OPT312      39   O 17 82
+     A            D_OPT313      39   O 18 82
+     A            D_OPT314      39   O 19 82
+     A            D_OPT315      39   O 20 82
+     A                                 22  2'Option:'
+     A            D_CHOICE       2   B 22 10CHECK(LC)
+     A    N33                               DSPATR(HI UL)
+     A     33                               DSPATR(RI)
+     A     33
+     AO       94                            DSPATR(PC)
+
+      * Screen 2 (edit slot)
+     A          R DFWINDOW1
+     A N10                                  DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A                                      KEEP
+     A                                      WINDOW(&D__WDWROW1 &D__WDWCOL1
+     A                                             4 57
+     A                                             *NOMSGLIN *RSTCSR)
+     A                                      WDWBORDER((*COLOR BLU))
+     A                                      WDWTITLE((*TEXT &D__WDWTIT1)
+     A                                               (*COLOR WHT)
+     A                                               *CENTER)
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A            D__WDWROW1     2S 0P
+     A            D__WDWCOL1     3S 0P
+     A            D__WDWTIT1    60   P
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+     A                                  2  1'Choice (blank if hdr):'
+     A            D_OCHOICE      2   B  2 24CHECK(LC)
+     A    N41                               DSPATR(UL)
+     A     41                               DSPATR(RI PC)
+     A                                  3  1'Option (or hdr) text :'
+     A            D_OTEXT       34   B  3 24CHECK(LC)
+     A    N42                               DSPATR(UL)
+     A     42                               DSPATR(RI PC)
+
+      * Screen 3/4/5 (edit attributes option/page/menu)
+     A          R DFWINDOW2
+     A N10                                  DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A                                      KEEP
+     A                                      WINDOW(&D__WDWROW2 &D__WDWCOL2
+     A                                             15 73
+     A                                             *NOMSGLIN *RSTCSR)
+     A                                      WDWBORDER((*COLOR BLU))
+     A                                      WDWTITLE((*TEXT &D__WDWTIT2)
+     A                                               (*COLOR WHT)
+     A                                               *CENTER)
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A            D__WDWROW2     2S 0P
+     A            D__WDWCOL2     3S 0P
+     A            D__WDWTIT2    60   P
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+     A            D_PROMPTXT    22   O  2  1
+     A            D_TITLETXT    34   B  2 24CHECK(LC)
+     A    N50                               DSPATR(UL)
+     A     50                               DSPATR(RI PC)
+     A                                  4  1'Groups  . . . . . . .:'
+     A                                  5  1'  !... = inverse pfx  '
+     A                                  6  1'  *ALL,*NONE,*ADMIN   '
+     A            D_GROUP1      16   B  4 24
+     A    N51                               DSPATR(UL)
+     A     51                               DSPATR(RI PC)
+     A            D_GROUP2      16   B  4 41
+     A    N52                               DSPATR(UL)
+     A     52                               DSPATR(RI PC)
+     A            D_GROUP3      16   B  4 58
+     A    N53                               DSPATR(UL)
+     A     53                               DSPATR(RI PC)
+     A            D_GROUP4      16   B  5 24
+     A    N54                               DSPATR(UL)
+     A     54                               DSPATR(RI PC)
+     A            D_GROUP5      16   B  5 41
+     A    N55                               DSPATR(UL)
+     A     55                               DSPATR(RI PC)
+     A            D_GROUP6      16   B  5 58
+     A    N56                               DSPATR(UL)
+     A     56                               DSPATR(RI PC)
+     A            D_GROUP7      16   B  6 24
+     A    N57                               DSPATR(UL)
+     A     57                               DSPATR(RI PC)
+     A            D_GROUP8      16   B  6 41
+     A    N58                               DSPATR(UL)
+     A     58                               DSPATR(RI PC)
+     A            D_GROUP9      16   B  6 58
+     A    N59                               DSPATR(UL)
+     A     59                               DSPATR(RI PC)
+     A                                  8  1'Command . . . . . . .'
+     A     45                               DSPATR(RI)
+     A                                  9  1'  press F1 for help  '
+     A                                 10  1'        F4 to prompt '
+     A            D_COMMAND    250   B  8 24
+     A                                      CNTFLD(50)
+     A                                      WRDWRAP
+     A                                      DSPATR(UL)
+     A     45                               DSPATR(PC)
+     A                                 14  1'Confirm perform opt? :'
+     A            D_CONFPO       1   B 14 24
+     A    N46                               DSPATR(UL)
+     A     46                               DSPATR(RI PC)
+     A                                 14 28'Y/N'
+     A                                 15  1'Default err handler? :'
+     A            D_DFTEH        1   B 15 24
+     A    N47                               DSPATR(UL)
+     A     47                               DSPATR(RI PC)
+     A                                 15 28'Y/N'
+
+      * Screen 9 (confirm save menu)
+     A          R DFWINDOW9
+     A N10                                  DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A                                      KEEP
+     A                                      WINDOW(&D__WDWROW9 &D__WDWCOL9
+     A                                             7 44
+     A                                             *NOMSGLIN *RSTCSR)
+     A                                      WDWBORDER((*COLOR BLU))
+     A                                      WDWTITLE((*TEXT &D__WDWTIT9)
+     A                                               (*COLOR WHT)
+     A                                               *CENTER)
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A            D__WDWROW9     2S 0P
+     A            D__WDWCOL9     3S 0P
+     A            D__WDWTIT9    30   P
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+     A                                  2 13'PRESS ENTER TO SAVE'
+     A                                      DSPATR(HI)
+     A                                  4  1'Type "YES" to force users to -
+     A                                      reload the menu'
+     A            D_FRELOAD      3   B  6 19
+     A    N61                               DSPATR(UL)
+     A     61                               DSPATR(RI PC)
+
+      * Header
+     A          R DFHEADER
+     A N10                                  DSPMOD(*NORMAL)
+     A            D__HDPGMI     13   O  1  2
+     A            D__HDTXT1     34   O  1 50DSPATR(HI)
+     A  *NORMAL                         1 24
+     A            D__HDDATE      8   O  1115
+     A  *NORMAL                         1 63
+     A            D__HDTIME      8   O  1124
+     A  *NORMAL                         1 72
+     A            D__HDUSRI     21   O  2  2
+     A            D__HDTXT2     34   O  2 50
+     A  *NORMAL                         2 24
+     A            D__HDJOBI     17   O  2115
+     A  *NORMAL                         2 63
+
+      * Footer (*WIDE)
+     A          R DFFOOTERW
+     A                                      OVERLAY
+     A N30        D__FTMSG1W   130   O 25  2DSPATR(HI UL)
+     A  30                             25  2'>>'
+     A                                      DSPATR(RI)
+     A                                      COLOR(RED)
+     A  30        D__FTMSG2W   127   O 25  5DSPATR(HI UL)
+     A            D__FTTEXTW   263   O 26  2
+
+      * Footer (*NORMAL)
+     A          R DFFOOTER
+     A                                      DSPMOD(*NORMAL)
+     A                                      OVERLAY
+     A N30        D__FTMSG1     78   O 24  2DSPATR(HI)
+     A  30                             24  2'>>'
+     A                                      DSPATR(RI)
+     A                                      COLOR(RED)
+     A  30        D__FTMSG2     75   O 24  5DSPATR(HI)
+
+      * Dummy record needed for windowing
+     A          R DUMMY1
+     A                                      ASSUME
+     A            DUMMYFLD       1   O  2  1
+

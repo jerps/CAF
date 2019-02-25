@@ -1,0 +1,3056 @@
+
+       // (c) 2019 John Erps
+
+
+       // Common App - Menu
+
+
+       // Pass 0-5 parameters:
+
+       //   1 I  (10)    : Mode.
+       //                    *DISPLAY - Display the menu.
+       //                    *UPDATE  - Display the menu and enable updating
+       //                               the menu.
+
+       //   2 I  (10)    : Special behavior codes.
+       //                  This field can contain one or more letters listed
+       //                  below to indicate special behaviors.
+       //                    V - Force DSPMOD(*NORMAL) on program init.
+       //                    W - Force DSPMOD(*WIDE) on program init.
+       //                    X - Do not allow resize/refresh (F9).
+
+       //   3 O  (2,0)   : Return code (ERROR if >=30)
+       //                    00 - Default.
+       //                    01 - F3 key was pressed (exit).
+       //                    30 - An unspecified error occurred.
+       //                    31 - Illegal parameter value.
+       //                    32 - Function not allowed.
+       //                    33 - Program fault.
+
+       //   4 O  (100)   : Return message 1 (error).
+       //   5 O  (100)   : Return message 2 (cause).
+
+
+       // Binding directories.
+       // Release all service programs at the end of main by calling the
+       // "RlsSp*" procedure for each. Be sure to do this in the correct
+       // order, i.e. highest level first and lowest level last.
+     h bnddir(
+     h             'CAPPDISP'
+     h            :'CAPPSSAM'
+     h            :'CAPPBASE'
+     h            :'CSYSBASE'
+     h       )
+
+      /include QINCSRC,DPGM_HEAD
+
+
+     fCAFMENU   cf   e             workstn infds(WSI)
+
+
+       // ----- Includes
+
+      /include QINCSRC,CAFMENU
+
+      /include QINCSRC,CAFMENUG
+
+      /include CAPPDISPS,INCL_API
+      /include CAPPSSAMS,INCL_API
+      /include CAPPBASES,INCL_API
+      /include CSYSBASES,INCL_API
+
+
+       // ----- Constants
+
+       // The minimum number of parameters needed by this program.
+     d MinPgmParms     c                   0
+
+       // Vertical strip borders
+     d VsbTop          c                   6
+     d VsbBottom       c                   20
+     d VsbLeftLeft     c                   2
+     d VsbLeftRight    c                   40
+     d VsbMiddleLeft   c                   42
+     d VsbMiddleRight  c                   80
+     d VsbRightLeft    c                   82
+     d VsbRightRight   c                   120
+
+       // Window sizes.
+     d WszDFWINDOW1V   c                   6
+     d WszDFWINDOW1H   c                   61
+     d WszDFWINDOW2V   c                   17
+     d WszDFWINDOW2H   c                   77
+     d WszDFWINDOW9V   c                   9
+     d WszDFWINDOW9H   c                   48
+
+       // Row on which to display the bottom message (*NORMAL and *WIDE).
+     d MsgRowNormal    c                   24
+     d MsgRowWide      c                   25
+
+
+       // ----- External Data Structures
+
+
+       // ----- Internal Data Structures
+
+      /include QINCSRC,DS_PSI
+
+       // Error structure.
+       // For convenience, use local procedures "L_SetErr" and "L_AddErrFld".
+     d Err             ds                  qualified inz
+         // *on if an error occurred, else *off.
+     d   e                             n
+         // names of fields/attributes in error.
+     d   flds                        12    dim(40)
+
+
+       // ----- Arrays
+
+       // Array "FEMap" associates field/attribute names with error indicators
+       // *in31-*in69. A question mark ("?") in a name means that the position
+       // matches any character. The first name which matches a field/attribute
+       // name (case sensitive) determines the indicator to be set to *on.
+       // Execute subr. "SetErrFldsInd" to set error indicators according to
+       // the names in array "Err.flds" (see above).
+     d FEMap           s             14    ctdata dim(100)
+       // Cursor locations.
+     d CursLocs        s              7    ctdata dim(50)
+       // Texts
+     d Text            s             80    ctdata dim(50)
+       // Function key texts
+     d FunText         s             60    ctdata dim(50)
+       // Array "HelpText" contains the current help text to be displayed when
+       // pressing F1. It contains the active function key descriptions from
+       // "FunText" which are usually displayed at the bottom of the screen.
+       // Is only displayed when "DspWide" is *off;
+     d HelpText        s             60    dim(30)
+
+
+       // ----- Fields/Vars
+
+       // Number of parameters passed to this program.
+     d Parms#          s             10i 0
+
+       // Program activated.
+     d PgmActivated    s               n   inz(*off)
+
+       // Return code/message1/2 to be returned to caller.
+     d Rtncd           s              2  0
+     d Rtnmsg1         s            100
+     d Rtnmsg2         s            100
+
+       // Modes:
+     d ModeDisplay     s               n
+     d ModeUpdate      s               n
+
+       // Special behaviors:
+       // - SbDspiNorm   : Force DSPMOD(*NORMAL) on program init.
+       // - SbDspiWide   : Force DSPMOD(*WIDE) on program init.
+       // - SbNoResize   : Do not allow resize/refresh (F9).
+     d SbDspiNorm      s               n
+     d SbDspiWide      s               n
+     d SbNoResize      s               n
+
+       // Display mode *WIDE if *on.
+     d DspWide         s               n
+
+       // Current screen rows and columns.
+     d ScreenRows      s             10i 0
+     d ScreenCols      s             10i 0
+
+       // The screen/window to be displayed/processed (0 = exit).
+       //   1 : The menu                  (DFSCREEN1)
+       //   2 : Edit slot                 (DFWINDOW1)
+       //   3 : Edit option attributes    (DFWINDOW2)
+       //   4 : Edit page attributes      (DFWINDOW2)
+       //   5 : Edit menu attributes      (DFWINDOW2)
+       //   9 : Confirm save menu         (DFWINDOW9)
+     d Screen          s             10i 0
+
+       // Previous screen.
+     d PrevScreen      s                   like(Screen)
+
+       // The primary (error)message, to be displayed at the bottom, in
+       // "ExScreen". This field is always cleared automatically, after
+       // "ExScreen", with "CAPPBASE/ClrDspMsgs" (see below).
+       // For convenience, use local procedures "L_SetErr" and "L_AddErrFld"
+       // to set the "Err" data structure and "DspMsg" in one go in case
+       // of an error.
+       // NOTE: This field is defined in and exported from *SRVPGM CAPPBASE.
+     d DspMsg          s            130            import('DspMsg')
+
+       // A list of max. 99 supplementary (error)messages, to be displayed
+       // in "ExScreen", like "DspMsg". This array is also always cleared
+       // automatically, after "ExScreen". Field "DspMsg", together with
+       // "DspMsgList" can be considered as one list with max. 100 messages,
+       // where "DspMsg" is the first one, and "DspMsgList(1)" the second.
+       // The first message in this list (either "DspMsg" or "DspMsgList(1)")
+       // is displayed at the bottom, in "ExScreen". The last message in
+       // "DspMsgList" is by definition in the element just before the first
+       // blank element. Thus, if "DspMsgList(1)" is blank then the array is
+       // considered to contain no messages at all. If "DspMsgList(1)" and
+       // "DspMsg" are both not blank, or "DspMsgList(1)" and "DspMsgList(2)"
+       // are both not blank, a "+" at the right of the displayed message at
+       // the bottom is shown to indicate more messages. The user may press
+       // F22 to display all messages within a pageable window, which includes
+       // "DspMsg" (displayed at the top).
+       // NOTES:
+       //   - Use "CAPPBASE/ClrDspMsgs" to clear all messages, including
+       //     "DspMsg".
+       //   - Use "CAPPBASE/AddToDspMsgList" to place a message into the
+       //     first non-blank element of "DspMsgList".
+       //   - Array "DspMsgList" is defined in and exported from *SRVPGM
+       //     CAPPBASE.
+     d DspMsgList      s            130    dim(99) import('DspMsgList')
+
+       // Is set to *on in "ExScreen" if there are more messages to display,
+       // i.e. a "+" is shown on the right of the displayed message at the
+       // bottom.
+     d MoreMsgs        s               n
+
+       // The statusmessage to be displayed at the bottom row, in "ExScreen",
+       // but only if "StatMsg <> *BLANKS", and "StatMsg <> DspMsg" and
+       // "StatMsg <> DspMsgList(1)". This field is NOT cleared automatically.
+       // NOTE: the statusmessage replaces the second line with function
+       // key information, which is normally displayed at the bottom row.
+     d StatMsg         s            130
+
+       // The row on the screen on which to display the bottom message,
+       // determined in subr. "CalcScrSizes".
+     d DspMsgRow       s             10i 0
+
+       // Cursor location on last input operation (exfmt).
+     d CursRow         s             10i 0
+     d CursCol         s             10i 0
+
+       // If *on, set cursor on location "CursRow"/"CursCol" on next
+       // display output operation (exfmt).
+     d SetCurs         s               n
+
+       // Press key again to confirm if *off.
+     d ConfirmExit     s               n
+     d ConfirmAccept   s               n
+     d ConfirmRefresh  s               n
+     d ConfirmDelete   s               n
+
+       // Header displayed on screen.
+     d HdrText         s            100
+       // Subfile options or function keys to be displayed on screen.
+     d DspOpts         s           1056
+       // A message.
+     d Msg             s            130
+       // A message number.
+     d Msg#            s             10i 0
+
+       // Standard program parameter fields.
+     d Pmode           s             10
+     d Pspcbhvr        s             10
+     d Prc             s                   like(Rtncd)
+     d Prm1            s                   like(Rtnmsg1)
+     d Prm2            s                   like(Rtnmsg2)
+
+       // Original input parameter values.
+     d Imode           s             10
+     d Ispcbhvr        s             10
+
+       // Previous screen values, used to check whether a screen field
+       // has been changed by the user.
+     d PsvPageTitle    s                   like(D_PTITLE)
+     d PsvSimUser      s                   like(D_SIMUSER)
+
+       // Is set tot *on when a screen field has been changed.
+       // The change is handled in a "Hsf" subroutine, which must set
+       // the indicator to *off again, else the field is reset to it's
+       // previous value ("Psv*").
+     d SfcPageTitle    s               n
+     d SfcSimUser      s               n
+
+       // If set to *on, set the cursor on the screen field.
+     d PcfPageTitle    s               n
+     d PcfSimUser      s               n
+
+       // The user for which the menu is currently presented.
+       // In *DISPLAY mode:
+       //   - The menu is loaded with the options for the current user-id
+       //     ("PSI.curuser").
+       //   - This field is initialized with the current user-id and is
+       //     never changed.
+       // In *UPDATE mode:
+       //   - The menu is loaded with all options for all users.
+       //   - This field is initialized with blanks, and is changed to
+       //     a specific user-id or the special character "*" (all options)
+       //     in "simulation mode" (i.e. "SimDisplay" is *on).
+       //   - This field is changed back again to blanks if "SimDisplay" is
+       //     set to *off again.
+     d MenuUser        s             10
+
+       // The current "user" menu page being displayed ("Screen" 1).
+       // Is set to 0 when there are no menu pages to display (empty menu).
+       // When in update mode and "SimDisplay" is *off then this field is
+       // only 0 when the menu is not loaded, because there are always
+       // "CNumPages" (empty) pages.
+     d CurUserPage     s             10i 0
+
+       // The current "real" menu page (i.e. index of array "MenuPages")
+       // being displayed ("Screen" 1). Must be ignored if "CurUserPage"
+       // is 0.
+     d CurMenuPage     s             10i 0
+
+       // The slot index of the current cursor location, which is 0 if
+       // the menu is empty, or if the cursor is outside the vertical
+       // strip borders (see constants "Vsb*").
+     d SlotAtCursor    s             10i 0
+
+       // In *DISPLAY mode (and in *UPDATE mode with "SimDisplay" *off)
+       // the options and headers on a page are not displayed on the fixed
+       // screen location which corresponds to the slot containing the
+       // option or header. This array contains, for each slot on the
+       // current menu page ("CurMenuPage"), the slot index of the option
+       // that is displayed on that slot location, which are always the
+       // same if in update mode and "SimDisplay" is *off.
+     d DspSlots        s             10i 0 dim(%elem(MenuPage.slots))
+
+       // If the program is in *UPDATE mode and "SimDisplay" is *on,
+       // the program simulates display mode (where applicable).
+     d SimDisplay      s               n
+
+       // Currently selected page and slot.
+     d SelectedPage    s             10i 0
+     d SelectedSlot    s             10i 0
+
+       // If set to *on, fields "SelectedPage" and "SelectedSlot" are
+       // set to 0 right after subr. "ExScreen" has been executed.
+     d NoSlotSelection...
+     d                 s               n
+
+       // Contains the value to which "CurUserPage" is set when
+       // going back to screen 1 (the menu), from another screen.
+     d OrigUserPage    s             10i 0
+
+       // Contains the value to which "CurUserPage" is set when
+       // switching back from simulate display mode to normal mode.
+     d SimPgNorm       s             10i 0
+
+       // An error message / attribute / page / slot.
+     d ErrMsg          s            200
+     d ErrAttr         s             10
+     d ErrPage         s             10i 0
+     d ErrSlot         s             10i 0
+
+
+       // ----- MAIN Prototype
+
+     d MAIN            pr
+
+
+       // ----- Local Prototypes
+
+      /include QINCSRC,DPGM_LPP
+
+       // Fill the screen fields for the current menu page ("CurMenuPage").
+       // In *UPDATE mode and when "SimDisplay" is *off all options
+       // are displayed on the location that corresponds with the slot
+       // containing the option (left, middle or right strip and vertical
+       // location). In *DISPLAY mode the location is variable and depends
+       // on the available options. In *DISPLAY mode only the available
+       // options are displayed without vertical gaps between them. Also,
+       // headers are never immediately preceded or followed by an option
+       // (a blank line is automatically inserted if necessary).
+       // This procedure also fills array "DspSlots".
+     dL_FillMenuFlds   pr
+
+       // Return the slot index of the current cursor location.
+       // Return 0 if the menu is empty, or if the cursor is outside the
+       // vertical strip borders (see constants "Vsb*").
+       // Note: the slots always have fixed locations on the screen.
+     dL_SlotAtCursor   pr            10i 0
+
+       // L_AddHelpText - Add Help Text
+       // Add a line of help text to array "HelpText".
+     d L_AddHelpText   pr
+     d   ln                          60    const
+
+
+       // ----- Program Entry
+
+     d PgmCAFMENU      pi
+     d   @@Mode                      10    const options(*nopass)
+     d   @@Spcbhvr                   10    const options(*nopass)
+     d   @@Rtncd                      2  0       options(*nopass)
+     d   @@Rtnmsg1                  100          options(*nopass)
+     d   @@Rtnmsg2                  100          options(*nopass)
+
+      /free
+
+
+       *inLR = *on;
+
+       Parms# = %parms;
+
+       if Parms# > 2;
+         @@Rtncd = 0;
+       endif;
+       if Parms# > 3;
+         @@Rtnmsg1 = '';
+       endif;
+       if Parms# > 4;
+         @@Rtnmsg2 = '';
+       endif;
+
+       Rtncd = 0;
+       Rtnmsg1 = '';
+       Rtnmsg2 = '';
+
+       MAIN();
+
+       // Release all resources.
+       RlsSpCAPPDISP();
+       RlsSpCAPPSSAM();
+       RlsSpCAPPBASE();
+       RlsSpCSYSBASE();
+
+       if Parms# > 2;
+         @@Rtncd = Rtncd;
+       endif;
+       if Parms# > 3;
+         @@Rtnmsg1 = Rtnmsg1;
+       endif;
+       if Parms# > 4;
+         @@Rtnmsg2 = Rtnmsg2;
+       endif;
+
+       return;
+
+
+      /end-free
+
+
+     p MAIN            b
+     d MAIN            pi
+
+     d grps            s                   like(MenuOption.groups)
+     d                                     dim(CNumGroups)
+     d specb           s                   like(MenuOption.specb)
+     d chgcmd          s          30000
+     d flag            s               n
+     d a200            s            200
+     d i               s             10i 0
+     d n               s             10i 0
+     d p               s             10i 0
+     d s               s             10i 0
+
+      /free
+
+
+       dou 0=0;
+
+       if not PgmActivated;
+         PgmActivated = *on;
+         exsr Activate;
+         if Rtncd <> 0;
+           leave;
+         endif;
+       endif;
+
+       exsr Init;
+       if Rtncd <> 0;
+         leave;
+       endif;
+
+       dow Screen <> 0;
+
+         // Check if display mode *WIDE is supported.
+         if     DspWide
+            and not IsDspModeWideSupported();
+           DspWide = *off;
+           PushDspMsgs(RtvAMsgAB(1046:CAmsWarning));
+         endif;
+
+         // Make sure the first message is in "DspMsg" and up.
+         DropDspMsgs();
+
+         // Calculate current screen sizes.
+         exsr CalcScrSizes;
+
+         // Set "CurUserPage" and "CurMenuPage".
+         exsr SetCurPage;
+
+         // Set current page info.
+         exsr SetPageInfo;
+
+         // Fill the "Screen 1" display fields for the menu, for the
+         // current page, i.e. user page "CurUserPage" and "real" page
+         // "CurMenuPage" (index of array "MenuPages").
+         L_FillMenuFlds();
+
+         D_CHOICE = '';
+
+         // Remember "previous" (now current) screen values.
+         PsvPageTitle = D_PTITLE;
+         PsvSimUser   = D_SIMUSER;
+
+         // Adjust window locations.
+         exsr AdjustWdwLocs;
+
+         // Execute screen / subfile.
+         exsr ExScreen;
+
+         if NoSlotSelection;
+           NoSlotSelection = *off;
+           SelectedPage    = 0;
+           SelectedSlot    = 0;
+         endif;
+
+         // Check which screen values have been changed by the user.
+         SfcPageTitle = D_PTITLE  <> PsvPageTitle;
+         SfcSimUser   = D_SIMUSER <> PsvSimUser;
+
+         clear Err;       // Clear error data.
+         ClrDspMsgs();    // Clear (error)messages.
+         MoreMsgs = *off; // No more messages.
+
+         if not KeyPressed(KsF03);
+           ConfirmExit = *off;
+         endif;
+         if not KeyPressed(KsEnter);
+           ConfirmAccept = *off;
+         endif;
+         if not KeyPressed(KsF05);
+           ConfirmRefresh = *off;
+         endif;
+         if not KeyPressed(KsF14);
+           ConfirmDelete = *off;
+         endif;
+
+         if Screen = 1;
+           SlotAtCursor = L_SlotAtCursor();
+         else;
+           SlotAtCursor = 0;
+         endif;
+
+         // RETAIN CURSOR LOCATION FOR "Screen" > 1
+         if Screen > 1;
+           SetCurs = *on;
+         endif;
+
+         PrevScreen = Screen;
+
+         dou 0=0;
+
+         if Err.e;
+           leave;
+         endif;
+
+         if     (   KeyPressed(KsPageDown)
+                 or KeyPressed(KsPageUp))
+            and Screen <> 4;
+           // Pagedown/up pressed, but not in screen "edit page attr".
+           if CurUserPage <= 0;
+             L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           elseif KeyPressed(KsPageDown);
+             if CurUserPage < MnuUserPage(MenuUser);
+               CurUserPage = CurUserPage + 1;
+             else;
+               DspMsg = RtvAMsgAM(5011);
+             endif;
+           elseif KeyPressed(KsPageUp);
+             if CurUserPage > 1;
+               CurUserPage = CurUserPage - 1;
+             else;
+               DspMsg = RtvAMsgAM(5012);
+             endif;
+           endif;
+         elseif     KeyPressed(KsF02)
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay;
+           // F02 pressed in menu; save menu.
+           exsr SaveMenu;
+         elseif KeyPressed(KsF03);
+           // F03 pressed; exit program (if confirmed).
+           if ConfirmExit;
+             ConfirmExit = *off;
+             Rtncd = 1;
+             Screen = 0;
+           else;
+             ConfirmExit = *on;
+             if     ModeUpdate
+                and MnuIsUpdated();
+               DspMsg = RtvAMsgAM(5102);
+             else;
+               DspMsg = RtvAMsgAM(5101);
+             endif;
+           endif;
+         elseif KeyPressed(KsF04);
+           // F04 pressed; select item.
+           exsr SelectItem;
+         elseif     KeyPressed(KsF05)
+                and Screen = 1;
+           // F05 pressed in menu; reload menu.
+           if    not MnuIsUpdated()
+              or ConfirmRefresh;
+             ConfirmRefresh = *off;
+             exsr LoadMenu;
+           else;
+             // The menu has been updated; confirm.
+             ConfirmRefresh = *on;
+             DspMsg = RtvAMsgAM(5105);
+           endif;
+         elseif     KeyPressed(KsF06)
+                and (   Screen = 3
+                     or Screen = 4
+                     or Screen = 5);
+           // F06 pressed in screen "edit attrs"; insert blank group.
+           exsr InsertBlankGroup;
+         elseif     (   KeyPressed(KsF07)
+                     or KeyPressed(KsF08))
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay
+                and not MnuIsBlankPage(CurMenuPage);
+           // F07 or F08 pressed in menu in update mode; move opts/pages.
+           SetCurs = *on;
+           exsr MoveOptsPages;
+         elseif     KeyPressed(KsF09)
+                and not SbNoResize;
+           // F09 pressed; switch screen size & refresh.
+           DspWide = not DspWide;
+           SetCurs = *off;
+         elseif     KeyPressed(KsF11)
+                and Screen = 1
+                and ModeUpdate;
+           // F11 pressed in menu in update mode; switch sim. display.
+           exsr SwitchSimDisplay;
+         elseif     KeyPressed(KsF12)
+                and Screen > 1;
+           // F12 pressed; return to previous screen.
+           select;
+           when Screen = 2;
+             CurUserPage = OrigUserPage;
+             Screen = 1;
+             SelectedPage = 0;
+             SelectedSlot = 0;
+           when Screen = 3;
+             D__WDWTIT1 = SubstText(Text(11)
+                              :%char(SelectedPage):%char(SelectedSlot));
+             Screen = 2;
+           when Screen = 4;
+             CurUserPage = OrigUserPage;
+             Screen = 1;
+             SelectedPage = 0;
+           when Screen = 5;
+             Screen = 1;
+           when Screen = 9;
+             Screen = 1;
+           endsl;
+         elseif     KeyPressed(KsF13)
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate;
+           // F13 pressed in menu in update mode; reload authorisations.
+           exsr ReloadAuth;
+         elseif     KeyPressed(KsF13)
+                and (   Screen = 3
+                     or Screen = 4
+                     or Screen = 5);
+           // F13 pressed in screen "edit attrs"; work with menu groups.
+           exsr WorkWithMenuGroups;
+         elseif     KeyPressed(KsF14)
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay
+                and not MnuIsBlankPage(CurMenuPage);
+           // F14 pressed in menu in update mode; clear page.
+           if ConfirmDelete;
+             exsr ClearPage;
+           else;
+             ConfirmDelete = *on;
+             DspMsg = RtvAMsgAM(5111);
+           endif;
+         elseif     KeyPressed(KsF14)
+                and Screen = 2
+                and (   MnuSlotHasOpt(SelectedPage:SelectedSlot)
+                     or MnuSlotHasHdr(SelectedPage:SelectedSlot));
+           // F14 pressed in screen "edit slot"; delete option or header.
+           if ConfirmDelete;
+             exsr DeleteOptHdr;
+           elseif MnuSlotHasOpt(SelectedPage:SelectedSlot);
+             ConfirmDelete = *on;
+             DspMsg = RtvAMsgAM(5112);
+           elseif MnuSlotHasHdr(SelectedPage:SelectedSlot);
+             ConfirmDelete = *on;
+             DspMsg = RtvAMsgAM(5113);
+           else;
+             L_SetErr(RtvAMsgAM(5007:CAmsFatal));
+           endif;
+         elseif     KeyPressed(KsF14)
+                and (   Screen = 3
+                     or Screen = 4
+                     or Screen = 5);
+           // F14 pressed in screen "edit attrs"; delete group.
+           exsr DeleteGroup;
+         elseif     KeyPressed(KsF16)
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay;
+           // F16 pressed in menu in update mode; edit page attributes.
+           exsr EditPageAttr;
+         elseif     KeyPressed(KsF16)
+                and Screen = 4;
+           // F16 pressed in edit page attr; edit menu attributes.
+           exsr EditMenuAttr;
+         elseif     KeyPressed(KsF17)
+                and Screen = 1
+                and CurUserPage > 0;
+           // F17 pressed in menu; go to first menu page ...
+           if CurUserPage > 1;
+             // ... if not already on first menu page.
+             CurUserPage = 1;
+           endif;
+         elseif     KeyPressed(KsF18)
+                and Screen = 1
+                and CurUserPage > 0;
+           // F18 pressed in menu; go to last menu page ...
+           if CurUserPage < MnuUserPage(MenuUser);
+             // ... if not already on last menu page.
+             CurUserPage = MnuUserPage(MenuUser);
+           endif;
+         elseif     (   KeyPressed(KsF19)
+                     or KeyPressed(KsF20))
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay;
+           // F19/F20 pressed in menu in update mode; prev/next nb page.
+           exsr GotoPrvNxtNonBlankPage;
+         elseif     KeyPressed(KsEnter)
+                and Screen = 1;
+           // Enter pressed in menu.
+           if      SfcPageTitle
+               and ModeUpdate and not SimDisplay;
+             // Handle changed screen field: page title.
+             exsr HsfPageTitle;
+           elseif D_NEWPAGE <> '';
+             // Handle changed screen field: page no.
+             exsr NewPage;
+           elseif SfcSimUser and ModeUpdate and SimDisplay;
+             // Handle changed screen field: simulated user.
+             exsr HsfSimUser;
+           elseif     ModeUpdate and not SimDisplay
+                  and SlotAtCursor > 0;
+             // Edit slot at cursor location.
+             exsr EditSlot;
+           else;
+             // Perform option.
+             exsr PerformOption;
+           endif;
+         elseif     KeyPressed(KsEnter)
+                and Screen = 2
+                and CurUserPage > 0;
+           // Enter pressed in screen "edit slot".
+           exsr AcceptEditSlot;
+         elseif     KeyPressed(KsEnter)
+                and (   Screen = 3
+                     or Screen = 4
+                     or Screen = 5)
+                and CurUserPage > 0;
+           // Enter pressed in screen "edit attributes".
+           exsr AcceptEditAttr;
+         elseif     KeyPressed(KsEnter)
+                and Screen = 9
+                and CurUserPage > 0;
+           // Enter pressed in screen "confirm save menu".
+           exsr AcceptSaveMenu;
+         else;
+           // Function key not supported.
+           L_SetErr(RtvAMsgAB(1010:CAmsFatal));
+         endif;
+
+         enddo;
+
+         // Reset screen values if not handled ("Sfc*" still *on).
+         if SfcPageTitle;
+           D_PTITLE = PsvPageTitle;
+         endif;
+         if SfcSimUser;
+           D_SIMUSER = PsvSimUser;
+         endif;
+
+         if     PrevScreen > 1
+            and Screen <> PrevScreen;
+           SetCurs = *off;
+         endif;
+
+       enddo;
+
+       enddo;
+
+       return;
+
+
+       // Perform actions when the program is first activated.
+       begsr Activate;
+
+         // Set WSI@ to let service program CSYSBASE access
+         // the workstation information in ds WSI.
+         WSI@ = %addr(WSI);
+
+       endsr;
+
+
+       // Initialize program.
+       begsr Init;
+
+         clear Err;
+
+         ClrDspMsgs();
+         MoreMsgs = *off;
+         StatMsg = '';
+
+         Screen = 1;
+
+         PrevScreen = Screen;
+
+         CursRow = 1;
+         CursCol = 1;
+         SetCurs = *off;
+
+         ConfirmExit    = *off;
+         ConfirmAccept  = *off;
+         ConfirmRefresh = *off;
+         ConfirmDelete  = *off;
+
+         Imode = '';
+         Ispcbhvr = '';
+
+         // Check number of parameters.
+         if Parms# < MinPgmParms;
+           Rtncd = 31;
+           Rtnmsg1 =   'This program needs at least '
+                     + %char(MinPgmParms) + ' parameters.';
+           leavesr;
+         endif;
+
+         // Set mode indicators.
+         if Parms# > 0;
+           Imode = @@Mode;
+         else;
+           Imode = '*DISPLAY';
+         endif;
+         ModeDisplay = Imode = '*DISPLAY';
+         ModeUpdate  = Imode = '*UPDATE';
+         if     not ModeDisplay
+            and not ModeUpdate;
+           Rtncd = 31;
+           Rtnmsg1 = 'Value of parameter 1 (mode) is unsupported.';
+           leavesr;
+         endif;
+
+         if     ModeUpdate
+            and not IsGrpMember(PSI.curuser:*off:CSgAdmin);
+           Rtncd = 32;
+           Rtnmsg1 = 'User ' + %trimr(PSI.curuser) + ' not in group ' +
+                     '"' + %trimr(CSgAdmin) + '"' + '.';
+           leavesr;
+         endif;
+
+         // Set special behavior indicators.
+         if Parms# > 1;
+           Ispcbhvr = @@Spcbhvr;
+         endif;
+         SbDspiNorm = %scan('V':Ispcbhvr) > 0;
+         SbDspiWide = %scan('W':Ispcbhvr) > 0;
+         SbNoResize = %scan('X':Ispcbhvr) > 0;
+
+         if SbDspiNorm;
+           DspWide = *off;
+         elseif SbDspiWide;
+           DspWide = *on;
+         else;
+           DspWide = IsDspModeWide();
+         endif;
+
+         exsr CalcScrSizes;
+
+         clear *all DFSCREEN1;
+
+         SimDisplay      = *off;
+         CurUserPage     = 0;
+         CurMenuPage     = 0;
+         DspSlots(*)     = 0;
+         SelectedPage    = 0;
+         SelectedSlot    = 0;
+         NoSlotSelection = *off;
+         OrigUserPage    = 0;
+         SimPgNorm       = 0;
+
+         PcfPageTitle = *off;
+         PcfSimUser   = *off;
+
+         // Load the menu . . .
+         if ModeUpdate;
+           // . . . for update with all options for all users.
+           MenuUser = '';
+         else;
+           // . . . for display with the options for "PSI.curuser".
+           MenuUser = PSI.curuser;
+         endif;
+         exsr LoadMenu;
+
+       endsr;
+
+
+       // Calculate current screen sizes.
+       begsr CalcScrSizes;
+
+         if DspWide;
+           ScreenRows = 27;
+           ScreenCols = 132;
+           DspMsgRow = MsgRowWide;
+         else;
+           ScreenRows = 24;
+           ScreenCols = 80;
+           DspMsgRow = MsgRowNormal;
+         endif;
+
+       endsr;
+
+
+       // Execute the current screen ("Screen").
+       begsr ExScreen;
+
+         if Err.e;
+           // Set error indicators (31-69), as specified in "FEMap".
+           exsr SetErrFldsInd;
+         endif;
+
+         // Set generic display indicators.
+         *in10 = DspWide;
+         *in30 = Err.e;
+         *in75 = ModeUpdate and not SimDisplay;
+         *in76 = ModeUpdate and SimDisplay;
+
+         // Set cursor on field, if requested, and no field error
+         // indicator is *on.
+         flag = *off;
+         for i = 31 to 69;
+           if *in(i);
+             flag = *on;
+             leave;
+           endif;
+         endfor;
+         if flag;
+           *in91 = *off;
+           *in92 = *off;
+           *in93 = *off;
+           *in94 = *off;
+         else;
+           *in91 = PcfPageTitle;
+           *in93 = PcfSimUser;
+           if *in91 or *in92 or *in93;
+             SetCurs = *off;
+           elseif not SetCurs;
+             // Set cursor on choice field by default.
+             *in94 = *on;
+           endif;
+         endif;
+
+         // "Msg" contains the message to display at the bottom.
+         Msg = '';
+         if DspMsg <> '';
+           Msg = DspMsg;
+           Msg# = 0;
+         else;
+           Msg = DspMsgList(1);
+           Msg# = 1;
+         endif;
+
+         if        DspMsg <> ''
+               and DspMsgList(1) <> ''
+            or     DspMsgList(1) <> ''
+               and DspMsgList(2) <> '';
+           // Show "+" to indicate more messages.
+           MoreMsgs = *on;
+         endif;
+
+         if Msg = '';
+           // Set informational message.
+           if not MnuIsLoaded();
+             Msg = RtvAMsgAM(5004);
+           elseif CurUserPage = 0;
+             Msg = RtvAMsgAM(5002);
+           elseif Screen = 2;
+             Msg = RtvAMsgAM(5021:CAmsInfo:
+                       %char(SelectedPage):%char(SelectedSlot));
+           elseif Screen = 3;
+             Msg = RtvAMsgAM(5022:CAmsInfo:
+                       %char(SelectedPage):%char(SelectedSlot));
+           elseif Screen = 4;
+             Msg = RtvAMsgAM(5023:CAmsInfo:
+                       %char(SelectedPage));
+           elseif Screen = 5;
+             Msg = RtvAMsgAM(5024:CAmsInfo);
+           elseif Screen = 9;
+             if MnuIsUpdated();
+               Msg = RtvAMsgAM(5025);
+             else;
+               Msg = RtvAMsgAM(5008);
+             endif;
+           elseif MnuIsBlankPage(CurMenuPage);
+             Msg = RtvAMsgAM(5005);
+           endif;
+         endif;
+
+         // Header.
+         select;
+         when ModeDisplay;
+           HdrText = Text(3);
+         when ModeUpdate;
+           if     Screen = 4
+              and CurMenuPage = SelectedPage;
+             HdrText = Text(5);
+           elseif Screen = 5;
+             HdrText = Text(6);
+           else;
+             HdrText = Text(4);
+           endif;
+         other;
+           HdrText = '?';
+         endsl;
+         D__HDPGMI = %trim(PSI.pgmname) + '.' + %char(Screen);
+         D__HDDATE = PtDate(%date);
+         D__HDTIME = PtTime(%time);
+         D__HDUSRI = PSI.curuser;
+         if PSI.jobuser <> PSI.curuser;
+           D__HDUSRI = %trim(D__HDUSRI) + '/' + %trim(PSI.jobuser);
+         endif;
+         evalr D__HDJOBI = %trim(PSI.jobname) + '/' +
+                           %editc(PSI.jobnumber:'X');
+         D__HDTXT1 = '';
+         D__HDTXT2 = '';
+         if Menu.title = '';
+           %subst(D__HDTXT1:
+               %div(%len(D__HDTXT1)-%len(%trim(Text(1))):2)+1)
+               = %trim(Text(1));
+         else;
+           %subst(D__HDTXT1:
+               %div(%len(D__HDTXT1)-%len(%trim(Menu.title)):2)+1)
+               = %trim(Menu.title);
+         endif;
+         %subst(D__HDTXT2:
+             %div(%len(D__HDTXT2)-%len(%trim(HdrText)):2)-1)
+             = '  ' + %trim(HdrText);
+         write DFHEADER;
+
+         clear HelpText;
+
+         // Footer.
+         DspOpts = '';
+         // F1
+         AddToAppOpts(FunText(1):DspOpts:DspWide);
+         // F2
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay;
+           AddToAppOpts(FunText(2):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(2));
+           endif;
+         endif;
+         // F4
+         if    Screen = 2
+            or Screen = 3;
+           AddToAppOpts(FunText(4):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(4));
+           endif;
+         endif;
+         // F5
+         if Screen = 1;
+           AddToAppOpts(FunText(5):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(5));
+           endif;
+         endif;
+         // F6
+         if    Screen = 3
+            or Screen = 4
+            or Screen = 5;
+           AddToAppOpts(FunText(6):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(6));
+           endif;
+         endif;
+         // F7, F8
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay
+            and not MnuIsBlankPage(CurMenuPage);
+           AddToAppOpts(FunText(7):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(7));
+           endif;
+           AddToAppOpts(FunText(8):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(8));
+           endif;
+         endif;
+         // F11
+         if    Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate;
+           if SimDisplay;
+             AddToAppOpts(FunText(31):DspOpts:DspWide);
+             if not DspWide;
+               L_AddHelpText(FunText(31));
+             endif;
+           else;
+             AddToAppOpts(FunText(11):DspOpts:DspWide);
+             if not DspWide;
+               L_AddHelpText(FunText(11));
+             endif;
+           endif;
+         endif;
+         // F13
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate;
+           AddToAppOpts(FunText(13):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(13));
+           endif;
+         elseif    Screen = 3
+                or Screen = 4
+                or Screen = 5;
+           AddToAppOpts(FunText(36):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(36));
+           endif;
+         endif;
+         // F14
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay
+            and not MnuIsBlankPage(CurMenuPage);
+           AddToAppOpts(FunText(14):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(14));
+           endif;
+         elseif         Screen = 2
+                and (   MnuSlotHasOpt(SelectedPage:SelectedSlot)
+                     or MnuSlotHasHdr(SelectedPage:SelectedSlot));
+           AddToAppOpts(FunText(32):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(32));
+           endif;
+         elseif    Screen = 3
+                or Screen = 4;
+           AddToAppOpts(FunText(33):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(33));
+           endif;
+         endif;
+         // F16
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay;
+           AddToAppOpts(FunText(16):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(16));
+           endif;
+         elseif     Screen = 4
+            and CurUserPage > 0;
+           AddToAppOpts(FunText(34):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(34));
+           endif;
+         endif;
+         // F19, F20
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay;
+           AddToAppOpts(FunText(19):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(19));
+           endif;
+           AddToAppOpts(FunText(20):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(20));
+           endif;
+         endif;
+         //D__FTTEXT  = DspOpts;
+         D__FTTEXTW = DspOpts;
+
+         if not DspWide;
+           L_AddHelpText('----------');
+         endif;
+
+         dou not (   KeyPressed(KsF01)
+                  or KeyPressed(KsF10)
+                  or KeyPressed(KsF22)
+                  or     (   KeyPressed(KsPageDown)
+                          or KeyPressed(KsPageUp))
+                     and GetCursRow() = DspMsgRow);
+
+           D__FTMSG1  = Msg;
+           D__FTMSG1W = Msg;
+           D__FTMSG2  = Msg;
+           D__FTMSG2W = Msg;
+           if MoreMsgs;
+             if Msg# < GetDspMsgListCount();
+               %subst(D__FTMSG1 :%len(D__FTMSG1 )-1) = ' +';
+               %subst(D__FTMSG1W:%len(D__FTMSG1W)-1) = ' +';
+               %subst(D__FTMSG2 :%len(D__FTMSG2 )-1) = ' +';
+               %subst(D__FTMSG2W:%len(D__FTMSG2W)-1) = ' +';
+             else;
+               %subst(D__FTMSG1 :%len(D__FTMSG1 )-1) = ' <';
+               %subst(D__FTMSG1W:%len(D__FTMSG1W)-1) = ' <';
+               %subst(D__FTMSG2 :%len(D__FTMSG2 )-1) = ' <';
+               %subst(D__FTMSG2W:%len(D__FTMSG2W)-1) = ' <';
+             endif;
+           endif;
+           if DspWide;
+             write DFFOOTERW;
+           else;
+             write DFFOOTER;
+           endif;
+
+           if     StatMsg <> ''
+              and StatMsg <> Msg;
+             // Display statusmessage.
+             DspStatMsg(%trimr(StatMsg));
+           endif;
+
+           *in27 = SetCurs;
+           if SetCurs;
+             if     CursRow >= 1
+                and CursRow <= ScreenRows
+                and CursCol >= 1
+                and CursCol <= ScreenCols;
+               D__CURSROW = CursRow;
+               D__CURSCOL = CursCol;
+             else;
+               *in27 = *off;
+             endif;
+             SetCurs = *off;
+           endif;
+
+           select;
+           when Screen = 2;
+             write DFSCREEN1;
+             exfmt DFWINDOW1;
+           when Screen = 3;
+             write DFSCREEN1;
+             write DFWINDOW1;
+             exfmt DFWINDOW2;
+           when Screen = 4;
+             write DFSCREEN1;
+             exfmt DFWINDOW2;
+           when Screen = 5;
+             write DFSCREEN1;
+             exfmt DFWINDOW2;
+           when Screen = 9;
+             write DFSCREEN1;
+             exfmt DFWINDOW9;
+           other;
+             // Screen 1 is default.
+             exfmt DFSCREEN1;
+           endsl;
+
+           // Determine cursor location.
+           if Screen = 1;
+             CursRow = GetCursRow();
+             CursCol = GetCursCol();
+           else;
+             CursRow = GetWCursRow();
+             CursCol = GetWCursCol();
+           endif;
+
+           if KeyPressed(KsF10);
+             exsr SetNextCursLoc;
+           elseif    KeyPressed(KsF01)
+                  or KeyPressed(KsF22);
+             SetCurs = *on;
+             if KeyPressed(KsF01);
+               if DspWide;
+                 DspHelp(' ');
+               else;
+                 DspHelp(' ':HelpText);
+               endif;
+             elseif MoreMsgs;
+               ShowDspMsgs();
+             endif;
+           elseif     (   KeyPressed(KsPageDown)
+                       or KeyPressed(KsPageUp))
+                  and GetCursRow() = DspMsgRow;
+             SetCurs = *on;
+             if MoreMsgs;
+               if KeyPressed(KsPageDown);
+                 Msg# = Msg# + 1;
+               else;
+                 Msg# = Msg# - 1;
+               endif;
+               if Msg# < 0;
+                 Msg# = GetDspMsgListCount();
+               elseif Msg# > GetDspMsgListCount();
+                 Msg# = 0;
+               endif;
+               if Msg# = 0;
+                 Msg = DspMsg;
+               else;
+                 Msg = DspMsgList(Msg#);
+               endif;
+               Msg = %char(Msg# + 1) + ': ' + Msg;
+             endif;
+           endif;
+
+         enddo;
+
+         // Set off all indicators.
+         *in(*) = *off;
+
+         SetCurs = *off;
+
+         PcfPageTitle = *off;
+         PcfSimUser   = *off;
+
+       endsr;
+
+
+       // Set current page.
+       begsr SetCurPage;
+
+         if not MnuIsLoaded();
+           CurUserPage = 0;
+         elseif CurUserPage < 1;
+           CurUserPage = 1;
+         endif;
+         if CurUserPage > MnuUserPage(MenuUser);
+           CurUserPage = MnuUserPage(MenuUser);
+         endif;
+         if CurUserPage > 0;
+           CurMenuPage = MnuUserPage(MenuUser:CurUserPage);
+         else;
+           CurMenuPage = 0;
+         endif;
+
+       endsr;
+
+
+       // Set current page info.
+       begsr SetPageInfo;
+         if ModeUpdate and SimDisplay;
+           evalr D_PAGENO = 'Page' + x'22' + %char(CurUserPage) + x'20' +
+                            '(' + %char(CurMenuPage) + ') '             +
+                            'of ' + %char(MnuUserPage(MenuUser));
+         else;
+           evalr D_PAGENO = 'Page' + x'22' + %char(CurUserPage) + x'20' +
+                            'of ' + %char(MnuUserPage(MenuUser));
+         endif;
+       endsr;
+
+
+       // Adjust window locations.
+       begsr AdjustWdwLocs;
+
+         // Window 1
+         if D__WDWROW1 < VsbTop;
+           D__WDWROW1 = VsbTop;
+         endif;
+         if D__WDWROW1 + WszDFWINDOW1V >= ScreenRows;
+           D__WDWROW1 = ScreenRows - WszDFWINDOW1V;
+         endif;
+         if D__WDWCOL1 < VsbLeftLeft;
+           D__WDWCOL1 = VsbLeftLeft;
+         endif;
+         if D__WDWCOL1 + WszDFWINDOW1H >= ScreenCols;
+           D__WDWCOL1 = ScreenCols - WszDFWINDOW1H;
+         endif;
+
+         // Window 2
+         if Screen = 3;
+           D__WDWROW2 = D__WDWROW1 + WszDFWINDOW1V - 2;
+           if D__WDWROW2 + WszDFWINDOW2V >= ScreenRows;
+             D__WDWROW2 = D__WDWROW1 - WszDFWINDOW2V + 2;
+             if D__WDWROW2 < VsbTop;
+               D__WDWROW2 = VsbTop;
+             endif;
+           endif;
+           D__WDWCOL2 = D__WDWCOL1 + WszDFWINDOW1H - 2;
+           if D__WDWCOL2 + WszDFWINDOW2H >= ScreenCols;
+             D__WDWCOL2 = ScreenCols - WszDFWINDOW2H;
+           endif;
+         else;
+           D__WDWROW2 = %div(ScreenRows-WszDFWINDOW2V:2) + 1;
+           D__WDWCOL2 = %div(ScreenCols-WszDFWINDOW2H:2) + 1;
+         endif;
+         if D__WDWROW2 < VsbTop;
+           D__WDWROW2 = VsbTop;
+         endif;
+         if D__WDWROW2 + WszDFWINDOW2V >= ScreenRows;
+           D__WDWROW2 = ScreenRows - WszDFWINDOW2V;
+         endif;
+         if D__WDWCOL2 < VsbLeftLeft;
+           D__WDWCOL2 = VsbLeftLeft;
+         endif;
+         if D__WDWCOL2 + WszDFWINDOW2H >= ScreenCols;
+           D__WDWCOL2 = ScreenCols - WszDFWINDOW2H;
+         endif;
+
+         // Window 9
+         D__WDWROW9 = %div(ScreenRows-WszDFWINDOW9V:2) + 1;
+         D__WDWCOL9 = %div(ScreenCols-WszDFWINDOW9H:2) + 1;
+
+       endsr;
+
+
+       // Handle changed screen field: page title.
+       begsr HsfPageTitle;
+
+         if CurUserPage <= 0;
+           L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           leavesr;
+         endif;
+
+         SfcPageTitle = *off;
+         PcfPageTitle = *on;
+
+         if not MnuSetPageAttr(ErrMsg:ErrAttr:CurMenuPage:D_PTITLE);
+           L_SetErr(ErrMsg:ErrAttr);
+         endif;
+
+       endsr;
+
+
+       // Handle changed screen field: simulated user.
+       begsr HsfSimUser;
+
+         PcfSimUser = *on;
+
+         D_SIMUSER = %trim(D_SIMUSER);
+
+         if D_SIMUSER = '';
+           L_SetErr(RtvAMsgAM(5052:CAmsFatal):'D_SIMUSER');
+         else;
+           SfcSimUser = *off;
+           if ModeUpdate and SimDisplay;
+             MenuUser = D_SIMUSER;
+           endif;
+         endif;
+
+       endsr;
+
+
+       // Handle new page.
+       begsr NewPage;
+
+         if CurUserPage <= 0;
+           L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           *in92 = *on;
+           leavesr;
+         endif;
+         n = %check('0123456789':%trim(D_NEWPAGE));
+         if n > 0;
+           L_SetErr(RtvAMsgAM(5051:CAmsFatal));
+           *in92 = *on;
+           leavesr;
+         endif;
+         CurUserPage = CvtTxtToInt(D_NEWPAGE);
+
+       endsr;
+
+
+       // Work with menu groups.
+       begsr WorkWithMenuGroups;
+
+         // Call *PGM CAFMENUG.
+         PgmCAFMENUG('*EDIT':CalleeSpcBhvr(Ispcbhvr)
+                    :Prc:Prm1:Prm2);
+
+         // Select action on return code.
+         select;
+         when Prc = 1;
+           // Exit.
+           Rtncd = 1;
+           Screen = 0;
+         when Prc >= 30;
+           L_SetErr(PtPgmResult(Prc:Prm1:Prm2));
+         endsl;
+
+       endsr;
+
+
+       // Perform the option having the currently entered choice
+       // (D_CHOICE), or - if D_CHOICE is blank - the option on
+       // the current cursor location.
+       begsr PerformOption;
+
+         if CurUserPage <= 0;
+           L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           leavesr;
+         endif;
+
+         if MnuIsBlankPage(CurMenuPage);
+           L_SetErr(RtvAMsgAM(5016:CAmsFatal));
+           leavesr;
+         endif;
+
+         if D_CHOICE = '';
+
+           // Perform option on cursor location.
+
+           if    SlotAtCursor < 1
+              or SlotAtCursor > %elem(DspSlots)
+              or DspSlots(SlotAtCursor) = 0
+              or not MnuSlotHasOpt(CurMenuPage:DspSlots(SlotAtCursor));
+             L_SetErr(RtvAMsgAM(5017:CAmsFatal));
+             leavesr;
+           endif;
+
+           s = DspSlots(SlotAtCursor);
+
+         else;
+
+           // Perform option with choice.
+
+           evalr D_CHOICE = %trim(D_CHOICE);
+
+           s = MnuGetSlotChoice(CurMenuPage:D_CHOICE:n);
+           if s = 0;
+             if n = 0;
+               L_SetErr(RtvAMsgAM(5018:CAmsFatal:D_CHOICE):'D_CHOICE');
+             else;
+               L_SetErr(RtvAMsgAM(5019:CAmsFatal:%char(n):D_CHOICE):'D_CHOICE');
+             endif;
+             leavesr;
+           endif;
+
+         endif;
+
+         if MnuMustReload();
+           L_SetErr(RtvAMsgAM(5090:CAmsFatal));
+           leavesr;
+         endif;
+
+         if     s > CNumVSlots*2
+            and not DspWide;
+           // Option is not visible; don't perform invisible options.
+           L_SetErr(RtvAMsgAM(5050:CAmsFatal));
+           leavesr;
+         endif;
+
+         MenuPage@   = MenuPages(CurMenuPage);
+         MenuOption@ = MenuPage.slots(s);
+
+         if    %scan(CMsbConfPO:Menu.specb) > 0
+            or %scan(CMsbConfPO:MenuPage.specb) > 0
+            or %scan(CMsbConfPO:MenuOption.specb) > 0;
+           // Confirm perform option.
+           if not PresentConfWdw(%trim(MenuOption.text));
+             DspMsg = RtvAMsgAM(5020:CAmsInfo:%trim(MenuOption.text));
+             leavesr;
+           endif;
+         endif;
+
+         DspStatMsg(SubstText(Text(10):%trim(MenuOption.text)));
+
+         if MnuPerformOpt(ErrMsg:CurMenuPage:s);
+           DspMsg = RtvAMsgAM(5200:CAmsInfo:%trim(MenuOption.text));
+         else;
+           SelectedPage    = CurMenuPage;
+           SelectedSlot    = s;
+           NoSlotSelection = *on;
+           if D_CHOICE = '';
+             L_SetErr(ErrMsg);
+           else;
+             L_SetErr(ErrMsg:'D_CHOICE');
+           endif;
+         endif;
+
+       endsr;
+
+
+       // Load the menu.
+       begsr LoadMenu;
+
+         DspStatMsg(Text(7));
+
+         if ModeUpdate;
+           flag = MnuLoadMenu(ErrMsg);
+         else;
+           flag = MnuLoadMenu(ErrMsg:MenuUser);
+         endif;
+         if flag;
+           DspMsg = RtvAMsgAM(5208);
+         else;
+           L_SetErr(ErrMsg);
+         endif;
+         if CurUserPage = 0;
+           CurUserPage = 1;
+         endif;
+         if CurUserPage > MnuUserPage(MenuUser);
+           CurUserPage = MnuUserPage(MenuUser);
+         endif;
+
+       endsr;
+
+
+       // Reload authorisations.
+       begsr ReloadAuth;
+
+         DspStatMsg(Text(9));
+
+         if MnuLoadAuth(ErrMsg);
+           DspMsg = RtvAMsgAM(5209);
+         else;
+           L_SetErr(ErrMsg);
+         endif;
+
+       endsr;
+
+
+       // Save the menu; go to confirmation screen first.
+       begsr SaveMenu;
+
+         clear *all DFWINDOW9;
+
+         D_FRELOAD = 'NO';
+
+         // Set window title and go to screen 9: save menu
+         Screen = 9;
+         if MnuIsUpdated();
+           D__WDWTIT9 = Text(21);
+         else;
+           D__WDWTIT9 = Text(22);
+         endif;
+
+       endsr;
+
+
+       // The user pressed enter.
+       // Accept screen 9: "confirm save menu".
+       begsr AcceptSaveMenu;
+
+         if     D_FRELOAD <> 'YES'
+            and D_FRELOAD <> 'NO';
+           L_SetErr(RtvAMsgAM(5061:CAmsFatal):'D_FRELOAD');
+           leavesr;
+         endif;
+
+         // Always go back to menu.
+         Screen = 1;
+
+         a200 = '';
+         if D_FRELOAD = 'YES';
+           a200 = '*RELOAD';
+         endif;
+
+         DspStatMsg(Text(8));
+         if MnuSaveMenu(ErrMsg:a200:ErrAttr:ErrPage:ErrSlot);
+           // Menu has been saved.
+           DspMsg = RtvAMsgAM(5207);
+           leavesr;
+         endif;
+
+         // Error saving the menu; go to error page.
+         if ErrPage > 0;
+           CurUserPage = ErrPage;
+         endif;
+         SelectedPage    = ErrPage;
+         SelectedSlot    = ErrSlot;
+         NoSlotSelection = *on;
+         L_SetErr(ErrMsg:ErrAttr);
+
+       endsr;
+
+
+       // Move all options from the current cursor location and down one
+       // slot up (F07) or down (F08), if the cursor is on one of the slots.
+       // If the cursor is outside the slots, move all pages from the current
+       // page to the last page one page number to the left (F07, decrease
+       // indexes by 1) or right (F08, increase indexes by 1).
+       begsr MoveOptsPages;
+
+         if SlotAtCursor = 0;
+
+           // Move pages.
+
+           if MnuIsBlankPage(CurMenuPage);
+             L_SetErr(RtvAMsgAM(5013:CAmsFatal));
+           endif;
+           if        KeyPressed(KsF07)
+                 and MnuMovePagesLeft(ErrMsg:CurMenuPage)
+              or     KeyPressed(KsF08)
+                 and MnuMovePagesRight(ErrMsg:CurMenuPage);
+             if KeyPressed(KsF07);
+               CurUserPage = CurUserPage - 1;
+             else;
+               CurUserPage = CurUserPage + 1;
+             endif;
+             DspMsg = RtvAMsgAM(5210);
+           else;
+             L_SetErr(ErrMsg);
+           endif;
+
+         else;
+
+           // Move slots.
+
+           if        KeyPressed(KsF07)
+                 and MnuMoveOptsUp(ErrMsg:CurMenuPage:SlotAtCursor)
+              or     KeyPressed(KsF08)
+                 and MnuMoveOptsDown(ErrMsg:CurMenuPage:SlotAtCursor);
+             DspMsg = RtvAMsgAM(5211);
+           else;
+             L_SetErr(ErrMsg);
+           endif;
+
+         endif;
+
+       endsr;
+
+
+       // Clear the current page.
+       begsr ClearPage;
+
+         if MnuIsBlankPage(CurMenuPage);
+           L_SetErr(RtvAMsgAM(5006:CAmsFatal));
+           leavesr;
+         endif;
+
+         if MnuClearPage(CurMenuPage);
+           DspMsg = RtvAMsgAM(5204:CAmsInfo:%char(CurMenuPage));
+         endif;
+
+       endsr;
+
+
+       // Go to the previous (F19) or next (F20) non-blank page.
+       begsr GotoPrvNxtNonBlankPage;
+
+         if     KeyPressed(KsF19)
+            and CurMenuPage = 1;
+           L_SetErr(RtvAMsgAM(5009:CAmsFatal));
+           leavesr;
+         endif;
+         if     KeyPressed(KsF20)
+            and CurMenuPage = CNumPages;
+           L_SetErr(RtvAMsgAM(5010:CAmsFatal));
+           leavesr;
+         endif;
+
+         i = CurMenuPage;
+         dou    not MnuIsBlankPage(i)
+             or i <= 1
+             or i >= CNumPages;
+           if KeyPressed(KsF19);
+             i = i - 1;
+           else;
+             i = i + 1;
+           endif;
+         enddo;
+         if    i < 1
+            or i > CNumPages
+            or MnuIsBlankPage(i);
+           // Not found.
+           if KeyPressed(KsF19);
+             DspMsg = RtvAMsgAM(5014);
+           else;
+             DspMsg = RtvAMsgAM(5015);
+           endif;
+         else;
+           // Found.
+           CurUserPage = MnuUserPage(MenuUser:0-i);
+           DspMsg = RtvAMsgAM(5212);
+         endif;
+
+       endsr;
+
+
+       // Switch simulate display.
+       begsr SwitchSimDisplay;
+
+         if SimDisplay;
+
+           // Back to normal mode.
+
+           SimDisplay  = *off;
+           CurUserPage = SimPgNorm;
+           MenuUser    = '';
+
+         else;
+
+           // Go to simulate display mode.
+
+           SimDisplay = *on;
+           SimPgNorm  = CurUserPage;
+
+           if D_SIMUSER = '';
+             D_SIMUSER = '*';
+           endif;
+
+           MenuUser = D_SIMUSER;
+
+           CurUserPage = MnuUserPage(MenuUser:0-CurMenuPage);
+
+         endif;
+
+       endsr;
+
+
+       // Edit slot at cursor location.
+       begsr EditSlot;
+
+         if CurUserPage <= 0;
+           L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           leavesr;
+         endif;
+
+         if SlotAtCursor = 0;
+           L_SetErr(RtvAMsgAM(5003:CAmsFatal));
+           leavesr;
+         endif;
+
+         MenuPage@ = MenuPages(CurMenuPage);
+
+         // Check if the previous or next slot contains a header.
+         // If so, do not allow editing this slot because this will
+         // result in a validation error eventually because a header
+         // can not be directly preceded or followed by a non-empty
+         // slot.
+         if     MenuPage@ <> *null
+            and (      %rem(SlotAtCursor:CNumVSlots) <> 1
+                    and MnuSlotHasHdr(CurMenuPage:SlotAtCursor-1)
+                 or     %rem(SlotAtCursor:CNumVSlots) <> 0
+                    and MnuSlotHasHdr(CurMenuPage:SlotAtCursor+1));
+           L_SetErr(RtvAMsgAM(5059:CAmsFatal));
+           leavesr;
+         endif;
+
+         clear *all DFWINDOW1;
+
+         if MenuPage@ = *null;
+           MenuOption@ = *null;
+         else;
+           MenuOption@ = MenuPage.slots(SlotAtCursor);
+         endif;
+
+         if MenuOption@ = *null;
+           // Empty slot; create new option or header.
+
+         else;
+           // Non-empty slot; update existing option or header.
+           if MenuOption.command <> *null;
+             n = %len(%trimr(%str(MenuOption.command)));
+             if n > %len(D_COMMAND);
+               L_SetErr(RtvAMsgAM(5053:CAmsFatal
+                                 :%char(n):%char(%len(D_COMMAND))));
+               leavesr;
+             endif;
+           endif;
+           D_OCHOICE = MenuOption.choice;
+           D_OTEXT   = MenuOption.text;
+         endif;
+
+         // Remember current user page to go back to.
+         OrigUserPage = CurUserPage;
+
+         // Remember selected page/slot.
+         SelectedPage = CurMenuPage;
+         SelectedSlot = SlotAtCursor;
+
+         // Initialize screen 3 with the option attributes.
+         clear *all DFWINDOW2;
+         D_PROMPTXT = Text(23);
+         D_CONFPO = 'N';
+         D_DFTEH  = 'N';
+         if     MenuOption@ <> *null
+            and MenuOption.choice <> '';
+           D_TITLETXT = MenuOption.text;
+           D_GROUP1 = MenuOption.groups(1);
+           D_GROUP2 = MenuOption.groups(2);
+           D_GROUP3 = MenuOption.groups(3);
+           D_GROUP4 = MenuOption.groups(4);
+           D_GROUP5 = MenuOption.groups(5);
+           D_GROUP6 = MenuOption.groups(6);
+           D_GROUP7 = MenuOption.groups(7);
+           D_GROUP8 = MenuOption.groups(8);
+           D_GROUP9 = MenuOption.groups(9);
+           if MenuOption.command <> *null;
+             D_COMMAND = %str(MenuOption.command);
+           endif;
+           if %scan(CMsbConfPO:MenuOption.specb) > 0;
+             D_CONFPO = 'Y';
+           endif;
+           if %scan(CMsbDftEH:MenuOption.specb) > 0;
+             D_DFTEH = 'Y';
+           endif;
+         endif;
+
+         // Set window location and title and go to screen 2: edit slot.
+         Screen = 2;
+         D__WDWTIT1 = SubstText(Text(11)
+                          :%char(SelectedPage):%char(SelectedSlot));
+         if CursRow >= VsbTop + WszDFWINDOW1V;
+           D__WDWROW1 = VsbTop;
+         else;
+           D__WDWROW1 = CursRow + 1;
+         endif;
+         D__WDWCOL1 = VsbLeftLeft;
+
+       endsr;
+
+
+       // The user pressed enter.
+       // Accept screen 2: "edit slot".
+       // Fields "SelectedPage" and "SelectedSlot" identify the slot being
+       // edited.
+       // Validate user entry.
+       // Create/update header if choice is blanks, else go to screen
+       // "edit attributes".
+       begsr AcceptEditSlot;
+
+         D__WDWTIT1 = SubstText(Text(11)
+                          :%char(SelectedPage):%char(SelectedSlot));
+
+         MenuPage@ = MenuPages(SelectedPage);
+         if MenuPage@ = *null;
+           MenuOption@ = *null;
+         else;
+           MenuOption@ = MenuPage.slots(SelectedSlot);
+         endif;
+
+         if D_OTEXT = '';
+           // Text can not be blank.
+           ConfirmAccept = *off;
+           L_SetErr(RtvAMsgAM(2001:CAmsFatal):'D_OTEXT');
+           leavesr;
+         endif;
+
+         if  D_OCHOICE = '';
+
+           // Header.
+
+           if     ConfirmAccept
+              or MenuOption@ = *null
+              or MenuOption.choice = '';
+
+             ConfirmAccept = *off;
+
+             // Create/update header.
+
+             if not MnuSetOptHdr(ErrMsg:ErrAttr:SelectedPage:SelectedSlot
+                                :D_OTEXT);
+               L_SetErr(ErrMsg:ErrAttr);
+               leavesr;
+             endif;
+
+             MenuPage@   = MenuPages(SelectedPage);
+             MenuOption@ = MenuPage.slots(SelectedSlot);
+             DspMsg = RtvAMsgAM(5201:CAmsInfo
+                          :%char(SelectedPage):%char(SelectedSlot)
+                          :%trim(MenuOption.text));
+             CurUserPage = OrigUserPage;
+             Screen = 1;
+             SelectedPage = 0;
+             SelectedSlot = 0;
+
+           else;
+             // Confirm replace option with header.
+             ConfirmAccept = *on;
+             D__WDWTIT1 = SubstText(Text(12)
+                              :%char(SelectedPage):%char(SelectedSlot));
+             DspMsg = RtvAMsgAM(5120);
+           endif;
+
+         else;
+
+           // Option.
+
+           ConfirmAccept = *off;
+           if MenuOption@ = *null;
+             D__WDWTIT1 = SubstText(Text(13)
+                              :%char(SelectedPage):%char(SelectedSlot));
+           else;
+             D__WDWTIT1 = SubstText(Text(14)
+                              :%char(SelectedPage):%char(SelectedSlot));
+           endif;
+
+           // Go to screen 3: edit option attributes.
+
+           Screen = 3;
+
+           D_TITLETXT = D_OTEXT;
+
+           D__WDWTIT2 = SubstText(Text(15):%trim(D_OTEXT));
+
+         endif;
+
+       endsr;
+
+
+       // Edit page attributes.
+       begsr EditPageAttr;
+
+         clear *all DFWINDOW2;
+         D_PROMPTXT = Text(24);
+
+         D_CONFPO = 'N';
+         D_DFTEH  = 'N';
+
+         MenuPage@ = MenuPages(CurMenuPage);
+
+         if MenuPage@ <> *null;
+           if MenuPage.command <> *null;
+             n = %len(%trimr(%str(MenuPage.command)));
+             if n > %len(D_COMMAND);
+               L_SetErr(RtvAMsgAM(5054:CAmsFatal
+                                 :%char(n):%char(%len(D_COMMAND))));
+               leavesr;
+             endif;
+           endif;
+           D_TITLETXT = MenuPage.title;
+           D_GROUP1 = MenuPage.groups(1);
+           D_GROUP2 = MenuPage.groups(2);
+           D_GROUP3 = MenuPage.groups(3);
+           D_GROUP4 = MenuPage.groups(4);
+           D_GROUP5 = MenuPage.groups(5);
+           D_GROUP6 = MenuPage.groups(6);
+           D_GROUP7 = MenuPage.groups(7);
+           D_GROUP8 = MenuPage.groups(8);
+           D_GROUP9 = MenuPage.groups(9);
+           if MenuPage.command <> *null;
+             D_COMMAND = %str(MenuPage.command);
+           endif;
+           if %scan(CMsbConfPO:MenuPage.specb) > 0;
+             D_CONFPO = 'Y';
+           endif;
+           if %scan(CMsbDftEH:MenuPage.specb) > 0;
+             D_DFTEH = 'Y';
+           endif;
+         endif;
+
+         // Remember current user page to go back to.
+         OrigUserPage = CurUserPage;
+
+         // Remember selected page.
+         SelectedPage = CurMenuPage;
+
+         // Set window title and go to screen 4: edit page attr
+         Screen = 4;
+         D__WDWTIT2 = SubstText(Text(16):%char(CurMenuPage));
+
+       endsr;
+
+
+       // Edit menu attributes.
+       begsr EditMenuAttr;
+
+         clear *all DFWINDOW2;
+         D_PROMPTXT = Text(25);
+
+         D_CONFPO = 'N';
+         D_DFTEH  = 'N';
+
+         if Menu.command <> *null;
+           n = %len(%trimr(%str(Menu.command)));
+           if n > %len(D_COMMAND);
+             L_SetErr(RtvAMsgAM(5055:CAmsFatal
+                               :%char(n):%char(%len(D_COMMAND))));
+             leavesr;
+           endif;
+         endif;
+         D_TITLETXT = Menu.title;
+         D_GROUP1 = Menu.groups(1);
+         D_GROUP2 = Menu.groups(2);
+         D_GROUP3 = Menu.groups(3);
+         D_GROUP4 = Menu.groups(4);
+         D_GROUP5 = Menu.groups(5);
+         D_GROUP6 = Menu.groups(6);
+         D_GROUP7 = Menu.groups(7);
+         D_GROUP8 = Menu.groups(8);
+         D_GROUP9 = Menu.groups(9);
+         if Menu.command <> *null;
+           D_COMMAND = %str(Menu.command);
+         endif;
+         if %scan(CMsbConfPO:Menu.specb) > 0;
+           D_CONFPO = 'Y';
+         endif;
+         if %scan(CMsbDftEH:Menu.specb) > 0;
+           D_DFTEH = 'Y';
+         endif;
+
+         OrigUserPage = 0;
+         SelectedPage = 0;
+
+         // Set window title and go to screen 5: edit menu attr
+         Screen = 5;
+         D__WDWTIT2 = SubstText(Text(17):x'21':x'20');
+
+       endsr;
+
+
+       // The user pressed enter.
+       // Accept screen 3/4/5: "edit attributes option/page".
+       // If "Screen" is 3, the option attributes are being edited and fields
+       // "SelectedPage" and "SelectedSlot" identify the slot being edited.
+       // If "Screen" is 4, the attributes of page ("SelectedPage") are being
+       // edited.
+       // If "Screen" is 5, the attributes of the menu are being edited.
+       // Validate user entry and update the page/menu attributes (screen 4/5),
+       // or create/update option (screen 3).
+       begsr AcceptEditAttr;
+
+         grps(*) = '';
+         grps(1) = D_GROUP1;
+         grps(2) = D_GROUP2;
+         grps(3) = D_GROUP3;
+         grps(4) = D_GROUP4;
+         grps(5) = D_GROUP5;
+         grps(6) = D_GROUP6;
+         grps(7) = D_GROUP7;
+         grps(8) = D_GROUP8;
+         grps(9) = D_GROUP9;
+
+         if     D_CONFPO <> 'Y'
+            and D_CONFPO <> 'N';
+           L_SetErr(RtvAMsgAB(5101:CAmsFatal):'D_CONFPO');
+           leavesr;
+         endif;
+         if     D_DFTEH <> 'Y'
+            and D_DFTEH <> 'N';
+           L_SetErr(RtvAMsgAB(5101:CAmsFatal):'D_DFTEH');
+           leavesr;
+         endif;
+
+         specb = '';
+         if D_CONFPO = 'Y';
+           specb = %trim(specb) + CMsbConfPO;
+         endif;
+         if D_DFTEH = 'Y';
+           specb = %trim(specb) + CMsbDftEH;
+         endif;
+
+         if Screen = 3;
+           // Create/update option.
+
+           if MnuSetOptAttr(
+                  ErrMsg:ErrAttr:SelectedPage:SelectedSlot
+                 :D_OCHOICE:D_TITLETXT
+                 :grps:specb:D_COMMAND);
+
+             // Ok; back to menu.
+             MenuPage@   = MenuPages(SelectedPage);
+             MenuOption@ = MenuPage.slots(SelectedSlot);
+             DspMsg = RtvAMsgAM(5202:CAmsInfo
+                          :%char(SelectedPage):%char(SelectedSlot)
+                          :%trim(MenuOption.text));
+             CurUserPage = OrigUserPage;
+             Screen = 1;
+             SelectedPage = 0;
+             SelectedSlot = 0;
+
+           else;
+
+             // Error; back to screen 2 or stay on screen 3.
+             L_SetErr(ErrMsg:ErrAttr);
+             if ErrAttr = 'OCHOICE';
+               Screen = 2;
+             endif;
+
+           endif;
+
+         elseif Screen = 4;
+           // Create/update page.
+
+           if MnuSetPageAttr(
+                  ErrMsg:ErrAttr:CurMenuPage
+                 :D_TITLETXT
+                 :grps:specb:D_COMMAND);
+
+             // Ok; back to menu.
+             CurUserPage = OrigUserPage;
+             DspMsg = RtvAMsgAM(5203:CAmsInfo:%char(CurMenuPage));
+             Screen = 1;
+             SelectedPage = 0;
+
+           else;
+
+             // Error; stay on screen 4.
+             L_SetErr(ErrMsg:ErrAttr);
+
+           endif;
+
+         elseif Screen = 5;
+           // Update menu.
+
+           if MnuSetMenuAttr(
+                  ErrMsg:ErrAttr
+                 :D_TITLETXT
+                 :grps:specb:D_COMMAND);
+
+             // Ok; back to menu.
+             DspMsg = RtvAMsgAM(5213:CAmsInfo);
+             Screen = 1;
+
+           else;
+
+             // Error; stay on screen 5.
+             L_SetErr(ErrMsg:ErrAttr);
+
+           endif;
+
+         else;
+           L_SetErr(RtvAMsgAB(9999:CAmsFatal):'unknown "Screen"');
+         endif;
+
+       endsr;
+
+
+       // Delete the selected option or header, identified with
+       // "SelectedPage" and "SelectedSlot", in screen 3 "edit slot".
+       begsr DeleteOptHdr;
+
+         if MnuIsBlankPage(CurMenuPage);
+           L_SetErr(RtvAMsgAM(5006:CAmsFatal));
+           leavesr;
+         endif;
+
+         MenuPage@   = MenuPages(SelectedPage);
+         MenuOption@ = MenuPage.slots(SelectedSlot);
+
+         if MenuOption@ = *null;
+           leavesr;
+         endif;
+
+         a200 = MenuOption.text;
+
+         flag = *off;
+         ErrMsg = RtvAMsgAB(9999:CAmsFatal:'no opt/hdr in slot??');
+
+         if MnuSlotHasOpt(SelectedPage:SelectedSlot);
+           if MnuDeleteOpt(ErrMsg:SelectedPage:SelectedSlot);
+             flag = *on;
+             DspMsg = RtvAMsgAM(5205:CAmsInfo:%trim(a200):
+                          %char(SelectedPage):%char(SelectedSlot));
+           endif;
+         endif;
+
+         if MnuSlotHasHdr(SelectedPage:SelectedSlot);
+           if MnuDeleteOpt(ErrMsg:SelectedPage:SelectedSlot);
+             flag = *on;
+             DspMsg = RtvAMsgAM(5206:CAmsInfo:%trim(a200):
+                          %char(SelectedPage):%char(SelectedSlot));
+           endif;
+         endif;
+
+         if flag;
+           // Back to menu;
+           CurUserPage = OrigUserPage;
+           Screen = 1;
+           SelectedPage = 0;
+           SelectedSlot = 0;
+         else;
+           L_SetErr(ErrMsg);
+         endif;
+
+       endsr;
+
+
+       // Insert a blank group on the current cursor location in the
+       // "edit attributes option/page" screen (3/4).
+       begsr InsertBlankGroup;
+
+         if %subst(D__CURSFLD:1:7) <> 'D_GROUP';
+           L_SetErr(RtvAMsgAM(5062:CAmsFatal));
+           leavesr;
+         endif;
+
+         n = CvtTxtToInt(D__CURSFLD);
+         if    n < 1
+            or n > 9;
+           L_SetErr(RtvAMsgAM(5062:CAmsFatal));
+           leavesr;
+         endif;
+
+         // Determine last blank field on or after "n".
+         p = 0;
+         select;
+         when     D_GROUP9 = ''
+              and n <= 9;
+           p = 9;
+         when     D_GROUP8 = ''
+              and n <= 8;
+           p = 8;
+         when     D_GROUP7 = ''
+              and n <= 7;
+           p = 7;
+         when     D_GROUP6 = ''
+              and n <= 6;
+           p = 6;
+         when     D_GROUP5 = ''
+              and n <= 5;
+           p = 5;
+         when     D_GROUP4 = ''
+              and n <= 4;
+           p = 4;
+         when     D_GROUP3 = ''
+              and n <= 3;
+           p = 3;
+         when     D_GROUP2 = ''
+              and n <= 2;
+           p = 2;
+         when     D_GROUP1 = ''
+              and n <= 1;
+           p = 1;
+         endsl;
+
+         if p = 0;
+           L_SetErr(RtvAMsgAM(5063:CAmsFatal));
+           leavesr;
+         endif;
+
+         if n = 9;
+           // No effect.
+           leavesr;
+         endif;
+
+         // Move groups one field to the right from "n" up to "p".
+         if     p >= 9
+            and n <  9;
+           D_GROUP9 = D_GROUP8;
+           D_GROUP8 = '';
+         endif;
+         if     p >= 8
+            and n <  8;
+           D_GROUP8 = D_GROUP7;
+           D_GROUP7 = '';
+         endif;
+         if     p >= 7
+            and n <  7;
+           D_GROUP7 = D_GROUP6;
+           D_GROUP6 = '';
+         endif;
+         if     p >= 6
+            and n <  6;
+           D_GROUP6 = D_GROUP5;
+           D_GROUP5 = '';
+         endif;
+         if     p >= 5
+            and n <  5;
+           D_GROUP5 = D_GROUP4;
+           D_GROUP4 = '';
+         endif;
+         if     p >= 4
+            and n <  4;
+           D_GROUP4 = D_GROUP3;
+           D_GROUP3 = '';
+         endif;
+         if     p >= 3
+            and n <  3;
+           D_GROUP3 = D_GROUP2;
+           D_GROUP2 = '';
+         endif;
+         if     p >= 2
+            and n <  2;
+           D_GROUP2 = D_GROUP1;
+           D_GROUP1 = '';
+         endif;
+
+       endsr;
+
+
+       // Delete group on the current cursor location in the
+       // "edit attributes option/page" screen (3/4).
+       begsr DeleteGroup;
+
+         if %subst(D__CURSFLD:1:7) <> 'D_GROUP';
+           L_SetErr(RtvAMsgAM(5062:CAmsFatal));
+           leavesr;
+         endif;
+
+         n = CvtTxtToInt(D__CURSFLD);
+         if    n < 1
+            or n > 9;
+           L_SetErr(RtvAMsgAM(5062:CAmsFatal));
+           leavesr;
+         endif;
+
+         // Move groups one field left from "n" up to the last one.
+         if n <= 1;
+           D_GROUP1 = D_GROUP2;
+           D_GROUP2 = '';
+         endif;
+         if n <= 2;
+           D_GROUP2 = D_GROUP3;
+           D_GROUP3 = '';
+         endif;
+         if n <= 3;
+           D_GROUP3 = D_GROUP4;
+           D_GROUP4 = '';
+         endif;
+         if n <= 4;
+           D_GROUP4 = D_GROUP5;
+           D_GROUP5 = '';
+         endif;
+         if n <= 5;
+           D_GROUP5 = D_GROUP6;
+           D_GROUP6 = '';
+         endif;
+         if n <= 6;
+           D_GROUP6 = D_GROUP7;
+           D_GROUP7 = '';
+         endif;
+         if n <= 7;
+           D_GROUP7 = D_GROUP8;
+           D_GROUP8 = '';
+         endif;
+         if n <= 8;
+           D_GROUP8 = D_GROUP9;
+           D_GROUP9 = '';
+         endif;
+         if n <= 9;
+           D_GROUP9 = '';
+         endif;
+
+       endsr;
+
+
+       // Select an item for the current display field on the
+       // current screen, identified with "Screen".
+       begsr SelectItem;
+
+         select;
+         when    Screen = 2
+              or Screen = 3;
+           select;
+           when    D__CURSFLD = 'D_GROUP1'
+                or D__CURSFLD = 'D_GROUP2'
+                or D__CURSFLD = 'D_GROUP3'
+                or D__CURSFLD = 'D_GROUP4'
+                or D__CURSFLD = 'D_GROUP5'
+                or D__CURSFLD = 'D_GROUP6'
+                or D__CURSFLD = 'D_GROUP7'
+                or D__CURSFLD = 'D_GROUP8'
+                or D__CURSFLD = 'D_GROUP9';
+             if SelAppMenuGroup(SelAppMenuGroup$:-1);
+               select;
+               when D__CURSFLD = 'D_GROUP1';
+                 D_GROUP1 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP2';
+                 D_GROUP2 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP3';
+                 D_GROUP3 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP4';
+                 D_GROUP4 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP5';
+                 D_GROUP5 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP6';
+                 D_GROUP6 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP7';
+                 D_GROUP7 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP8';
+                 D_GROUP8 = SelAppMenuGroup$.f1;
+               when D__CURSFLD = 'D_GROUP9';
+                 D_GROUP9 = SelAppMenuGroup$.f1;
+               endsl;
+               DspMsg = RtvAMsgAB(1016);
+             endif;
+             leavesr;
+           when D__CURSFLD = 'D_COMMAND';
+             if D_COMMAND = '';
+               L_SetErr(RtvAMsgAM(5080:CAmsFatal):'D_COMMAND');
+             else;
+               D_COMMAND = %trim(D_COMMAND);
+               if PromptCmd(ErrMsg:D_COMMAND:chgcmd);
+                 if chgcmd = '';
+                   L_SetErr(RtvAMsgAM(5081:CAmsFatal):'D_COMMAND');
+                 elseif %len(%trim(chgcmd)) > %len(D_COMMAND);
+                   L_SetErr(RtvAMsgAM(5082:CAmsFatal):'D_COMMAND');
+                 else;
+                   D_COMMAND = %trim(chgcmd);
+                 endif;
+               else;
+                 L_SetErr(RtvAMsgAB(9999:CAmsFatal:%trim(ErrMsg)):'D_COMMAND');
+               endif;
+             endif;
+             leavesr;
+           endsl;
+         endsl;
+
+         L_SetErr(RtvAMsgAB(1015:CAmsFatal));
+
+       endsr;
+
+
+      /include QINCSRC,DPGM_SUBR
+
+
+      /end-free
+     p                 e
+
+
+      /include QINCSRC,DPGM_LPI
+
+
+     pL_FillMenuFlds   b
+     dL_FillMenuFlds   pi
+
+     d dsp             s               n
+     d allow           s               n
+     d pt              s                   like(MenuPage.title)
+     d opt             s                   like(D_OPT101)
+     d blankmot        s                   like(MenuOption.text) static inz('')
+     d l               s             10i 0
+     d ld              s             10i 0
+     d lh              s             10i 0
+     d s               s             10i 0
+     d nbp             s               n
+     d so              s               n
+     d f               s               n
+     d hdr             s               n
+     d hopts           s               n
+
+      /free
+
+       dsp = not ModeUpdate or SimDisplay;
+
+       allow =     CurMenuPage > 0
+               and (   not dsp
+                    or not ModeUpdate
+                    or MenuUser = '*'
+                    or MnuOptAllowed(MenuUser:0:0)
+                    or MnuOptAllowed(MenuUser:CurMenuPage:0));
+
+       // Initialize strips.
+       if dsp;
+         D_OPT101 = '';
+         D_OPT102 = '';
+         D_OPT103 = '';
+         D_OPT104 = '';
+         D_OPT105 = '';
+         D_OPT106 = '';
+         D_OPT107 = '';
+         D_OPT108 = '';
+         D_OPT109 = '';
+         D_OPT110 = '';
+         D_OPT111 = '';
+         D_OPT112 = '';
+         D_OPT113 = '';
+         D_OPT114 = '';
+         D_OPT115 = '';
+         D_OPT201 = '';
+         D_OPT202 = '';
+         D_OPT203 = '';
+         D_OPT204 = '';
+         D_OPT205 = '';
+         D_OPT206 = '';
+         D_OPT207 = '';
+         D_OPT208 = '';
+         D_OPT209 = '';
+         D_OPT210 = '';
+         D_OPT211 = '';
+         D_OPT212 = '';
+         D_OPT213 = '';
+         D_OPT214 = '';
+         D_OPT215 = '';
+         D_OPT301 = '';
+         D_OPT302 = '';
+         D_OPT303 = '';
+         D_OPT304 = '';
+         D_OPT305 = '';
+         D_OPT306 = '';
+         D_OPT307 = '';
+         D_OPT308 = '';
+         D_OPT309 = '';
+         D_OPT310 = '';
+         D_OPT311 = '';
+         D_OPT312 = '';
+         D_OPT313 = '';
+         D_OPT314 = '';
+         D_OPT315 = '';
+       else;
+         D_OPT101 = '    .';
+         D_OPT102 = '    .';
+         D_OPT103 = '    .';
+         D_OPT104 = '    .';
+         D_OPT105 = '    .';
+         D_OPT106 = '    .';
+         D_OPT107 = '    .';
+         D_OPT108 = '    .';
+         D_OPT109 = '    .';
+         D_OPT110 = '    .';
+         D_OPT111 = '    .';
+         D_OPT112 = '    .';
+         D_OPT113 = '    .';
+         D_OPT114 = '    .';
+         D_OPT115 = '    .';
+         D_OPT201 = '    .';
+         D_OPT202 = '    .';
+         D_OPT203 = '    .';
+         D_OPT204 = '    .';
+         D_OPT205 = '    .';
+         D_OPT206 = '    .';
+         D_OPT207 = '    .';
+         D_OPT208 = '    .';
+         D_OPT209 = '    .';
+         D_OPT210 = '    .';
+         D_OPT211 = '    .';
+         D_OPT212 = '    .';
+         D_OPT213 = '    .';
+         D_OPT214 = '    .';
+         D_OPT215 = '    .';
+         D_OPT301 = '    .';
+         D_OPT302 = '    .';
+         D_OPT303 = '    .';
+         D_OPT304 = '    .';
+         D_OPT305 = '    .';
+         D_OPT306 = '    .';
+         D_OPT307 = '    .';
+         D_OPT308 = '    .';
+         D_OPT309 = '    .';
+         D_OPT310 = '    .';
+         D_OPT311 = '    .';
+         D_OPT312 = '    .';
+         D_OPT313 = '    .';
+         D_OPT314 = '    .';
+         D_OPT315 = '    .';
+       endif;
+
+       DspSlots(*) = 0;
+
+       if dsp;
+         pt = '- NO OPTIONS -';
+       else;
+         pt = '- BLANK -';
+       endif;
+
+       if     CurUserPage > 0
+          and not MnuIsBlankPage(CurMenuPage);
+         nbp = *on;
+         MenuPage@ = MenuPages(CurMenuPage);
+       else;
+         nbp = *off;
+       endif;
+
+       if     nbp
+          and (   dsp
+               or MenuPage.title <> '');
+         pt = MenuPage.title;
+       endif;
+
+       // Fill left strip.
+       l  = 0;
+       lh = 0;
+       for s = 1 to CNumVSlots + 1;
+         if s <= CNumVSlots;
+           exsr setopt;
+           if so;
+             if     l >= 1
+                and l <= CNumVSlots;
+               DspSlots(l) = s;
+             endif;
+           else;
+             iter;
+           endif;
+         elseif     dsp
+                and lh > 0
+                and not hopts;
+           l = lh;
+           if     CurMenuPage = SelectedPage
+              and DspSlots(l) = SelectedSlot;
+             opt = x'21'+'   '+blankmot+x'20';
+           else;
+             opt = '';
+           endif;
+           DspSlots(l) = 0;
+         else;
+           l = 0;
+         endif;
+         select;
+         when l= 01;
+           D_OPT101 = opt;
+         when l= 02;
+           D_OPT102 = opt;
+         when l= 03;
+           D_OPT103 = opt;
+         when l= 04;
+           D_OPT104 = opt;
+         when l= 05;
+           D_OPT105 = opt;
+         when l= 06;
+           D_OPT106 = opt;
+         when l= 07;
+           D_OPT107 = opt;
+         when l= 08;
+           D_OPT108 = opt;
+         when l= 09;
+           D_OPT109 = opt;
+         when l= 10;
+           D_OPT110 = opt;
+         when l= 11;
+           D_OPT111 = opt;
+         when l= 12;
+           D_OPT112 = opt;
+         when l= 13;
+           D_OPT113 = opt;
+         when l= 14;
+           D_OPT114 = opt;
+         when l= 15;
+           D_OPT115 = opt;
+         endsl;
+         l = l + ld;
+       endfor;
+
+       // Fill middle strip.
+       l  = 0;
+       lh = 0;
+       for s = CNumVSlots+1 to CNumVSlots*2 + 1;
+         if s <= CNumVSlots*2;
+           exsr setopt;
+           if so;
+             if     l >= 1
+                and l <= CNumVSlots;
+               DspSlots(CNumVSlots+l) = s;
+             endif;
+           else;
+             iter;
+           endif;
+         elseif     dsp
+                and lh > 0
+                and not hopts;
+           l = lh;
+           if     CurMenuPage = SelectedPage
+              and DspSlots(l) = SelectedSlot;
+             opt = x'21'+'   '+blankmot+x'20';
+           else;
+             opt = '';
+           endif;
+           DspSlots(l) = 0;
+         else;
+           l = 0;
+         endif;
+         select;
+         when l= 01;
+           D_OPT201 = opt;
+         when l= 02;
+           D_OPT202 = opt;
+         when l= 03;
+           D_OPT203 = opt;
+         when l= 04;
+           D_OPT204 = opt;
+         when l= 05;
+           D_OPT205 = opt;
+         when l= 06;
+           D_OPT206 = opt;
+         when l= 07;
+           D_OPT207 = opt;
+         when l= 08;
+           D_OPT208 = opt;
+         when l= 09;
+           D_OPT209 = opt;
+         when l= 10;
+           D_OPT210 = opt;
+         when l= 11;
+           D_OPT211 = opt;
+         when l= 12;
+           D_OPT212 = opt;
+         when l= 13;
+           D_OPT213 = opt;
+         when l= 14;
+           D_OPT214 = opt;
+         when l= 15;
+           D_OPT215 = opt;
+         endsl;
+         l = l + ld;
+       endfor;
+
+       // Fill right strip.
+       l  = 0;
+       lh = 0;
+       for s = CNumVSlots*2+1 to CNumVSlots*3 + 1;
+         if s <= CNumVSlots*3;
+           exsr setopt;
+           if so;
+             if     l >= 1
+                and l <= CNumVSlots;
+               DspSlots(CNumVSlots*2+l) = s;
+             endif;
+           else;
+             iter;
+           endif;
+         elseif     dsp
+                and lh > 0
+                and not hopts;
+           l = lh;
+           if     CurMenuPage = SelectedPage
+              and DspSlots(l) = SelectedSlot;
+             opt = x'21'+'   '+blankmot+x'20';
+           else;
+             opt = '';
+           endif;
+           DspSlots(l) = 0;
+         else;
+           l = 0;
+         endif;
+         select;
+         when l= 01;
+           D_OPT301 = opt;
+         when l= 02;
+           D_OPT302 = opt;
+         when l= 03;
+           D_OPT303 = opt;
+         when l= 04;
+           D_OPT304 = opt;
+         when l= 05;
+           D_OPT305 = opt;
+         when l= 06;
+           D_OPT306 = opt;
+         when l= 07;
+           D_OPT307 = opt;
+         when l= 08;
+           D_OPT308 = opt;
+         when l= 09;
+           D_OPT309 = opt;
+         when l= 10;
+           D_OPT310 = opt;
+         when l= 11;
+           D_OPT311 = opt;
+         when l= 12;
+           D_OPT312 = opt;
+         when l= 13;
+           D_OPT313 = opt;
+         when l= 14;
+           D_OPT314 = opt;
+         when l= 15;
+           D_OPT315 = opt;
+         endsl;
+         l = l + ld;
+       endfor;
+
+       // Title
+       D_PTITLE = '';
+       %subst(D_PTITLE:%div(%len(D_PTITLE)-%len(%trim(pt)):2)+1) = %trim(pt);
+
+       return;
+
+       begsr setopt;
+         so = *off;
+         ld = 0;
+         hdr = *off;
+         f =     CurMenuPage = SelectedPage
+             and s = SelectedSlot;
+         if dsp;
+           if f;
+             opt = x'21'+'   '+blankmot+x'20';
+           else;
+             opt = '';
+           endif;
+         else;
+           if f;
+             %subst(blankmot:1:1) = '.';
+             opt = x'21'+'   '+blankmot+x'20';
+             %subst(blankmot:1:1) = ' ';
+           else;
+             opt = '    .';
+           endif;
+         endif;
+         if nbp;
+           MenuOption@ = MenuPage.slots(s);
+         else;
+           MenuOption@ = *null;
+         endif;
+         if MenuOption@ <> *null;
+           if MenuOption.choice = '';
+             so = *on;
+             hdr = *on;
+             if f;
+               opt = x'21'+'   '+MenuOption.text+x'20';
+             else;
+               opt = '   '+x'22'+MenuOption.text+x'20';
+             endif;
+             if dsp;
+               ld = 1;
+               if lh > 0 and not hopts;
+                 l = lh;
+               elseif l = 0;
+                 l = 1;
+               else;
+                 l = l + 2;
+               endif;
+             endif;
+           elseif    allow
+                  or MnuOptAllowed(MenuUser:CurMenuPage:0-s);
+             so = *on;
+             hopts = *on;
+             if f;
+               opt = x'21'+MenuOption.choice+' '+MenuOption.text+x'20';
+             else;
+               opt = x'22'+MenuOption.choice+x'20'+MenuOption.text;
+             endif;
+             if dsp;
+               l = l + 1;
+             endif;
+           endif;
+         endif;
+         if not dsp;
+           l = l + 1;
+         endif;
+         if hdr;
+           lh = l;
+           hopts = *off;
+         endif;
+       endsr;
+
+      /end-free
+     p                 e
+
+
+     pL_SlotAtCursor   b
+     dL_SlotAtCursor   pi            10i 0
+
+      /free
+
+       if    GetCursRow() < VsbTop
+          or GetCursRow() > VsbBottom;
+         return 0;
+       endif;
+
+       select;
+       when     GetCursCol() >= VsbLeftLeft
+            and GetCursCol() <= VsbLeftRight;
+         return GetCursRow() - VsbTop + 1;
+       when     GetCursCol() >= VsbMiddleLeft
+            and GetCursCol() <= VsbMiddleRight;
+         return GetCursRow() - VsbTop + 1 + CNumVSlots;
+       when     GetCursCol() >= VsbRightLeft
+            and GetCursCol() <= VsbRightRight;
+         return GetCursRow() - VsbTop + 1 + CNumVSlots*2;
+       endsl;
+
+       return 0;
+
+      /end-free
+     p                 e
+
+
+     p L_AddHelpText   b
+     d L_AddHelpText   pi
+     d   ln                          60    const
+
+     d i               s             10i 0
+
+      /free
+
+       if ln = '';
+         return;
+       endif;
+
+       i = %lookup(' ':HelpText);
+       if i > 0;
+         HelpText(i) = ln;
+       endif;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+** FEMap (nnnnnnnnnnnnii, field/attribute name where ?=any, indicator)
+D_SIMUSER   31
+??PTITLE    32
+D_CHOICE    33
+??OCHOICE   41
+??OTEXT     42
+D_COMMAND   45
+???COMMAND  45
+D_CONFPO    46
+D_DFTEH     47
+D_TITLETXT  50
+??OTEXT     50
+???TITLE    50
+D_GROUP1    51
+???GROUP1   51
+D_GROUP2    52
+???GROUP2   52
+D_GROUP3    53
+???GROUP3   53
+D_GROUP4    54
+???GROUP4   54
+D_GROUP5    55
+???GROUP5   55
+D_GROUP6    56
+???GROUP6   56
+D_GROUP7    57
+???GROUP7   57
+D_GROUP8    58
+???GROUP8   58
+D_GROUP9    59
+???GROUP9   59
+D_FRELOAD   61
+** CursLocs (snrrccc, screensize/screen#/row/col, s=W/N/blank, n=blank=all)
+ 122010
+N104075
+W104127
+** Text
+App Menu
+ 2:RESERVED
+
+>>> UPDATE <<<
+>>> EDIT THIS PAGE <<<
+>>> EDIT MENU <<<
+Loading the menu . . .
+Saving the menu . . .
+Loading authorisations . . .
+Performing "%1" . . .
+Edit slot %2, page %1
+Confirm change option to header in slot %2, page %1
+Create new option at page %1, slot %2
+Update option at page %1, slot %2
+Edit attributes, option "%1"
+Edit attributes, page %1
+Edit%1MENU%2attributes
+18:RESERVED
+19:RESERVED
+20:RESERVED
+Save Menu
+Save Menu (NOT UPDATED)
+Option text . . . . .:
+Page title  . . . . .:
+Menu title  . . . . .:
+** FunText
+F1=Help
+F2=Save Menu
+F3=
+F4=Select/Prompt
+F5=Reload menu
+F6=Insert group
+F7=OptUp/PgLeft
+F8=OptDown/PgRight
+F9=
+F10=
+F11=Start simulate
+F12=
+F13=Reload auth.
+F14=Clear page
+F15=
+F16=Edit page/menu
+F17=
+F18=
+F19=Prev nb page
+F20=Next nb page
+F21=
+F22=
+F23=
+F24=
+25:RESERVED
+26:RESERVED
+27:RESERVED
+28:RESERVED
+29:RESERVED
+30:RESERVED
+F11=Stop simulate
+F14=Delete opt/hdr
+F14=Delete group
+F16=Edit MENU attr
+F13=Work w/ groups

@@ -1,0 +1,9 @@
+* text eol=lf
+*.bin binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.RPG linguist-language=RPG
+*.RPGLE linguist-language=RPG
+*.MBR linguist-language=RPG

@@ -1,0 +1,92 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  DisplayFile CAPPDISPD2
+
+      *  Service Program: Common App Services / Display
+      *  Display File   : Select Item
+
+
+      *  Used in module HD to select an item.
+
+
+     A                                      DSPSIZ(24 80 *NORMAL 27 132 *WIDE)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      CF01
+     A                                      CF02
+     A                                      CF03
+     A                                      CF04
+     A                                      CF05
+     A                                      CF06
+     A                                      CF07
+     A                                      CF08
+     A                                      CF09
+     A                                      CF10
+     A                                      CF11
+     A                                      CF12
+     A                                      CF13
+     A                                      CF14
+     A                                      CF15
+     A                                      CF16
+     A                                      CF17
+     A                                      CF18
+     A                                      CF19
+     A                                      CF20
+     A                                      CF21
+     A                                      CF22
+     A                                      CF23
+     A                                      CF24
+     A                                      CLEAR
+     A                                      HELP
+     A                                      PAGEUP
+     A                                      PAGEDOWN
+     A                                      PRINT
+
+     A          R DFSFR2                    SFL
+     A            D__CHCCTL      1Y 0H      SFLCHCCTL
+     A            D__ACTIVE      1   H
+     A            D_SELITEM     40   O  1  1
+     A  59                                  DSPATR(ND)
+     A            D_SELITEMK    40   H
+
+     A          R DFSFC2                    SFLCTL(DFSFR2)
+     A                                      SFLSNGCHC(*RSTCSR *NOSLTIND
+     A                                                *AUTOSLT)
+     A                                      SFLSIZ(00010)
+     A                                      SFLPAG(00009)
+     A  10                                  DSPMOD(*WIDE)
+     A                                      OVERLAY
+     A                                      KEEP
+     A                                      WINDOW(&D__WDWROW &D__WDWCOL
+     A                                              9 45 +
+     A                                             *NOMSGLIN *RSTCSR)
+     A                                      WDWBORDER((*COLOR BLU))
+     A                                      WDWTITLE((*TEXT &D__TITLE2)
+     A                                               (*COLOR WHT)
+     A                                               *CENTER)
+     A                                      CHCAVAIL((*COLOR GRN))
+     A                                      CHCSLT((*COLOR GRN))
+     A                                      CHCUNAVAIL((*COLOR YLW))
+     A                                      RTNCSRLOC(*RECNAME &D__CURSREC
+     A                                                &D__CURSFLD &D__CURSPOS)
+     A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
+     A  21                                  SFLDSPCTL
+     A  22                                  SFLDSP
+     A  23                                  SFLCLR
+     A  29                                  SFLEND(*SCRBAR *PLUS)
+     A            D__WDWROW      2S 0P
+     A            D__WDWCOL      3S 0P
+     A            D__TITLE2     40   P
+     A            D__CURREC      4S 0H      SFLRCDNBR
+     A            D__CURSREC    10   H
+     A            D__CURSFLD    10   H
+     A            D__CURSPOS     4S 0H
+     A            D__CURSROW     3  0H
+     A            D__CURSCOL     3  0H
+
+     A          R DUMMY2
+     A                                      ASSUME
+     A            DUMMYFLD       1   O  2  1
+

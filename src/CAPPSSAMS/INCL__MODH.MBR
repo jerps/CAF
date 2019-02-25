@@ -1,0 +1,19 @@
+
+       // (c) 2019 John Erps
+
+
+       // Module Header specs for *SRVPGM CAPPSSAM
+
+       // NOTE:
+       // Include prerequisite service program declarations in INCL_DECL.
+
+
+     h copyright('(c) 2019 John Erps')
+
+     h bnddir(
+     h             'CAPPBASE'
+     h            :'CSYSBASE'
+     h       )
+
+     h nomain decedit(*JOBRUN)
+

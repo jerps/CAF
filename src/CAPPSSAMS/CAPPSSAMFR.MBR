@@ -1,0 +1,36 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CAPPSSAMFR
+
+      *  Service Program: Common App Services / SubSystem AppMenu
+      *  File:          : Field Reference File
+
+
+      *  Defines the attribute types for this subsystem.
+
+      *  Each attribute type's name must start with "TAM_".
+
+
+     A          R CAPPSSAMFR
+
+      * Menu
+     A            TAM_MPAGE      5S 0       COLHDG('Menu' 'Page')
+     A            TAM_MSLOT      2S 0       COLHDG('Menu' 'Slot')
+     A            TAM_MCHC       2          COLHDG('Menu' 'Choice')
+     A            TAM_MOTEXT    34          COLHDG('Menu/Option' 'Text')
+     A            TAM_MBIN       1S 0       COLHDG('Menu' 'Bin')
+
+      * Group / Member
+     A            TAM_GROUP     15          COLHDG('Group' 'Name')
+     A            TAM_GRPFX      1          COLHDG('Group' 'Prefix')
+     A            TAM_MBRN      15          COLHDG('Member' 'Name')
+     A            TAM_MBRT       1S 0       COLHDG('Member' 'Type')
+
+      * Misc.
+     A            TAM_TEXT      50          COLHDG('Text')
+     A            TAM_ACTIVE     1          COLHDG('Active' 'Y/N')
+     A            TAM_SPECB     10          COLHDG('Special' 'Behaviors')
+     A            TAM_CMD      500          COLHDG('Command')
+

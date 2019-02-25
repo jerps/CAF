@@ -1,0 +1,2026 @@
+
+       // (c) 2019 John Erps
+
+
+       // Common App - SQL Statements: Work with
+
+
+       // WARNING:
+       // This program executes SQL using service program CSYSSQLS.
+       // See member CSYSSQLS/INCL_RM for detailed info about some issues.
+       // This program releases service program CSYSSQLS when it ends, to
+       // circumvent a resource problem. Therefore, this program should
+       // never be called if there is another active program in the same
+       // job that also uses CSYSSQLS.
+
+
+       // Pass 0-6 parameters:
+
+       //   1 I  (10)    : Mode.
+       //                    *DISPLAY - Data records are displayed only and
+       //                               can not be added, updated, deleted or
+       //                               copied.
+       //                    *EDIT    - Data records can be added, (in-line)
+       //                               updated, deleted or copied.
+       //                    *SELECT  - Data records are displayed only for
+       //                               selection and can not be added,
+       //                               updated, deleted or copied.
+
+       //   2 I  (10)    : Special behavior codes.
+       //                  This field can contain one or more letters listed
+       //                  below to indicate special behaviors.
+       //                    A - Keep the program active; do NOT end the
+       //                        program on ENTER. Normally, the program is
+       //                        ended when there are no pending actions or
+       //                        subfile options to be processed. With this
+       //                        special behavior the only way to end the
+       //                        program is to press F3 or F12.
+       //                    I - Inhibit in-line updating of data records
+       //                        (ignored when not in *EDIT mode).
+       //                    J - Do not allow adding or copying data records
+       //                        (ignored when not in *EDIT mode).
+       //                    K - Do not allow deleting data records
+       //                        (ignored when not in *EDIT mode).
+       //                    V - Force DSPMOD(*NORMAL) on program init.
+       //                    W - Force DSPMOD(*WIDE) on program init.
+       //                    X - Do not allow resize/refresh (F9).
+
+       //   3 O  (2,0)   : Return code (ERROR if >=30)
+       //                    00 - Program ended normally (with ENTER).
+       //                    01 - F3 key was pressed (exit).
+       //                    02 - F12 key was pressed (cancel).
+       //                    10 - Data record has been selected (mode *SELECT).
+       //                         Output parms contain the key of the selected
+       //                         data record.
+       //                    30 - An unspecified error occurred.
+       //                    31 - Illegal parameter value.
+       //                    32 - Function not allowed.
+       //                    33 - Program fault.
+
+       //   4 O  (100)   : Return message 1 (error).
+       //   5 O  (100)   : Return message 2 (cause).
+
+       //   6 O  (20)    : If mode is *SELECT then return the selected
+       //                  SQL Statement ID (returncode 10), or blanks
+       //                  if nothing was selected.
+
+
+       ////$B OVRDBF FILE(SFRFILE1) TOFILE(X) OVRSCOPE(*JOB)
+       ////$A DLTOVR FILE(SFRFILE1) LVL(*JOB)
+
+
+       // Binding directories.
+       // Release all service programs at the end of main by calling the
+       // "RlsSp*" procedure for each. Be sure to do this in the correct
+       // order, i.e. highest level first and lowest level last.
+     h bnddir(
+     h             'CAPPDISP'
+     h            :'CAPPBASE'
+     h            :'CSYSSQLS'
+     h            :'CSYSBASE'
+     h       )
+
+      /include QINCSRC,DPGM_HEAD
+
+
+     fCAFSQLS   cf   e             workstn infds(WSI)
+     f                                     sfile(DFSFR1:SFLR1#)
+
+     fCSYSSQLSF1if   e           k disk
+
+       // The following files (SFRFILEn) are ONLY used to read data to
+       // populate subfile n. File pointers must be retained for these
+       // files to correctly read the next page. Therefore, ensure that
+       // the ODP's for these files are NOT shared.
+      //fSFRFILE1  if   e           k disk    rename(FMTX:FMTY)
+      //f                                     extfile('*LIBL/FILE')
+
+
+       // ----- Includes
+
+      /include QINCSRC,CAFSQLS
+
+      /include QINCSRC,CAFSQLSD
+
+      /include CAPPDISPS,INCL_API
+      /include CAPPBASES,INCL_API
+      /include CSYSSQLSS,INCL_API
+      /include CSYSBASES,INCL_API
+
+
+       // ----- Constants
+
+       // The minimum number of parameters needed by this program.
+     d MinPgmParms     c                   0
+
+       // SQL Statement ID's
+     d SSID00          c                   'CSYS-001'
+
+       // Number of lines in a page in subfile 1 in *NORMAL mode.
+     d SflPagelen1     c                   13
+       // Row with the top line of a page in subfile 1.
+     d SflTopline1     c                   8
+
+       // SQL Column#, Address, Length (, Scale)
+       // Char   :              %size     -
+       // Zoned  :              %len      %decpos
+       // Packed :              %len      %decpos
+     d ScSQLSID        c                   1
+     d SaSQLSID        c                     %addr(SQLSID)
+     d SlSQLSID        c                     %size(SQLSID)
+     d ScSQLSLINE      c                   2
+     d SaSQLSLINE      c                     %addr(SQLSLINE)
+     d SlSQLSLINE      c                     %size(SQLSLINE)
+     d ScVSQLSCOUNT    c                   3
+     d SaVSQLSCOUNT    c                     %addr(VSQLSCOUNT)
+     d SlVSQLSCOUNT    c                      %len(VSQLSCOUNT)
+     d SsVSQLSCOUNT    c                   %decpos(VSQLSCOUNT)
+
+       // Row on which to display the bottom message (*NORMAL and *WIDE).
+     d MsgRowNormal    c                   22
+     d MsgRowWide      c                   25
+
+
+       // ----- External Data Structures
+
+
+       // ----- Internal Data Structures
+
+      /include QINCSRC,DS_PSI
+
+       // Error structure.
+       // For convenience, use local procedures "L_SetErr" and "L_AddErrFld".
+     d Err             ds                  qualified inz
+         // *on if an error occurred, else *off.
+     d   e                             n
+         // names of fields/attributes in error.
+     d   flds                        12    dim(40)
+
+       // Positioning keys.
+       //   1: SQLSID (SSID00)
+     d Poskey1         ds                  qualified inz
+     d   f1                                like(D__POS1F1)
+
+       // Data record key.
+     d DrKey           ds                  qualified inz
+     d   f1                                like(TSQLS_ID)
+
+
+       // ----- Arrays
+
+       // Array "FEMap" associates field/attribute names with error indicators
+       // *in31-*in69. A question mark ("?") in a name means that the position
+       // matches any character. The first name which matches a field/attribute
+       // name (case sensitive) determines the indicator to be set to *on.
+       // Execute subr. "SetErrFldsInd" to set error indicators according to
+       // the names in array "Err.flds" (see above).
+     d FEMap           s             14    ctdata dim(50)
+       // Cursor locations.
+     d CursLocs        s              7    ctdata dim(50)
+       // Texts
+     d Text            s             80    ctdata dim(50)
+       // Function key texts
+     d FunText         s             60    ctdata dim(50)
+       // Subfile option texts
+     d SfoText         s             60    ctdata dim(50)
+
+
+       // ----- Fields/Vars
+
+       // Number of parameters passed to this program.
+     d Parms#          s             10i 0
+
+       // Program activated.
+     d PgmActivated    s               n   inz(*off)
+
+       // Return code/message1/2 to be returned to caller.
+     d Rtncd           s              2  0
+     d Rtnmsg1         s            100
+     d Rtnmsg2         s            100
+
+       // Modes:
+     d ModeDisplay     s               n
+     d ModeEdit        s               n
+     d ModeSelect      s               n
+
+       // Special behaviors:
+       // - SbKeepActive : Keep program active.
+       // - SbNoInlUpd   : Do not allow in-line updating in *EDIT mode.
+       // - SbNoAdd      : Do not allow add or copy in *EDIT mode.
+       // - SbNoDel      : Do not allow delete in *EDIT mode.
+       // - SbDspiNorm   : Force DSPMOD(*NORMAL) on program init.
+       // - SbDspiWide   : Force DSPMOD(*WIDE) on program init.
+       // - SbNoResize   : Do not allow resize/refresh (F9).
+     d SbKeepActive    s               n
+     d SbNoInlUpd      s               n
+     d SbNoAdd         s               n
+     d SbNoDel         s               n
+     d SbDspiNorm      s               n
+     d SbDspiWide      s               n
+     d SbNoResize      s               n
+
+       // Display mode *WIDE if *on.
+     d DspWide         s               n
+       // Current screen rows and columns.
+     d ScreenRows      s             10i 0
+     d ScreenCols      s             10i 0
+       // The screen to be displayed/processed (0 = exit).
+     d Screen          s             10i 0
+       // Previous screen.
+     d PrevScreen      s                   like(Screen)
+       // The current positioning key to be used (Poskey*).
+     d CurPoskey       s             10i 0
+       // The new positioning key which is set in subr. "CheckPositioning".
+     d NewPoskey       s             10i 0
+       // Is set to *on if a new positioning has been effectuated.
+     d Positioned      s               n
+       // If set to *on then the values of the screen positioning fields
+       // (D__POS*) are retained on next screen output.
+     d RetainPosFlds   s               n
+       // Is set to *on in subr. "ValSubfile" if subr. "PcsSubfile" needs
+       // to be executed.
+     d SflPcs          s               n
+       // Is *on if subfile n is empty.
+     d SflEmpty1       s               n
+       // Is set to *on in subr. "ReadFirstPage" or "ReadNextPage" if
+       // end-of-data has been reached for subfile n.
+     d EOD1            s               n
+       // Recno for subfile n.
+     d SFLR1#          s              5  0
+       // Recno total for subfile n.
+     d SFLR1#T         s              5  0
+
+       // The primary (error)message, to be displayed at the bottom, in
+       // "ExScreen". This field is always cleared automatically, after
+       // "ExScreen", with "CAPPBASE/ClrDspMsgs" (see below).
+       // For convenience, use local procedures "L_SetErr" and "L_AddErrFld"
+       // to set the "Err" data structure and "DspMsg" in one go in case
+       // of an error.
+       // NOTE: This field is defined in and exported from *SRVPGM CAPPBASE.
+     d DspMsg          s            130            import('DspMsg')
+
+       // A list of max. 99 supplementary (error)messages, to be displayed
+       // in "ExScreen", like "DspMsg". This array is also always cleared
+       // automatically, after "ExScreen". Field "DspMsg", together with
+       // "DspMsgList" can be considered as one list with max. 100 messages,
+       // where "DspMsg" is the first one, and "DspMsgList(1)" the second.
+       // The first message in this list (either "DspMsg" or "DspMsgList(1)")
+       // is displayed at the bottom, in "ExScreen". The last message in
+       // "DspMsgList" is by definition in the element just before the first
+       // blank element. Thus, if "DspMsgList(1)" is blank then the array is
+       // considered to contain no messages at all. If "DspMsgList(1)" and
+       // "DspMsg" are both not blank, or "DspMsgList(1)" and "DspMsgList(2)"
+       // are both not blank, a "+" at the right of the displayed message at
+       // the bottom is shown to indicate more messages. The user may press
+       // F22 to display all messages within a pageable window, which includes
+       // "DspMsg" (displayed at the top).
+       // NOTES:
+       //   - Use "CAPPBASE/ClrDspMsgs" to clear all messages, including
+       //     "DspMsg".
+       //   - Use "CAPPBASE/AddToDspMsgList" to place a message into the
+       //     first non-blank element of "DspMsgList".
+       //   - Array "DspMsgList" is defined in and exported from *SRVPGM
+       //     CAPPBASE.
+     d DspMsgList      s            130    dim(99) import('DspMsgList')
+
+       // Is set to *on in "ExScreen" if there are more messages to display,
+       // i.e. a "+" is shown on the right of the displayed message at the
+       // bottom.
+     d MoreMsgs        s               n
+
+       // The statusmessage to be displayed at the bottom row, in "ExScreen",
+       // but only if "StatMsg <> *BLANKS", and "StatMsg <> DspMsg" and
+       // "StatMsg <> DspMsgList(1)". This field is NOT cleared automatically.
+       // NOTE: the statusmessage replaces the second line with function
+       // key information, which is normally displayed at the bottom row.
+     d StatMsg         s            130
+
+       // The row on the screen on which to display the bottom message,
+       // determined in subr. "CalcScrSizes".
+     d DspMsgRow       s             10i 0
+
+       // Cursor location on last display input operation (exfmt).
+     d CursRow         s             10i 0
+     d CursCol         s             10i 0
+
+       // If *on, set cursor on location "CursRow"/"CursCol" on next
+       // display output operation (exfmt).
+     d SetCurs         s               n
+       // Press key again to confirm if *off.
+     d ConfirmExit     s               n
+     d ConfirmRefresh  s               n
+     d ConfirmResize   s               n
+       // Header displayed on screen.
+     d HdrText         s            100
+       // Subfile options or function keys to be displayed on screen.
+     d DspOpts         s           1056
+       // Current subfile page length (number of rows).
+     d PgLen           s             10i 0
+       // Screen row of the first record of the current subfile page.
+     d PgTopl          s             10i 0
+       // A message.
+     d Msg             s            130
+       // A message number.
+     d Msg#            s             10i 0
+       // Subfile record#
+     d SflRec          s             10i 0
+
+       // Standard program parameter fields.
+     d Pmode           s             10
+     d Pspcbhvr        s             10
+     d Prc             s                   like(Rtncd)
+     d Prm1            s                   like(Rtnmsg1)
+     d Prm2            s                   like(Rtnmsg2)
+
+       // Original input parameter values.
+     d Imode           s             10
+     d Ispcbhvr        s             10
+
+       // Database Query & Fetch fields.
+     d DbqId           s             20
+     d DbqStmt         s          30000    varying
+       // Cursor id.
+     d DbqCursId       s              5i 0 inz(-1)
+
+       // "DbqError" is set to *on if the query that was last executed in
+       // subr. "SFn_QUERY" resulted in an error; no records to fetch.
+     d DbqError        s               n
+
+       // "DbqFetchOK" is set to *on in subr. "SFn_FETCH" if a row has been
+       // fetched, else it is set to *on.
+     d DbqFetchOK      s               n
+
+       // "DbqFetched" is set to *off when the query has has been executed
+       // in subr. "SFn_QUERY" and is set to *on when a row has been fetched
+       // with subr. "SFn_FETCH".
+     d DbqFetched      s               n
+
+       // If "DbqResetCursor" is set to *on, subr. "SFn_QUERY" does not
+       // execute the query and the current result set is kept, and next
+       // time subr. "SFn_FETCH" is executed the cursor is positioned on
+       // the first row. "DbqResetCursor"" is always set to *off again
+       // in subr. "SFn_FETCH".
+     d DbqResetCursor  s               n
+
+       // If "DbqSkipFetch" is set to *on, next time subr. "SFn_FETCH" is
+       // executed the fetch is not executed and the current row is kept,
+       // and the cursor is not moved. "DbqSkipFetch" is always set to *off
+       // again in subr. "SFn_FETCH".
+     d DbqSkipFetch    s               n
+
+       // Level break indicators (array "DbqlInd") and associated level-break
+       // fields, which are initialized in "SFn_QUERY" and updated in subr.
+       // "SFn_FETCH". The fields contain values of the previous row, which
+       // are compared with the values of the current row in subr. "SFn_FETCH".
+       // Array "DbqlNull" is set in subr. "SFn_FETCH" to indicate whether the
+       // associated level-break field was NULL in the previous row.
+     d DbqlInd         s               n   dim(99)
+     d DbqlNull        s               n   dim(99)
+     d DbqlSQLSID      s                   like(TSQLS_ID)
+
+       // Virtual DB Fields
+     d VDBF            ds                  inz
+     d   VSQLSCOUNT                  15p 0
+
+
+       // ----- Prototypes for called programs
+
+     d CallCSYSSQLSP1  pr                  extpgm('CSYSSQLSP1')
+     d   @sqlsid                           const like(TSQLS_ID)
+
+
+       // ----- MAIN Prototype
+
+     d MAIN            pr
+
+
+       // ----- Local Prototypes
+
+      /include QINCSRC,DPGM_LPP
+
+
+       // ----- Program Entry
+
+     d PgmCAFSQLS      pi
+     d   @@Mode                      10    const options(*nopass)
+     d   @@Spcbhvr                   10    const options(*nopass)
+     d   @@Rtncd                      2  0       options(*nopass)
+     d   @@Rtnmsg1                  100          options(*nopass)
+     d   @@Rtnmsg2                  100          options(*nopass)
+     d   @@SelSqlsid                 20          options(*nopass)
+
+      /free
+
+
+       *inLR = *on;
+
+       Parms# = %parms;
+
+       if Parms# > 2;
+         @@Rtncd = 0;
+       endif;
+       if Parms# > 3;
+         @@Rtnmsg1 = '';
+       endif;
+       if Parms# > 4;
+         @@Rtnmsg2 = '';
+       endif;
+       if Parms# > 5;
+         @@SelSqlsid = '';
+       endif;
+
+       MAIN();
+
+       if     ModeSelect
+          and Rtncd = 10;
+         // Set output parameters to selected key.
+         if Parms# > 5;
+           @@SelSqlsid = DrKey.f1;
+         endif;
+       endif;
+
+       // Release all resources.
+       if DbqCursId > 0;
+         SqlsCloseCurs(DbqCursId);
+       endif;
+       RlsSpCAPPDISP();
+       RlsSpCAPPBASE();
+       RlsSpCSYSSQLS();
+       RlsSpCSYSBASE();
+
+       if Parms# > 2;
+         @@Rtncd = Rtncd;
+       endif;
+       if Parms# > 3;
+         @@Rtnmsg1 = Rtnmsg1;
+       endif;
+       if Parms# > 4;
+         @@Rtnmsg2 = Rtnmsg2;
+       endif;
+
+       return;
+
+
+      /end-free
+
+
+     p MAIN            b
+     d MAIN            pi
+
+     d flag            s               n
+     d sflopt          s                   like(D_SFLOPT)
+     d exit            s               n
+     d cancel          s               n
+     d newcurrec       s                   like(D__CURREC)
+     d sflrecs         s                   like(SFLR1#T)
+
+      /free
+
+
+       dou 0=0;
+
+       if not PgmActivated;
+         PgmActivated = *on;
+         exsr Activate;
+         if Rtncd <> 0;
+           leave;
+         endif;
+       endif;
+
+       exsr Init;
+       if Rtncd <> 0;
+         leave;
+       endif;
+
+       dow Screen <> 0;
+
+         // Check if display mode *WIDE is supported.
+         if     DspWide
+            and not IsDspModeWideSupported();
+           DspWide = *off;
+           PushDspMsgs(RtvAMsgAB(1046:CAmsWarning));
+         endif;
+
+         // Make sure the first message is in "DspMsg" and up.
+         DropDspMsgs();
+
+         // Calculate current screen sizes.
+         exsr CalcScrSizes;
+
+         // Execute screen / subfile.
+         exsr ExScreen;
+
+         clear Err;       // Clear error data.
+         ClrDspMsgs();    // Clear (error)messages.
+         MoreMsgs = *off; // No more messages.
+
+         NewPoskey = 0;
+         Positioned = *off;
+
+         if not KeyPressed(KsF03);
+           ConfirmExit = *off;
+         endif;
+         if not KeyPressed(KsF05);
+           ConfirmRefresh = *off;
+         endif;
+         if not KeyPressed(KsF09);
+           ConfirmResize = *off;
+         endif;
+
+         PrevScreen = Screen;
+
+         if KeyPressed(KsPageDown);
+           // Pagedown pressed; read next subfile page.
+           if     Screen = 1
+              and not SflEmpty1
+              and EOD1;
+             DspMsg = RtvAMsgAB(1001);
+           elseif    Screen = 1
+                 and SflEmpty1;
+             DspMsg = RtvAMsgAB(1002);
+           else;
+             exsr ReadNextPage;
+           endif;
+         elseif KeyPressed(KsPageUp);
+           // Pageup pressed; display message.
+           if     Screen = 1
+              and SflEmpty1;
+             DspMsg = RtvAMsgAB(1002);
+           else;
+             DspMsg = RtvAMsgAB(1005);
+           endif;
+           SetCurs = *on; // Retain cursor location.
+         elseif KeyPressed(KsF03);
+           // F03 pressed; exit program (if confirmed).
+           if ConfirmExit;
+             ConfirmExit = *off;
+             Rtncd = 1;
+             Screen = 0;
+           else;
+             ConfirmExit = *on;
+             DspMsg = RtvAMsgAB(1004:CAmsInfo:'F3');
+           endif;
+         elseif KeyPressed(KsF04);
+           // F04 pressed; select item.
+           exsr SelectItem;
+           SetCurs = *on; // Retain cursor location.
+         elseif KeyPressed(KsF05);
+           // F05 pressed; read first page (if confirmed).
+           if    ConfirmRefresh
+              or not ModeEdit;
+             ConfirmRefresh = *off;
+             exsr ReadFirstPage;
+           else;
+             ConfirmRefresh = *on;
+             DspMsg = RtvAMsgAB(1071);
+           endif;
+         elseif    KeyPressed(KsF06)
+               and ModeEdit
+               and not SbNoAdd;
+           // F06 pressed; add data record.
+           exsr AddNewRecord;
+           SetCurs = *off; // Do not retain cursor location.
+         elseif     KeyPressed(KsF09)
+                and not SbNoResize;
+           // F09 pressed; switch screen size & refresh (if confirmed).
+           if    ConfirmResize
+              or not ModeEdit;
+             ConfirmResize = *off;
+             DspWide = not DspWide;
+             exsr ReadFirstPage;
+           else;
+             ConfirmResize = *on;
+             DspMsg = RtvAMsgAB(1072);
+           endif;
+         elseif KeyPressed(KsF12);
+           // F12 pressed; cancel program.
+           Rtncd = 2;
+           Screen = 0;
+         elseif    KeyPressed(KsF17)
+                or KeyPressed(KsF18);
+           // F17/F18 pressed; go to first/last page.
+           D__CURREC = 1;
+           if     KeyPressed(KsF18)
+              and SFLR1#T > PgLen;
+             D__CURREC = SFLR1#T - Pglen + 1;
+           endif;
+         elseif KeyPressed(KsEnter);
+           // Enter pressed.
+           exsr CheckPositioning;
+           if not Err.e;
+             // No errors; validate screen.
+             exsr ValScreen;
+             if not Err.e;
+               // No errors; process screen.
+               exsr PcsScreen;
+             endif;
+           endif;
+           if not Err.e;
+             // No errors; validate subfile.
+             exsr ValSubfile;
+             if     NewPoskey > 0
+                and not Err.e
+                and SflPcs;
+               // Can not reposition with other actions pending.
+               L_SetErr(RtvAMsgAB(1007:CAmsFatal));
+             endif;
+             if not Err.e;
+               // No errors.
+               if SflPcs;
+                 // Process subfile.
+                 exsr PcsSubfile;
+               elseif DspMsg = '';
+                 // Nothing to do.
+                 DspMsg = RtvAMsgAB(1202);
+               endif;
+             endif;
+             if     not Err.e
+                and not SflPcs
+                and NewPoskey > 0;
+               // No errors, no sfl processing and new pos.; read first page.
+               exsr SetPoskey;
+               exsr ReadFirstPage;
+               Positioned = *on;
+               DspMsg = RtvAMsgAB(1211);
+             endif;
+             if     not SbKeepActive
+                and not Err.e
+                and not SflPcs
+                and NewPoskey = 0;
+               // No pending actions and no subfile options; end program.
+               Screen = 0;
+             endif;
+           endif;
+         else;
+           // Function key not supported.
+           L_SetErr(RtvAMsgAB(1010:CAmsFatal));
+         endif;
+
+       enddo;
+
+       enddo;
+
+       return;
+
+
+       // Subfile 1: Query
+       // Set "Err.e" to *on in case of an error.
+       begsr SF1_QUERY;
+
+         // No rows fetched yet.
+         DbqFetched = *off;
+
+         EOD1 = *off;
+         DbqSkipFetch   = *off;
+
+         // Initialize all level-break indicators with *on and all
+         // level-break fields with *loval. The fields contain the
+         // values of the previously fetched row. The indicators
+         // and fields are initialized here and updated in SF1_FETCH.
+         // Used level-break indicators and associated fields:
+         //    1 : SQLSID
+         DbqlInd(*)  = *on;
+         DbqlNull(*) = *on;
+         DbqlSQLSID  = *loval;
+
+         // Clear all data fields.
+         clear *all SQLSREC;
+         clear VDBF;
+
+         if not DbqResetCursor;
+
+         DbqError = *on;
+
+         DbqId   = SSID00;
+         DbqStmt = SqlsRtvStmt(DbqId);
+
+         if %len(DbqStmt) > 0;
+
+         if     %len(%triml(DbqStmt)) >= 7
+            and ToUppercase(%subst(%triml(DbqStmt):1:7)) = 'SELECT ';
+
+         DspStatMsg(RtvAMsgAB(1100:'':%trimr(DbqId)));
+
+         if DbqCursId > 0;
+           // Close current cursor first.
+           SqlsCloseCurs(DbqCursId);
+         endif;
+
+         // Execute the query.
+         SQLSID     = Poskey1.f1;
+         DbqCursId  = SqlsDBExec( *omit : DbqStmt
+
+       // Char   :    SQL_CHAR                    %size         *omit
+       // Zoned  :    SQL_NUMERIC                 %len          %decpos
+       // Packed :    SQL_DECIMAL                 %len          %decpos
+
+       //FldAddr      PgmType       DbType        Length        Scale
+
+       :SaSQLSID     :SQL_CHAR     :*omit        :SlSQLSID     :*omit
+
+         );
+
+         DspStatMsg('');
+
+         if DbqCursId > 0;
+
+           // Query has been executed; bind result set.
+
+         if SqlsBindCols( DbqCursId
+
+       // Char   :                  SQL_CHAR      %size         *omit
+       // Zoned  :                  SQL_NUMERIC   %len          %decpos
+       // Packed :                  SQL_DECIMAL   %len          %decpos
+
+       //Col#         FldAddr       PgmType       Length        Scale
+
+       :ScSQLSID     :SaSQLSID     :SQL_CHAR     :SlSQLSID     :*omit
+       :ScSQLSLINE   :SaSQLSLINE   :SQL_CHAR     :SlSQLSLINE   :*omit
+       :ScVSQLSCOUNT :SaVSQLSCOUNT :SQL_DECIMAL  :SlVSQLSCOUNT :SsVSQLSCOUNT
+
+         );
+
+           // Query has been executed and result set is bound.
+
+           DbqError = *off;
+           StatMsg = '';
+
+         else;
+           // Error binding result set.
+           L_SetErr(RtvAMsgAB(1101:CAmsFatal
+                        :SqlsStatusAsChar():%trimr(DbqId)));
+         endif;
+         else;
+           // Error executing query or binding it's parameters.
+           if DbqCursId = 0;
+             L_SetErr(RtvAMsgAB(1102:CAmsFatal
+                          :SqlsStatusAsChar():%trimr(DbqId)));
+           else;
+             L_SetErr(RtvAMsgAB(1103:CAmsFatal
+                          :SqlsStatusAsChar():%trimr(DbqId)));
+           endif;
+         endif;
+         else;
+           // SQL statement does not start with "SELECT".
+           L_SetErr(RtvAMsgAB(1104:CAmsFatal:%trimr(DbqId)));
+         endif;
+         else;
+           // Could not retrieve SQL statement.
+           L_SetErr(RtvAMsgAB(1105:CAmsFatal:%trimr(DbqId)));
+         endif;
+
+         endif;
+
+         if     Err.e
+            and DspMsg <> '';
+           StatMsg = DspMsg;
+         endif;
+
+         if DbqError;
+           EOD1 = *on;
+         endif;
+
+       endsr;
+
+
+       // Subfile 1: Fetch
+       // Set "Err.e" to *on in case of an error.
+       begsr SF1_FETCH;
+
+         DbqFetchOK = *off;
+
+         dou 0=0;
+
+         if    DbqError
+            or EOD1;
+           leave;
+         endif;
+
+         if DbqFetched;
+           // A row has been fetched previously. Store the current
+           // non-null column values in level-break fields "Dbql*",
+           // and set the corresponding elements in array "DbqlNull"
+           // to *on if the associated current column value is null.
+           DbqlNull(*) = *off;
+           if SqlsColIsNull(DbqCursId:ScSQLSID);
+             DbqlNull(1) = *on;
+           else;
+             DbqlSQLSID = SQLSID;
+           endif;
+         endif;
+
+         if DbqSkipFetch;
+           leave;
+         endif;
+
+         if DbqResetCursor;
+           flag = SqlsFetch(DbqCursId:'*FIRST');
+         else;
+           flag = SqlsFetch(DbqCursId);
+         endif;
+         if flag;
+           StatMsg = '';
+           if SqlsStatus() = 100;
+             // End of data reached.
+             EOD1 = *on;
+           else;
+             // A row has been fetched.
+             DbqFetchOK = *on;
+             DbqFetched = *on;
+           endif;
+         else;
+           // Error...
+           L_SetErr(RtvAMsgAB(1107:CAmsFatal
+                        :SqlsStatusAsChar():%trimr(DbqId)));
+           // Clear all data fields.
+           clear SQLSREC;
+           clear VDBF;
+         endif;
+
+         if     Err.e
+            and DspMsg <> ''
+            and StatMsg = '';
+           StatMsg = DspMsg;
+         endif;
+
+         enddo;
+
+         if EOD1;
+           // Set all level-break indicators to *on.
+           DbqlInd(*) = *on;
+         elseif DbqFetched;
+
+           // Set level-break indicators for the current row, by comparing
+           // the current and previous values of the level-break fields. A
+           // level-break is always triggered if the current or the previous
+           // value of a level-break field is null ("DbqlNull").
+
+           // Set all to *off first.
+           DbqlInd(*) = *off;
+
+           if    DbqlNull(1)
+              or SqlsColIsNull(DbqCursId:ScSQLSID)
+              or SQLSID <> DbqlSQLSID;
+             DbqlInd(1) = *on;
+           endif;
+
+         endif;
+
+         DbqResetCursor = *off;
+         DbqSkipFetch = *off;
+
+       endsr;
+
+
+       // Perform actions when the program is first activated.
+       begsr Activate;
+
+         // Set WSI@ to let service program CSYSBASE access
+         // the workstation information in ds WSI.
+         WSI@ = %addr(WSI);
+
+       endsr;
+
+
+       // Initialize program.
+       begsr Init;
+
+         clear Err;
+
+         ClrDspMsgs();
+         MoreMsgs = *off;
+         StatMsg = '';
+
+         Screen = 1;
+         SflEmpty1 = *on;
+         EOD1 = *off;
+
+         ConfirmExit = *off;
+
+         CursRow = 1;
+         CursCol = 1;
+         SetCurs = *off;
+
+         CurPoskey = 1;
+         clear Poskey1;
+         RetainPosFlds = *off;
+
+         DbqId          = '';
+         DbqStmt        = '';
+         DbqCursId      = -1;
+         DbqError       = *off;
+         DbqFetchOK     = *off;
+         DbqFetched     = *off;
+         DbqResetCursor = *off;
+         DbqSkipFetch   = *off;
+
+         Imode = '';
+         Ispcbhvr = '';
+
+         // Check number of parameters.
+         if Parms# < MinPgmParms;
+           Rtncd = 31;
+           Rtnmsg1 =   'This program needs at least '
+                     + %char(MinPgmParms) + ' parameters.';
+           leavesr;
+         endif;
+
+         // Set mode indicators.
+         if Parms# > 0;
+           Imode = @@Mode;
+         else;
+           Imode = '*DISPLAY';
+         endif;
+         ModeDisplay = Imode = '*DISPLAY';
+         ModeEdit    = Imode = '*EDIT';
+         ModeSelect  = Imode = '*SELECT';
+         if     not ModeDisplay
+            and not ModeEdit
+            and not ModeSelect;
+           Rtncd = 31;
+           Rtnmsg1 = 'Value of parameter 1 (mode) is unsupported.';
+           leavesr;
+         endif;
+
+         // Set special behavior indicators.
+         if Parms# > 1;
+           Ispcbhvr = @@Spcbhvr;
+         endif;
+         SbKeepActive = %scan('A':Ispcbhvr) > 0;
+         SbNoInlUpd   = %scan('I':Ispcbhvr) > 0;
+         SbNoAdd      = %scan('J':Ispcbhvr) > 0;
+         SbNoDel      = %scan('K':Ispcbhvr) > 0;
+         SbDspiNorm   = %scan('V':Ispcbhvr) > 0;
+         SbDspiWide   = %scan('W':Ispcbhvr) > 0;
+         SbNoResize   = %scan('X':Ispcbhvr) > 0;
+
+         if SbDspiNorm;
+           DspWide = *off;
+         elseif SbDspiWide;
+           DspWide = *on;
+         else;
+           DspWide = IsDspModeWide();
+         endif;
+
+         D__CURREC = 1;
+
+         exsr ReadFirstPage;
+
+       endsr;
+
+
+       // Calculate current screen sizes.
+       begsr CalcScrSizes;
+
+         select;
+         // when Screen = 1;
+         other;
+           // Screen 1 is default.
+           PgLen = SflPagelen1;
+           PgTopl = SflTopline1;
+         endsl;
+         if DspWide;
+           ScreenRows = 27;
+           ScreenCols = 132;
+           PgLen = PgLen + 3;
+           DspMsgRow = MsgRowWide;
+         else;
+           ScreenRows = 24;
+           ScreenCols = 80;
+           DspMsgRow = MsgRowNormal;
+         endif;
+
+       endsr;
+
+
+       // Execute the current screen ("Screen").
+       begsr ExScreen;
+
+         if Err.e;
+           // Set error indicators (31-69); see "FEMap".
+           exsr SetErrFldsInd;
+         endif;
+
+         // Set generic display indicators.
+         *in10 = DspWide;
+         *in21 = *on;
+         *in22 = *on;
+         *in23 = *off;
+         *in30 = Err.e;
+
+         // "Msg" contains the message to display at the bottom.
+         Msg = '';
+         if DspMsg <> '';
+           Msg = DspMsg;
+           Msg# = 0;
+         else;
+           Msg = DspMsgList(1);
+           Msg# = 1;
+         endif;
+
+         if        DspMsg <> ''
+               and DspMsgList(1) <> ''
+            or     DspMsgList(1) <> ''
+               and DspMsgList(2) <> '';
+           // Show "+" to indicate more messages.
+           MoreMsgs = *on;
+         endif;
+
+         if Msg = '';
+           // Set informational message.
+           select;
+           when Screen = 1 and SflEmpty1;
+             // Empty subfile.
+             Msg = RtvAMsgAB(1009);
+           when     NewPoskey > 0
+                and not Positioned;
+             Msg = RtvAMsgAB(1008);
+           when D__CURREC <= PgLen;
+             Msg = RtvAMsgAB(1011);
+           endsl;
+         endif;
+
+         // Header.
+         select;
+         when ModeDisplay;
+           HdrText = Text(3);
+         when ModeSelect;
+           HdrText = Text(4);
+         other;
+           HdrText = Text(2);
+         endsl;
+         D__HDPGMI = %trim(PSI.pgmname) + '.' + %char(Screen);
+         D__HDDATE = PtDate(%date);
+         D__HDTIME = PtTime(%time);
+         D__HDUSRI = PSI.curuser;
+         if PSI.jobuser <> PSI.curuser;
+           D__HDUSRI = %trim(D__HDUSRI) + '/' + %trim(PSI.jobuser);
+         endif;
+         evalr D__HDJOBI = %trim(PSI.jobname) + '/' +
+                           %editc(PSI.jobnumber:'X');
+         D__HDTXT1 = '';
+         D__HDTXT2 = '';
+         %subst(D__HDTXT1:
+             %div(%len(D__HDTXT1)-%len(%trim(Text(1))):2)+1)
+             = %trim(Text(1));
+         %subst(D__HDTXT2:
+             %div(%len(D__HDTXT2)-%len(%trim(HdrText)):2)-1)
+             = '  ' + %trim(HdrText);
+         write DFHEADER;
+
+         // Footer.
+         DspOpts = '';
+         AddToAppOpts(FunText( 1):DspOpts:DspWide);
+         if     ModeEdit
+            and not SbNoAdd;
+           AddToAppOpts(FunText( 6):DspOpts:DspWide);
+         endif;
+         D__FTTEXT  = DspOpts;
+         D__FTTEXTW = DspOpts;
+
+         // Subfile options.
+         DspOpts = '';
+         if ModeSelect;
+           AddToAppOpts(SfoText(1):DspOpts:DspWide);
+         endif;
+         if ModeEdit;
+           AddToAppOpts(SfoText(2):DspOpts:DspWide);
+           if not SbNoAdd;
+             AddToAppOpts(SfoText(3):DspOpts:DspWide);
+           endif;
+           if not SbNoDel;
+             AddToAppOpts(SfoText(4):DspOpts:DspWide);
+           endif;
+         endif;
+         AddToAppOpts(SfoText(5):DspOpts:DspWide);
+         if ModeEdit;
+           AddToAppOpts(SfoText(20):DspOpts:DspWide);
+         endif;
+         D__SFOPTS  = DspOpts;
+         D__SFOPTSW = DspOpts;
+
+         // Subfile headers.
+         D_SFHDR1 = '';
+         D_SFHDR2 = '';
+         %subst(D_SFHDR1: 1   ) = 'ID';
+         %subst(D_SFHDR1:23   ) = '1st line';
+         %subst(D_SFHDR2: 1   ) = 'Lines';
+
+         if D__CURREC < 1;
+           D__CURREC = 1;
+         endif;
+         if D__CURREC > SFLR1#T;
+           D__CURREC = SFLR1#T;
+         endif;
+
+         dou not (   KeyPressed(KsF01)
+                  or KeyPressed(KsF10)
+                  or KeyPressed(KsF22)
+                  or     (   KeyPressed(KsPageDown)
+                          or KeyPressed(KsPageUp))
+                     and GetCursRow() = DspMsgRow);
+
+           D__FTMSG1  = Msg;
+           D__FTMSG1W = Msg;
+           D__FTMSG2  = Msg;
+           D__FTMSG2W = Msg;
+           if MoreMsgs;
+             if Msg# < GetDspMsgListCount();
+               %subst(D__FTMSG1 :%len(D__FTMSG1 )-1) = ' +';
+               %subst(D__FTMSG1W:%len(D__FTMSG1W)-1) = ' +';
+               %subst(D__FTMSG2 :%len(D__FTMSG2 )-1) = ' +';
+               %subst(D__FTMSG2W:%len(D__FTMSG2W)-1) = ' +';
+             else;
+               %subst(D__FTMSG1 :%len(D__FTMSG1 )-1) = ' <';
+               %subst(D__FTMSG1W:%len(D__FTMSG1W)-1) = ' <';
+               %subst(D__FTMSG2 :%len(D__FTMSG2 )-1) = ' <';
+               %subst(D__FTMSG2W:%len(D__FTMSG2W)-1) = ' <';
+             endif;
+           endif;
+           if DspWide;
+             write DFFOOTERW;
+           else;
+             write DFFOOTER;
+           endif;
+
+           if     StatMsg <> ''
+              and StatMsg <> Msg;
+             // Display statusmessage.
+             DspStatMsg(%trimr(StatMsg));
+           endif;
+
+           *in27 = SetCurs;
+           if SetCurs;
+             if     CursRow >= 1
+                and CursRow <= ScreenRows
+                and CursCol >= 1
+                and CursCol <= ScreenCols;
+               D__CURSROW = CursRow;
+               D__CURSCOL = CursCol;
+             else;
+               *in27 = *off;
+             endif;
+             SetCurs = *off;
+           endif;
+
+           if not RetainPosFlds;
+             // Set screen positioning fields.
+             exsr SetPosFields;
+           endif;
+
+           select;
+           // when Screen = ?;
+           other;
+             // Screen 1 is default.
+             if SflEmpty1;
+               *in22 = *off;
+               if DspWide;
+                 write DFSFND1W;
+               else;
+                 write DFSFND1;
+               endif;
+             endif;
+             *in29 = EOD1;
+             exfmt DFSFC1;
+           endsl;
+
+           // Determine cursor location.
+           CursRow = GetCursRow();
+           CursCol = GetCursCol();
+
+           if KeyPressed(KsF10);
+             exsr SetNextCursLoc;
+           elseif    KeyPressed(KsF01)
+                  or KeyPressed(KsF22);
+             SetCurs = *on;
+             if KeyPressed(KsF01);
+               DspHelp(' ');
+             elseif MoreMsgs;
+               ShowDspMsgs();
+             endif;
+           elseif     (   KeyPressed(KsPageDown)
+                       or KeyPressed(KsPageUp))
+                  and GetCursRow() = DspMsgRow;
+             SetCurs = *on;
+             if MoreMsgs;
+               if KeyPressed(KsPageDown);
+                 Msg# = Msg# + 1;
+               else;
+                 Msg# = Msg# - 1;
+               endif;
+               if Msg# < 0;
+                 Msg# = GetDspMsgListCount();
+               elseif Msg# > GetDspMsgListCount();
+                 Msg# = 0;
+               endif;
+               if Msg# = 0;
+                 Msg = DspMsg;
+               else;
+                 Msg = DspMsgList(Msg#);
+               endif;
+               Msg = %char(Msg# + 1) + ': ' + Msg;
+             endif;
+           endif;
+
+         enddo;
+
+         // Set off all indicators.
+         *in(*) = *off;
+
+         // Calculate the correct subfile record# to set the
+         // cursor location on next display.
+         if CursRow < PgTopl;
+           D__CURREC = WSI.sfrrn;
+         elseif CursRow >= PgTopl + PgLen;
+           D__CURREC = WSI.sfrrn + PgLen - 1;
+         else;
+           D__CURREC = WSI.sfrrn + CursRow - PgTopl;
+         endif;
+         if D__CURREC < 1;
+           D__CURREC = 1;
+         endif;
+         if D__CURREC > SFLR1#T;
+           D__CURREC = SFLR1#T;
+         endif;
+
+         if     not KeyPressed(KsPageDown)
+            and not KeyPressed(KsPageUp);
+           // Clear/reset all subfile indicators, flags, etc.
+           for SflRec = 1 to SFLR1#T;
+             select;
+             // when Screen = 1;
+             other;
+               // Screen 1 is default.
+               chain SflRec DFSFR1;
+               exsr ClrIndDFSFR1;
+               D__PCS = '';
+               exsr SetIndDFSFR1;
+               update DFSFR1;
+             endsl;
+           endfor;
+         endif;
+
+         SetCurs = *off;
+         RetainPosFlds = *off;
+
+       endsr;
+
+
+       // Validate the current screen, identified with "Screen".
+       begsr ValScreen;
+       endsr;
+
+
+       // Process the current screen, identified with "Screen".
+       begsr PcsScreen;
+       endsr;
+
+
+       // Select an item for the current display field on the
+       // current screen, identified with "Screen".
+       begsr SelectItem;
+
+         //if not ModeEdit;
+         //  L_SetErr(RtvAMsgAB(1025:CAmsFatal));
+         //  leavesr;
+         //endif;
+
+         select;
+         // when Screen = ?;
+         other;
+           // Screen 1 is default.
+           select;
+           when D__CURSFLD = 'D__POS1F1';
+             if SelSqlStmtId(SelSqlStmtId$:-1);
+               D__POS1F1 = SelSqlStmtId$.f1;
+               RetainPosFlds = *on;
+               DspMsg = RtvAMsgAB(1016);
+             else;
+               DspMsg = RtvAMsgAB(1059);
+             endif;
+             leavesr;
+           when     D__CURSFLD = 'D_XXX'
+                and D__CURREC > 0
+                and D__CURREC <= SFLR1#T;
+             //chain D__CURREC DFSFR1;
+             //if     %found
+             //   and D__STAT = 'N'; <-- if D_XXX is key field
+             //  if SelXxx(SelXxx$:-1);
+             //    exsr ClrIndDFSFR1;
+             //    D_XXX = SelXxx$.f1;
+             //    exsr SetIndDFSFR1;
+             //    update DFSFR1;
+             //    DspMsg = RtvAMsgAB(1016);
+             //  else;
+             //    DspMsg = RtvAMsgAB(1059);
+             //  endif;
+             //  leavesr;
+             //endif;
+           endsl;
+         endsl;
+
+         L_SetErr(RtvAMsgAB(1015:CAmsFatal));
+
+       endsr;
+
+
+       // Read the first page of the subfile for the current
+       // screen.
+       begsr ReadFirstPage;
+
+         exsr CalcScrSizes;
+
+         *in10 = DspWide;
+         *in21 = *off;
+         *in22 = *off;
+         *in23 = *on;
+
+         write DFHEADER;
+
+         // Position file pointer / query.
+         select;
+         // when Screen = ?;
+         other;
+           // Screen 1 is default.
+           EOD1 = *off;
+           SflEmpty1 = *on;
+           SFLR1#T = 0;
+           write DFSFC1;
+           exsr SF1_QUERY;
+         endsl;
+
+         if     not Err.e
+            and not EOD1;
+           exsr ReadNextPage;
+         endif;
+
+         if DspMsg = '';
+           DspMsg = RtvAMsgAB(1006);
+         endif;
+
+       endsr;
+
+
+       // Read the next page of the subfile for the current screen.
+       begsr ReadNextPage;
+
+         for SflRec = 1 to PgLen;
+
+           // Fetch next row.
+           select;
+           // when Screen = 1;
+           other;
+             // Screen 1 is default.
+             exsr SF1_FETCH;
+             if Err.e;
+               EOD1 = *on;
+             elseif EOD1;
+               DspMsg = RtvAMsgAB(1017);
+               leave;
+             endif;
+           endsl;
+
+           // Write next subfile record.
+           select;
+           // when Screen = 1;
+           other;
+             // Screen 1 is default.
+             if SFLR1#T >= 9999;
+               DspMsg = RtvAMsgAB(1901);
+               leave;
+             endif;
+             exsr SetDFSFR1;
+             SFLR1# = SFLR1#T + 1;
+             write DFSFR1;
+             SFLR1#T = SFLR1#;
+             SflEmpty1 = *off;
+             if SflRec = 1;
+               D__CURREC = SFLR1#T;
+             endif;
+             if %rem(SFLR1#T:PgLen) = 0;
+               leave;
+             endif;
+           endsl;
+
+         endfor;
+
+         // Retain cursor location if it is within the subfile page.
+         select;
+         // when Screen = 1;
+         other;
+           // Screen 1 is default.
+           if     CursRow >= PgTopl
+              and (       %rem(SFLR1#T:PgLen) = 0
+                      and CursRow < PgTopl + PgLen
+                   or CursRow < PgTopl + %rem(SFLR1#T:PgLen));
+             SetCurs = *on;
+           endif;
+         endsl;
+
+       endsr;
+
+
+       // Set field values and indicators for subfile record DFSFR1.
+       // All necessary data should be available when executing
+       // this subroutine.
+       begsr SetDFSFR1;
+
+         clear *all DFSFR1;
+         exsr ClrIndDFSFR1;
+         exsr SetFldDFSFR1;
+         exsr SetDerivedFldDFSFR1;
+         exsr SetIndDFSFR1;
+
+       endsr;
+
+
+       // Clear all indicators for subfile record DFSFR1.
+       begsr ClrIndDFSFR1;
+
+         *in61 = *off; // error on option field if *on
+         *in72 = *off; // subfile fields are editable if *on
+         *in74 = *off; // subfile key fields are editable if *on
+         *in81 = *off; // mark as "deleted" if *on
+         *in82 = *off; // mark as "stale" if *on
+         *in88 = *off; // disable option field if *on
+         *in89 = *off; // disable subfile record if *on
+
+       endsr;
+
+
+       // Set field values for subfile record DFSFR1.
+       // All necessary data should be available when executing
+       // this subroutine.
+       begsr SetFldDFSFR1;
+
+         // Subfile record statusfield:
+         //   N = subfile record represents a new data record.
+         //   D = data record has been deleted.
+         //   S = subfile record may contain stale data (data rec. updated).
+         //   * = option field is disabled.
+         //   X = subfile record is disabled.
+         D__STAT = '';
+
+         // Set hidden primary key fields.
+         D__PK1 = SQLSID;
+         %subst(D_SFTEXT1: 1   ) = SQLSID;
+         if SqlsColIsNull(DbqCursId:ScSQLSLINE);
+           %subst(D_SFTEXT1:23   ) = '-';
+         else;
+           %subst(D_SFTEXT1:23   ) = SQLSLINE;
+         endif;
+         evalr %subst(D_SFTEXT2: 1: 5) = %char(VSQLSCOUNT);
+
+       endsr;
+
+
+       // Set derived field values for subfile record DFSFR1, which are
+       // dependent only on fields in the same subfile record.
+       begsr SetDerivedFldDFSFR1;
+       endsr;
+
+
+       // Set indicators for subfile record DFSFR1.
+       // This subroutine expects that all indicators are cleared with
+       // subr. "SetIndDFSFR1" and that all fields are filled (not
+       // necessarily with subr. "SetFldDFSFR1").
+       begsr SetIndDFSFR1;
+
+         *in72 =     ModeEdit and not SbNoInlUpd
+                 and D__STAT <> 'D' and D__STAT <> 'X';
+         *in74 = *in72 and D__STAT = 'N';
+         *in81 = D__STAT = 'D';
+         *in82 = D__STAT = 'S';
+         *in88 = D__STAT = '*' or D__STAT = 'N' or D__STAT = 'D';
+         *in89 = D__STAT = 'X';
+
+       endsr;
+
+
+       // Validate the subfile for the current screen.
+       // Set indicator "SflPcs" to *on if the subfile needs to be processed
+       // by executing subr. "PcsSubfile", e.g. if one or more options have
+       // been entered.
+       // Set subfile field "D__PCS" to one of the following values for each
+       // record that should be processed in subr. "PcsSubfile":
+       //   "F" : request processing of subfile fields only;
+       //   "O" : request processing of subfile option only;
+       //   "P" : request processing of subfile fields and option.
+       // Set ds "Err" if the subfile has errors (e.g. an invalid option),
+       // in which case "PcsSubfile" is not executed.
+       begsr ValSubfile;
+
+         SflPcs = *off;
+
+         if     Screen = 1
+            and SflEmpty1;
+           leavesr;
+         endif;
+
+         sflopt = '';  // last valid option
+
+         for SflRec = 1 to SFLR1#T;
+
+           select;
+           // when Screen = 1;
+           other;
+             // Screen 1 is default.
+             chain SflRec DFSFR1;
+             if     D__STAT <> 'D'
+                and D__STAT <> 'X';
+
+               // Validate subfile record.
+
+               exsr ClrIndDFSFR1;
+
+               dou 0=0;
+
+               //if     ModeEdit
+               //   and (       D__STAT = 'N'
+               //           and D_XXX <> ''
+               //        or     not SbNoInlUpd
+               //           and D__STAT <> 'N'
+               //           and D_XXX <> D__XXX);
+               //
+               //  D__PCS = 'F'; // process fields
+               //
+               //  // Validate subfile fields.
+               //
+               //  dou 0=0;
+               //
+               //  if D_XXX <> '?';
+               //    L_SetErr(RtvAMsgAB(0000:CAmsFatal)
+               //            :'XXX');
+               //    leave;
+               //  endif;
+               //
+               //  enddo;
+               //
+               //  if Err.e;
+               //    // Set error indicators (31-69); see "FEMap".
+               //    exsr SetErrFldsInd;
+               //    leave;
+               //  endif;
+               //
+               //endif;
+
+               if     D__STAT <> 'N'
+                  and D__STAT <> '*'
+                  and D_SFLOPT <> '';
+
+                 if D__PCS = 'F';
+                   D__PCS = 'P'; // process fields & option
+                 else;
+                   D__PCS = 'O'; // process option
+                 endif;
+
+                 // Validate option.
+
+                 dou 0=0;
+
+                 evalr D_SFLOPT = %trim(D_SFLOPT);
+
+                 if        D_SFLOPT <> ' 1'
+                       and D_SFLOPT <> ' 2'
+                       and D_SFLOPT <> ' 3'
+                       and D_SFLOPT <> ' 4'
+                       and D_SFLOPT <> ' 5'
+                       and D_SFLOPT <> ' E'
+                    or     D_SFLOPT = ' 1'
+                       and not ModeSelect
+                    or     D_SFLOPT = ' 2'
+                       and not ModeEdit
+                    or     D_SFLOPT = ' 3'
+                       and (not ModeEdit or SbNoAdd)
+                    or     D_SFLOPT = ' 4'
+                       and (not ModeEdit or SbNoDel)
+                    or     D_SFLOPT = ' E'
+                       and not ModeEdit;
+                   L_SetErr(RtvAMsgAB(1003:CAmsFatal));
+                   leave;
+                 endif;
+
+                 if D_SFLOPT = ' 1';
+                   if sflopt = D_SFLOPT;
+                     L_SetErr(RtvAMsgAB(1042:CAmsFatal));
+                     leave;
+                   elseif sflopt <> '';
+                     L_SetErr(RtvAMsgAB(1043:CAmsFatal));
+                     leave;
+                   endif;
+                 elseif sflopt = ' 1';
+                   L_SetErr(RtvAMsgAB(1043:CAmsFatal));
+                   leave;
+                 endif;
+
+                 if     sflopt <> ''
+                    and D_SFLOPT <> sflopt
+                    and (   sflopt = ' 4'
+                         or D_SFLOPT = ' 4');
+                   L_SetErr(RtvAMsgAB(1044:CAmsFatal));
+                   leave;
+                 endif;
+
+                 sflopt = D_SFLOPT;
+
+                 enddo;
+
+                 if Err.e;
+                   *in61 = *on;
+                   leave;
+                 endif;
+
+               endif;
+
+               enddo;
+
+               if    D__PCS = 'F'
+                  or D__PCS = 'O'
+                  or D__PCS = 'P';
+                 SflPcs = *on;
+               endif;
+
+               exsr SetIndDFSFR1;
+               update DFSFR1;
+
+             endif;
+
+           endsl;
+
+           // Exit if first error encountered.
+           if Err.e;
+             D__CURREC = Sflrec;
+             leave;
+           endif;
+
+         endfor;
+
+       endsr;
+
+
+       // Process all subfile records where "D__PCS" is "F", "O" or "P"
+       // for the current screen.
+       // Set "D__PCS" to "C" (completed) for each subfile record which
+       // has been successfully processed.
+       // Set ds "Err" in case of an error.
+       begsr PcsSubfile;
+
+         if     Screen = 1
+            and SflEmpty1;
+           leavesr;
+         endif;
+
+         exit   = *off;
+         cancel = *off;
+
+         newcurrec = 0;
+
+         sflrecs = SFLR1#T;
+
+         for SflRec = 1 to sflrecs;
+
+           DspMsg = '';
+
+           select;
+           // when Screen = 1;
+           other;
+             // Screen 1 is default.
+             chain SflRec DFSFR1;
+             if    D__PCS = 'F'
+                or D__PCS = 'O'
+                or D__PCS = 'P';
+
+               // Process subfile record.
+
+               exsr ClrIndDFSFR1;
+
+               clear DrKey;
+               DrKey.f1 = D__PK1;
+
+               dou 0=0;
+
+               //if    D__PCS = 'F'
+               //   or D__PCS = 'P';
+               //
+               //  // Process subfile fields.
+               //
+               //  dou 0=0;
+               //
+               //  if D__STAT = 'N';
+               //
+               //    // ADD
+               //
+               //    D__PK1 = ...
+               //
+               //  else;
+               //
+               //    // UPDATE
+               //
+               //  endif;
+               //
+               //  enddo;
+               //
+               //  if Err.e;
+               //    // Set error indicators (31-69); see "FEMap".
+               //    exsr SetErrFldsInd;
+               //    leave;
+               //  elseif D__STAT = 'N';
+               //    D__STAT = ''; // clear "new" status
+               //  endif;
+               //
+               //endif;
+
+               if    D__PCS = 'O'
+                  or D__PCS = 'P';
+
+                 // Process option.
+
+                 dou 0=0;
+
+                 evalr D_SFLOPT = %trim(D_SFLOPT);
+
+                 if    D_SFLOPT = ' 1'
+                    or D_SFLOPT = ' 2'
+                    or D_SFLOPT = ' 3'
+                    or D_SFLOPT = ' 4'
+                    or D_SFLOPT = ' 5'
+                    or D_SFLOPT = ' E';
+                   chain (DrKey.f1) CSYSSQLSF1;
+                   if not %found;
+                     L_SetErr(RtvAMsgAB(1013:CAmsFatal));
+                     leave;
+                   endif;
+                 endif;
+
+                 if D_SFLOPT = ' 1';
+                   exit = *on;
+                   // Set output parms to selected key.
+                   Rtncd = 10;
+                 endif;
+
+                 if D_SFLOPT = ' E';
+                   CallCSYSSQLSP1(DrKey.f1);
+                 endif;
+
+                 if    D_SFLOPT = ' 2'
+                    or D_SFLOPT = ' 3'
+                    or D_SFLOPT = ' 4'
+                    or D_SFLOPT = ' 5';
+
+                   select;
+                   when D_SFLOPT = ' 2';
+                     Pmode = '*UPDATE';
+                   when D_SFLOPT = ' 3';
+                     Pmode = '*COPY';
+                   when D_SFLOPT = ' 4';
+                     Pmode = '*DELETE';
+                   other;
+                     Pmode = '*DISPLAY';
+                   endsl;
+                   PgmCAFSQLSD(Pmode:CalleeSpcBhvr(Ispcbhvr)
+                              :Prc:Prm1:Prm2
+                              :DrKey.f1);
+
+                   // Set result message.
+                   if Prc = 0 or Prc = 11 or Prc = 12;
+                     select;
+                     when D_SFLOPT = ' 2';
+                       DspMsg = RtvAMsgAB(1019);
+                     when D_SFLOPT = ' 3';
+                       DspMsg = RtvAMsgAB(1034);
+                     when D_SFLOPT = ' 4';
+                       DspMsg = RtvAMsgAB(1021);
+                     endsl;
+                   elseif Prc = 7;
+                     select;
+                     when D_SFLOPT = ' 2';
+                       DspMsg = RtvAMsgAB(1018);
+                     when D_SFLOPT = ' 3';
+                       DspMsg = RtvAMsgAB(1033);
+                     when D_SFLOPT = ' 4';
+                       DspMsg = RtvAMsgAB(1020);
+                     endsl;
+                   endif;
+
+                   // Select action on return code.
+                   select;
+                   when Prc = 1 or Prc = 11;
+                     exit = *on;
+                     Rtncd = 1;
+                   when Prc = 2 or Prc = 12;
+                     cancel = *on;
+                   when Prc >= 30;
+                     L_SetErr(PtPgmResult(Prc:Prm1:Prm2));
+                     leave;
+                   endsl;
+
+                   if     not Err.e
+                      and (Prc = 0 or Prc = 11 or Prc = 12);
+                     // Update subfile record.
+                     if    D_SFLOPT = ' 2'
+                        or D_SFLOPT = ' 4';
+                       chain (DrKey.f1) CSYSSQLSF1;
+                       if %found;
+                         if D_SFLOPT = ' 2';
+                           // Set "stale" status.
+                           D__STAT = 'S';
+                         endif;
+                         //  Update subfile record data.
+                         //exsr SetFldDFSFR1;
+                       else;
+                         // Set "deleted" status.
+                         D__STAT = 'D';
+                       endif;
+                     endif;
+                   endif;
+
+                 endif;
+
+                 enddo;
+
+                 if Err.e;
+                   *in61 = *on;
+                   leave;
+                 endif;
+
+               endif;
+
+               enddo;
+
+               if not Err.e;
+                 exsr SetDerivedFldDFSFR1;
+                 D__PCS = 'C';
+                 if not exit;
+                   D_SFLOPT = '';
+                 endif;
+               endif;
+
+               exsr SetIndDFSFR1;
+               update DFSFR1;
+
+             endif;
+
+           endsl;
+
+           // Exit if first error encountered, if exited or if cancelled.
+           if    Err.e
+              or exit
+              or cancel;
+             D__CURREC = Sflrec;
+             newcurrec = 0;
+             leave;
+           endif;
+
+         endfor;
+
+         if newcurrec > 0;
+           D__CURREC = newcurrec;
+         endif;
+
+         if exit;
+           // Exit program.
+           Screen = 0;
+         endif;
+
+       endsr;
+
+
+       // Add new data record.
+       begsr AddNewRecord;
+
+         PgmCAFSQLSD('*ADD':CalleeSpcBhvr(Ispcbhvr)
+                    :Prc:Prm1:Prm2
+                    :DrKey.f1);
+
+         // Set result message.
+         if Prc = 0 or Prc = 11 or Prc = 12;
+           DspMsg = RtvAMsgAB(1028);
+         elseif Prc = 7;
+           DspMsg = RtvAMsgAB(1027);
+         endif;
+
+         // Select action on return code.
+         select;
+         when Prc = 1 or Prc = 11;
+           Screen = 0;
+           Rtncd = 1;
+         when Prc >= 30;
+           L_SetErr(PtPgmResult(Prc:Prm1:Prm2));
+         endsl;
+
+       endsr;
+
+
+       // Check if a new positioning key has been entered.
+       // Set "NewPoskey" accordingly.
+       // Set ds "Err" if an invalid positioning has been entered.
+       begsr CheckPositioning;
+
+         select;
+         // when Screen = ?;
+         other;
+           // Screen 1 is default.
+           select;
+           when D__POS1F1 <> Poskey1.f1;
+             NewPoskey = 1;
+           endsl;
+         endsl;
+
+       endsr;
+
+
+       // Set the correct "Poskey*" data structure according to "NewPoskey".
+       begsr SetPoskey;
+
+         CurPoskey = NewPoskey;
+
+         select;
+         when CurPoskey = 1;
+           clear Poskey1;
+           Poskey1.f1 = D__POS1F1;
+         endsl;
+
+       endsr;
+
+
+       // Set the current screen positioning fields.
+       begsr SetPosFields;
+
+         select;
+         // when Screen = ?;
+         other;
+           // Screen 1 is default.
+           D__POS1F1 = Poskey1.f1;
+         endsl;
+
+       endsr;
+
+
+      /include QINCSRC,DPGM_SUBR
+
+
+      /end-free
+     p                 e
+
+
+      /include QINCSRC,DPGM_LPI
+
+
+** FEMap (nnnnnnnnnnnnii, field/attribute name where ?=any, indicator)
+XXX         31
+** CursLocs (snrrccc, screensize/screen#/row/col, s=W/N/blank, n=blank=all)
+ 107006
+N 22001
+W 25001
+** Text
+SQL Statements
+Work with
+Display
+Select
+** FunText
+F1=Help
+F2=
+F3=
+F4=
+F5=
+F6=Add
+F7=
+F8=
+F9=
+F10=
+F11=
+F12=
+F13=
+F14=
+F15=
+F16=
+F17=
+F18=
+F19=
+F20=
+F21=
+F22=
+F23=
+F24=
+** SfoText
+1=Select
+2=Update
+3=Copy
+4=Delete
+5=Display
+6=
+7=
+8=
+9=
+10=
+11=
+12=
+13=
+14=
+15=
+16=
+17=
+18=
+19=
+E=Edit
+

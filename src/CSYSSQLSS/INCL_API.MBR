@@ -1,0 +1,23 @@
+
+      /IF DEFINED(CSYSSQLS_INCL_API)
+      /EOF
+      /ENDIF
+      /DEFINE CSYSSQLS_INCL_API
+
+
+       // (c) 2019 John Erps
+
+
+       // INCLUDE: *SRVPGM CSYSSQLS
+
+       // API
+
+
+       // SEE INCL_RM FOR IMPORTANT INFORMATION !!!
+
+
+      /include CSYSSQLSS,INCL_DECL
+      /include CSYSSQLSS,INCL_SS
+      /include CSYSSQLSS,INCL_CI
+      /include CSYSSQLSS,INCL_RM
+

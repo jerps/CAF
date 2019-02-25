@@ -1,0 +1,52 @@
+
+      *  (c) 2019 John Erps
+
+
+      *  File CAPPSSAMF2
+
+      *  Service Program: Common System Services / SubSystem AppMenu
+      *  File:          : Slot/Groups
+
+
+      *  Attributes:
+
+      *   MENUSGBIN  - Bin (0 or 1)
+
+      *   MENUSGPAGE - Page (0-999)
+      *                The group applies to the menu if this field contains 0,
+      *                else the group applies to page MENUSGPAGE (MENUSGLOT=0),
+      *                or an option.
+
+      *   MENUSGSLOT - Slot (0-45)
+      *                Ignore this field if MENUSGPAGE is 0.
+      *                The group applies to page MENUSGPAGE if this field
+      *                contains 0 and MENUSGPAGE is greater than 0.
+      *                The group applies to an individual option contained
+      *                in slot MENUSGLOT on page MENUSGPAGE if this field is
+      *                greater than 0 and MENUSGPAGE is greater than 0.
+
+      *   MENUSGROUP - Group (non-blank)
+      *                The first position is either an uppercase letter
+      *                if the field contains a normal group name, or
+      *                an asterisk in case of a special group name like
+      *                *ADMIN. The group name must exist in table
+      *                CAPPSSAMF3 if it's not special.
+
+      *   MENUSGRPFX - Group prefix (blank or "!")
+      *                Contains an exclamation mark if the group is
+      *                inversed.
+
+     A                                      REF(CAPPSSAMFR)
+     A                                      UNIQUE
+     A          R MENUSGREC
+     A            MENUSGBIN R               REFFLD(TAM_MBIN)
+     A            MENUSGPAGER               REFFLD(TAM_MPAGE)
+     A            MENUSGSLOTR               REFFLD(TAM_MSLOT)
+     A            MENUSGROUPR               REFFLD(TAM_GROUP)
+     A            MENUSGRPFXR               REFFLD(TAM_GRPFX)
+     A          K MENUSGBIN
+     A          K MENUSGPAGE
+     A          K MENUSGSLOT
+     A          K MENUSGROUP
+     A          K MENUSGRPFX
+
