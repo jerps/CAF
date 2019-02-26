@@ -1687,8 +1687,8 @@
                      if     D_WEEK > 0
                         and D_DNUM > 0;
                        if Wdt2Gdt(MakeWdt(D_YEAR:D_WEEK:D_DNUM)) = *loval;
-                         SetErr(RtvAMsgAB(5000:CAmsFatal)
-                               :'NWDYEAR':'NWDWEEK':'NWDDNUM');
+                         L_SetErr(RtvAMsgAB(5000:CAmsFatal)
+                                 :'NWDYEAR':'NWDWEEK':'NWDDNUM');
                          leave;
                        endif;
                      endif;

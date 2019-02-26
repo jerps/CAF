@@ -957,8 +957,6 @@
              = '  ' + %trim(HdrText);
          write DFHEADER;
 
-         clear
-
          // Footer.
          DspOpts = '';
          AddToAppOpts(FunText( 1):DspOpts:DspWide);

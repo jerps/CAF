@@ -7,7 +7,7 @@
        // Pass 6 parameters.
 
 
-     d PgmCAFMENUGD   pr                   extpgm('CAFMENUGD')
+     d PgmCAFMENUGD    pr                  extpgm('CAFMENUGD')
      d   @@Mode                      10    const
      d   @@Spcbhvr                   10    const
      d   @@Rtncd                      2  0

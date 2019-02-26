@@ -69,6 +69,15 @@
      d   srcflib                     10
      d   srcfmbr                     10
 
+       // Format FILD0100 for API QDBRTVFD
+       // NOTE: The API likes to have a receiver variable at least 700 bytes.
+     d OS4FILD0100     ds                  qualified inz
+     d   bytesrtn                    10i 0
+     d   bytesavl                    10i 0
+     d   attr1                        1
+     d   attr2                        1
+     d   data                       700
+
        // Format RTVM0100 for API QMHRTVM
      d OS4RTVM0100     ds                  qualified inz
      d   bytesrtn                    10i 0
@@ -114,9 +123,26 @@
      d CallQUSROBJD    pr                  extpgm('QUSROBJD')
      d   objinf                                  like(OS4OBJD0200)
      d   objinflen                   10i 0 const
-     d   fmtname                     10    const
+     d   fmtname                      8    const
      d   qobjname                    20    const
      d   objtype                     10    const
+     d   apierr                                  like(OS4Error)
+
+       // API QDBRTVFD
+       // NOTE: When receiver variable is small then only the first 8 bytes
+       //       are returned with the number of available bytes. The API
+       //       can be called again with a receiver variable for which
+       //       this number of bytes has been allocated.
+     d CallQDBRTVFD    pr                  extpgm('QDBRTVFD')
+     d   fileinf                                 like(OS4FILD0100)
+     d   fileinflen                  10i 0 const
+     d   qrtnfilenm                  20
+     d   fmtname                      8    const
+     d   qfilenm                     20    const
+     d   recfmtnm                    10    const
+     d   procoverride                 1    const
+     d   system                      10    const
+     d   fmttype                     10    const
      d   apierr                                  like(OS4Error)
 
        // API QCMDEXC
@@ -589,14 +615,14 @@
      d   type                        10    const
      d   lib                         10    const options(*nopass)
 
-     d qon             s             20
+     d qn              s             20
 
       /free
 
        if %parms > 2;
-         qon = name + lib;
+         qn = name + lib;
        else;
-         qon = name + '*LIBL';
+         qn = name + '*LIBL';
        endif;
 
        reset OS4Error;
@@ -604,7 +630,7 @@
 
        CallQUSROBJD(
            OS4OBJD0200:%size(OS4OBJD0200):'OBJD0200':
-           qon:type:
+           qn:type:
            OS4Error);
 
         if    OS4Error.bavl > 0
@@ -613,6 +639,41 @@
         endif;
 
         return OS4OBJD0200.objtextdescr;
+
+      /end-free
+     p                 e
+
+
+     p IsSrcPF         b                   export
+     d IsSrcPF         pi              n
+     d   name                        10    const
+     d   lib                         10    const options(*nopass)
+
+     d qn              s             20
+     d qrn             s             20
+
+      /free
+
+       if %parms > 1;
+         qn = name + lib;
+       else;
+         qn = name + '*LIBL';
+       endif;
+
+       reset OS4Error;
+       clear OS4FILD0100;
+
+       CallQDBRTVFD(
+           OS4FILD0100:%size(OS4FILD0100):qrn:'FILD0100':
+           qn:'*FIRST':'1':'*FILETYPE':'*EXT':
+           OS4Error);
+
+        if    OS4Error.bavl > 0
+           or OS4FILD0100.bytesrtn <= 0;
+          return *off;
+        endif;
+
+        return %bitand(x'08':OS4FILD0100.attr1) = x'08';
 
       /end-free
      p                 e

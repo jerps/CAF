@@ -1,6 +1,7 @@
              PGM        PARM(&CAFLIB &OWNER &AUTLNF &AUTLNFGR +
                           &AUTLPFLF &AUTLPFLFGR &PUBAUTNF +
-                          &PUBAUTPFLF &INCLMDAUT &MNUADM &MNUADMGR)
+                          &PUBAUTPFLF &INCLMDAUT &INCLSPFAUT +
+                          &MNUADM &MNUADMGR)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&OWNER) TYPE(*CHAR) LEN(10)
              DCL        VAR(&AUTLNF) TYPE(*CHAR) LEN(10)
@@ -10,8 +11,14 @@
              DCL        VAR(&PUBAUTNF) TYPE(*CHAR) LEN(10)
              DCL        VAR(&PUBAUTPFLF) TYPE(*CHAR) LEN(10)
              DCL        VAR(&INCLMDAUT) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLSPFAUT) TYPE(*CHAR) LEN(10)
              DCL        VAR(&MNUADM) TYPE(*CHAR) LEN(10)
              DCL        VAR(&MNUADMGR) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&NUM1) TYPE(*DEC) LEN(4 0) VALUE(0)
+             DCL        VAR(&NUM2) TYPE(*DEC) LEN(5 0) VALUE(0)
+             DCL        VAR(&NUM1A) TYPE(*CHAR) LEN(4) VALUE('????')
+             DCL        VAR(&NUM2A) TYPE(*CHAR) LEN(5) VALUE('?????')
 
              DLTF       FILE(QTEMP/SETCAFAUTD)
              MONMSG     MSGID(CPF0000)
@@ -19,12 +26,13 @@
                           OUTPUT(*OUTFILE) OUTFILE(QTEMP/SETCAFAUTD)
 
              IF         COND(&OWNER *NE *SAME) THEN(CALL +
-                          PGM(&CAFLIB/SETCAFAUT1) PARM(&CAFLIB &OWNER))
+                          PGM(&CAFLIB/SETCAFAUT1) PARM(&CAFLIB +
+                          &OWNER &NUM1 &NUM2))
 
              IF         COND(&AUTLNF *NE *SAME *OR &AUTLPFLF *NE +
                           *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT2) +
                           PARM(&CAFLIB &AUTLNF &AUTLNFGR &AUTLPFLF +
-                          &AUTLPFLFGR &INCLMDAUT))
+                          &AUTLPFLFGR &INCLMDAUT &INCLSPFAUT))
 
              IF         COND(&PUBAUTNF *NE *SAME *OR &PUBAUTPFLF *NE +
                           *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT3) +
@@ -37,5 +45,11 @@
 
              DLTF       FILE(QTEMP/SETCAFAUTD)
              MONMSG     MSGID(CPF0000)
+
+             CALL       PGM(SETCAFAUT8) PARM(' ' &NUM1 &NUM2 &NUM1A +
+                          &NUM2A)
+             SNDPGMMSG  MSG('Performed ' *CAT &NUM2A *BCAT +
+                          'operations on ' *CAT &NUM1A *BCAT ' +
+                          objects.') MSGTYPE(*COMP)
 
              ENDPGM

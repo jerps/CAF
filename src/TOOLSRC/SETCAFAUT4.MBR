@@ -1,7 +1,9 @@
-             PGM        PARM(&CAFLIB &MNUADM &MNUADMGR)
+             PGM        PARM(&CAFLIB &MNUADM &MNUADMGR &NUM1 &NUM2)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&MNUADM) TYPE(*CHAR) LEN(10)
              DCL        VAR(&MNUADMGR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&NUM1) TYPE(*DEC) LEN(4 0)
+             DCL        VAR(&NUM2) TYPE(*DEC) LEN(5 0)
 
              DCL        VAR(&ADD) TYPE(*CHAR) LEN(1) VALUE('0')
 
@@ -18,6 +20,7 @@
                           USER(&MNUADM) AUT(*CHANGE))
              ELSE       CMD(RVKOBJAUT OBJ(&ODLBNM/&ODOBNM) +
                           OBJTYPE(&ODOBTP) USER(&MNUADM) AUT(*CHANGE))
+             CALL       PGM(SETCAFAUT8) PARM(&ODOBNM &NUM1 &NUM2)
              ENDDO
              GOTO       CMDLBL(READ)
  ENDREAD:

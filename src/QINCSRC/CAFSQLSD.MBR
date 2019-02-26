@@ -7,7 +7,7 @@
        // Pass 6 parameters.
 
 
-     d PgmCAFSQLSD    pr                  extpgm('CAFSQLSD')
+     d PgmCAFSQLSD     pr                  extpgm('CAFSQLSD')
      d   @@Mode                      10    const
      d   @@Spcbhvr                   10    const
      d   @@Rtncd                      2  0

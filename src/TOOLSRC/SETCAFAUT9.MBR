@@ -1,0 +1,28 @@
+
+     h bnddir('CSYSBASE')
+
+      /include QINCSRC,PGM_HEAD2
+
+
+      /include CSYSBASES,INCL_API
+
+
+     d Main            pr                  extpgm('SETCAFAUT9')
+     d   filenm                      10    const
+     d   libnm                       10    const
+     d   srcpf                        1
+
+
+     d Main            pi
+     d   filenm                      10    const
+     d   libnm                       10    const
+     d   srcpf                        1
+
+      /free
+
+       srcpf = IsSrcPf(filenm:libnm);
+
+       return;
+
+      /end-free
+

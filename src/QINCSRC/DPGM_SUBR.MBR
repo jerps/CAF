@@ -28,7 +28,7 @@
            for IMWF__J = 17 to 89 by 12;
              IMWF__A012 = %subst(IMWF__A100:IMWF__J:12);
              if IMWF__A012 <> '';
-               AddErrFld(IMWF__A012);
+               L_AddErrFld(IMWF__A012);
              endif;
            endfor;
          endif;
@@ -41,7 +41,7 @@
              for IMWF__J = 17 to 89 by 12;
                IMWF__A012 = %subst(IMWF__A100:IMWF__J:12);
                if IMWF__A012 <> '';
-                 AddErrFld(IMWF__A012);
+                 L_AddErrFld(IMWF__A012);
                endif;
              endfor;
            endif;

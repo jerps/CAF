@@ -1,6 +1,8 @@
-             PGM        PARM(&CAFLIB &OWNER)
+             PGM        PARM(&CAFLIB &OWNER &NUM1 &NUM2)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&OWNER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&NUM1) TYPE(*DEC) LEN(4 0)
+             DCL        VAR(&NUM2) TYPE(*DEC) LEN(5 0)
 
              DCLF       FILE(QTEMP/SETCAFAUTD)
 
@@ -8,6 +10,7 @@
              MONMSG     MSGID(CPF0864) EXEC(GOTO CMDLBL(ENDREAD))
              CHGOBJOWN  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
                           NEWOWN(&OWNER)
+             CALL       PGM(SETCAFAUT8) PARM(&ODOBNM &NUM1 &NUM2)
              GOTO       CMDLBL(READ)
  ENDREAD:
              CHGOBJOWN  OBJ(&CAFLIB) OBJTYPE(*LIB) NEWOWN(&OWNER)

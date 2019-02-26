@@ -23,7 +23,7 @@
      h            :'CSYSBASE'
      h       )
 
-      /include QINCSRC,DPGM_HEAD1
+      /include QINCSRC,DPGM_HEAD
 
 
      fCSYSSQLSF1uf a e           k disk

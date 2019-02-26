@@ -159,6 +159,16 @@
      d   type                        10    const
      d   lib                         10    const options(*nopass)
 
+       // IsSrcPF - Is Source Physical File
+       // Return *on if the file identified with "name" and "lib"
+       // is a source physical file, else return *off.
+       // Return *off if some error occurred.
+       // Parameter "lib" may contain "*CURLIB" or "*LIBL" as special
+       // values. If "lib" is not given, "*LIBL" is assumed.
+     d IsSrcPF         pr              n   extproc('IsSrcPF')
+     d   name                        10    const
+     d   lib                         10    const options(*nopass)
+
        // ExecCmd - Execute Command
        // Execute the OS/400 command string in parameter "cmd".
      d ExecCmd         pr                  extproc('ExecCmd')

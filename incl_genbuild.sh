@@ -33,10 +33,10 @@ echo "call ex 'ADDLIBLE LIB($HLIB)', 'q'"                                       
 
 echo "say ' '"                                                                                                     >> $BUILDMBR
 echo "say ' '"                                                                                                     >> $BUILDMBR
-echo "say 'COMPILING TOOLS . . .'"                                                                                 >> $BUILDMBR
-echo "call ex 'CRTCMD     CMD($HLIB/CO)        SRCFILE($HLIB/TOOLSRC)      PGM($HLIB/CO_P)'"                       >> $BUILDMBR
-echo "call ex 'CRTCMD     CMD($HLIB/RDI_CO)    SRCFILE($HLIB/TOOLSRC)      PGM($HLIB/RDI_CO_P)'"                   >> $BUILDMBR
-echo "call ex 'CRTBNDCL   PGM($HLIB/CO_P)      SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
+echo "say 'COMPILING TOOLS 1 . . .'"                                                                               >> $BUILDMBR
+echo "call ex 'CRTCMD     CMD($HLIB/CO)        SRCFILE($HLIB/TOOLSRC)      PGM($HLIB/CO0)'"                        >> $BUILDMBR
+echo "call ex 'CRTCMD     CMD($HLIB/RDICO)     SRCFILE($HLIB/TOOLSRC)      PGM($HLIB/RDICO0)'"                     >> $BUILDMBR
+echo "call ex 'CRTBNDCL   PGM($HLIB/CO0)       SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDCL   PGM($HLIB/COCLMOD)   SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDCL   PGM($HLIB/COCLPGM)   SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDCL   PGM($HLIB/COCMD)     SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
@@ -44,16 +44,27 @@ echo "call ex 'CRTBNDCL   PGM($HLIB/CODSPF)    SRCFILE($HLIB/TOOLSRC)'"         
 echo "call ex 'CRTBNDCL   PGM($HLIB/COPFLF)    SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDCL   PGM($HLIB/CORPGMOD)  SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDCL   PGM($HLIB/CORPGPGM)  SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
-echo "call ex 'CRTCLPGM   PGM($HLIB/RDI_CO_P)  SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
+echo "call ex 'CRTCLPGM   PGM($HLIB/RDICO0)    SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDRPG  PGM($HLIB/COPSCC)    SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDCL   PGM($HLIB/BUILD0)    SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
-echo "call ex 'CALL $HLIB/BUILD0 $HLIB'"                                                                           >> $BUILDMBR
 
 
 for sl in "${SRC1[@]}"
 do
   echo "call bsp '$sl', 'q'"                                                                                       >> $BUILDMBR
 done
+
+echo "say ' '"                                                                                                     >> $BUILDMBR
+echo "say 'COMPILING TOOLS 2 . . .'"                                                                               >> $BUILDMBR
+echo "call ex 'CALL $HLIB/BUILD0 $HLIB'"                                                                           >> $BUILDMBR
+
+echo "say ' '"                                                                                                     >> $BUILDMBR
+echo "say 'COMPILING APP COMMANDS . . .'"                                                                          >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFMENU)      SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFMENU0)'"        >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFMENUG)     SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFMENUG0)'"       >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFNWD)       SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFNWD0)'"         >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFNWDT)      SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFNWDT0)'"        >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFSQLS)      SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFSQLS0)'"        >> $BUILDMBR
 
 echo "say ' '"                                                                                                     >> $BUILDMBR
 echo "say 'COMPILING APP DISPLAYFILES . . .'"                                                                      >> $BUILDMBR
@@ -77,19 +88,11 @@ echo "call ex 'CO         SRCMBR(CAFSQLSD)     SRCFILE($HLIB/QRPGLESRC)   TGTLIB
 
 echo "say ' '"                                                                                                     >> $BUILDMBR
 echo "say 'COMPILING APP COMMAND PROCESSORS . . .'"                                                                              >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFMENUP)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFMENUGP)    SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFNWDP)      SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFNWDTP)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFSQLSP)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
-
-echo "say ' '"                                                                                                     >> $BUILDMBR
-echo "say 'COMPILING APP COMMANDS . . .'"                                                                          >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFMENU)      SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFMENUP)'"        >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFMENUG)     SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFMENUGP)'"       >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFNWD)       SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFNWDP)'"         >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFNWDT)      SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFNWDTP)'"        >> $BUILDMBR
-echo "call ex 'CO         SRCMBR(CAFSQLS)      SRCFILE($HLIB/QCMDSRC)     TGTLIB($HLIB)   PARM1(CAFSQLSP)'"        >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFMENU0)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFMENUG0)    SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFNWD0)      SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFNWDT0)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
+echo "call ex 'CO         SRCMBR(CAFSQLS0)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
 
 echo "say ' '"                                                                                                     >> $BUILDMBR
 echo "say ' '"                                                                                                     >> $BUILDMBR
