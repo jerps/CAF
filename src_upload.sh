@@ -28,7 +28,6 @@ echo "     $BUILDMBR"
 echo " "
 echo "  2. UPLOAD sources from $SDIR/src"
 echo "     to host lib $HLIB."
-echo "     $HLIB WILL BE FIRST DELETED!"
 echo " "
 echo "  3. Set descriptions and source member types."
 echo " "
@@ -49,19 +48,19 @@ fi
 
 
 echo "  Host : $HOST"
-echo " "
 echo "  User : $USER"
-echo " "
-echo "  Host Lib : $HLIB"
+echo "  Lib  : $HLIB"
 echo " "
 case "$MODE" in
-  P ) echo "  Use passive mode instead of extended passive mode";;
-  * ) echo "  Use extended passive mode (default)";;
+  P ) echo "  Mode : Passive mode instead of extended passive mode";;
+  * ) echo "  Mode : Extended passive mode (default)";;
 esac
 echo " "
 
 
-read -p "  Continue (Y/.)?" choice
+echo "  ***** You may delete lib $HLIB first *****"
+echo " "
+read -p "  ..... Continue (Y/.)?" choice
 case "$choice" in
   Y ) echo "  OK...";;
   * ) exit 0;;
@@ -84,7 +83,6 @@ case "$MODE" in
   * ) ;;
 esac
 
-echo "quote rcmd DLTLIB $HLIB" >> $FTPS
 echo "quote rcmd CRTLIB $HLIB" >> $FTPS
 
 for sl in "${SRC0[@]}"
@@ -131,28 +129,28 @@ csf   CAPPDISPS   "Common Application: Display - Source"
 function cm {
   echo "quote rcmd CHGPFM FILE($HLIB/$1) MBR($2) SRCTYPE($3) TEXT('$4')" >> $FTPS
 }
-cm    TOOLSRC     BUILD        REXX    "Compile All Objects In Library $HLIB"
-cm    TOOLSRC     BUILD0       CLP     "Compile Tool Objects"
+cm    TOOLSRC     CAFBUILD     REXX    "Compile All Objects In Library $HLIB"
+cm    TOOLSRC     CAFBUILD0    CLLE    "Compile Tool Objects"
 cm    TOOLSRC     CO           CMD     "Compile Object"
 cm    TOOLSRC     CO0          CLLE    "Compile Object - Cmd Processor"
-cm    TOOLSRC     COCLMOD      CLLE    "CO: CLP/CLLE (*MODULE) . . . . . . . . . .CRTCLMOD"
-cm    TOOLSRC     COCLPGM      CLLE    "CO: CLP/CLLE (*PGM). . . . . . . CRTBNDCL/CRTCLPGM"
+cm    TOOLSRC     COCLMOD      CLLE    "CO: CLLE (*MODULE) . . . . . . . . . . . .CRTCLMOD"
+cm    TOOLSRC     COCLPGM      CLLE    "CO: CLP/CLLE (*PGM)  . . . . . . CRTBNDCL/CRTCLPGM"
 cm    TOOLSRC     COCMD        CLLE    "CO: CMD (*CMD) . . . . . . . . . . . . . . .CRTCMD"
 cm    TOOLSRC     CODSPF       CLLE    "CO: DSPF (*FILE) . . . . . . . . . . . . . CRTDSPF"
-cm    TOOLSRC     COPFLF       CLLE    "CO: PF/LF (*FILE). . . . . CRTPF/CHGPF/CRTLF/CHGLF"
+cm    TOOLSRC     COPFLF       CLLE    "CO: PF/LF (*FILE)  . . . . CRTPF/CHGPF/CRTLF/CHGLF"
 cm    TOOLSRC     COPSCC       RPGLE   "CO: Process Source Compile Commands"
-cm    TOOLSRC     CORPGMOD     CLLE    "CO: RPG/RPGLE (*MODULE). . . . . . . . . CRTRPGMOD"
+cm    TOOLSRC     CORPGMOD     CLLE    "CO: RPGLE (*MODULE)  . . . . . . . . . . CRTRPGMOD"
 cm    TOOLSRC     CORPGPGM     CLLE    "CO: RPG/RPGLE (*PGM) . . . . . CRTBNDRPG/CRTRPGPGM"
 cm    TOOLSRC     CPYCAFDTA    CMD     "Copy CAF Data"
-cm    TOOLSRC     CPYCAFDTA0   CLP     "Copy CAF Data - CP 0"
+cm    TOOLSRC     CPYCAFDTA0   CLLE    "Copy CAF Data - CP 0"
 cm    TOOLSRC     RDICO        CMD     "RDi: Compile Object"
-cm    TOOLSRC     RDICO0       CLP     "RDi: Compile Object - Cmd Processor"
+cm    TOOLSRC     RDICO0       CLLE    "RDi: Compile Object - Cmd Processor"
 cm    TOOLSRC     SETCAFAUT    CMD     "Set CAF Authorities"
-cm    TOOLSRC     SETCAFAUT0   CLP     "Set CAF Authorities - CP 0"
-cm    TOOLSRC     SETCAFAUT1   CLP     "Set CAF Authorities - CP 1"
-cm    TOOLSRC     SETCAFAUT2   CLP     "Set CAF Authorities - CP 2"
-cm    TOOLSRC     SETCAFAUT3   CLP     "Set CAF Authorities - CP 3"
-cm    TOOLSRC     SETCAFAUT4   CLP     "Set CAF Authorities - CP 4"
+cm    TOOLSRC     SETCAFAUT0   CLLE    "Set CAF Authorities - CP 0"
+cm    TOOLSRC     SETCAFAUT1   CLLE    "Set CAF Authorities - CP 1"
+cm    TOOLSRC     SETCAFAUT2   CLLE    "Set CAF Authorities - CP 2"
+cm    TOOLSRC     SETCAFAUT3   CLLE    "Set CAF Authorities - CP 3"
+cm    TOOLSRC     SETCAFAUT4   CLLE    "Set CAF Authorities - CP 4"
 cm    TOOLSRC     SETCAFAUT8   RPGLE   "Set CAF Authorities - CP 8"
 cm    TOOLSRC     SETCAFAUT9   RPGLE   "Set CAF Authorities - CP 9"
 cm    QINCSRC     PGM_HEAD1    RPGLE   "Program Header specs (ACTGRP *NEW)"
@@ -371,7 +369,7 @@ rm $FTPS
 
 
 echo " "
-echo "\"STRREXPRC SRCMBR(BUILD) SRCFILE($HLIB/TOOLSRC)\" TO BUILD CAF ($HLIB)."
+echo "\"STRREXPRC SRCMBR(CAFBUILD) SRCFILE($HLIB/TOOLSRC)\" TO BUILD CAF ($HLIB)."
 
 echo " "
 echo "READY."

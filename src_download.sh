@@ -46,14 +46,12 @@ fi
 
 
 echo "  Host : $HOST"
-echo " "
 echo "  User : $USER"
-echo " "
-echo "  Host Lib : $HLIB"
+echo "  Lib  : $HLIB"
 echo " "
 case "$MODE" in
-  P ) echo "  Use passive mode instead of extended passive mode";;
-  * ) echo "  Use extended passive mode (default)";;
+  P ) echo "  Mode : Passive mode instead of extended passive mode";;
+  * ) echo "  Mode : Extended passive mode (default)";;
 esac
 echo " "
 

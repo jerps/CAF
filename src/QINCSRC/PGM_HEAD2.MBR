@@ -1,6 +1,5 @@
 
-       // (c) 2019 John Erps
-
+     h copyright('(c) 2019 John Erps')
 
      h dftactgrp(*NO) actgrp(*CALLER) decedit(*JOBRUN)
 

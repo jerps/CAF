@@ -1,44 +1,44 @@
-/*                                                                             +
-     (c) 2019 John Erps                                                        +
-                                                                               +
-                                                                               +
-     Set CAF Authorities                                                       +
-                                                                               +
-     This command sets several authorities of the objecs in a CAF              +
-     library. It will perform the following steps in sequence.                 +
-                                                                               +
-     Specify *SAME to skip the respective step.                                +
-                                                                               +
-     1. The owner of the library and all objects in it can be set              +
-        to a new one.                                                          +
-                                                                               +
-     2. An authorization list can be specified for all non-file                +
-        objects and/or PF/LF file objects. If *SAME is not specified           +
-        then specify *GRT to grant or *RVK to revoke the authorization         +
-        lists for the objects. Specify *NO for INCLMDAUT to skip the           +
-        menu file and data area objects (CAPPSSAMF* and CAPPSSAMD*).           +
-        Specify *ONLY for INCLMDAUT to *only* process the menu file            +
-        and data area objects. Specify *YES for INCLSPFAUT to include          +
-        the source PF's. Specify *ONLY to *only* process te source PF's.       +
-                                                                               +
-     3. Public authority of all non-file objects and/or PF/LF file             +
-        objects can be set to *USE, *EXCLUDE or *AUTL. If set then all         +
-        public authority is first revoked. Specify *NO for INCLMDAUT           +
-        to skip the menu file and data area objects (CAPPSSAMF* and            +
-        CAPPSSAMD*). Specify *ONLY for INCLMDAUT to *only* process             +
-        the menu file and data area objects. Specify *YES for INCLSPFAUT       +
-        to include the source PF's. Specify *ONLY to *only* process the        +
-        source PF's.                                                           +
-                                                                               +
-     4. A user profile name can be given which has the role of the             +
-        menu administrator. If *SAME is not specified then specify             +
-        *GRT to grant or *RVK to revoke *CHANGE authorization for              +
-        the menu file and data area objects (CAPPSSAMF* and CAPPSSAMD*).       +
-        Also, the user profile name is added to (*GRT) or removed from         +
-        (*RVK) the *ADMIN menu group.                                          +
-                                                                               +
-     Be sure to have *ALLOBJ special authority when using this command.        +
-                                                                               +
+
+/*                                                                           +
+     (c) 2019 John Erps                                                      +
+                                                                             +
+     Set CAF Authorities                                                     +
+                                                                             +
+     This command sets several authorities of the objecs in a CAF            +
+     library. It will perform the following steps in sequence.               +
+                                                                             +
+     Specify *SAME to skip the respective step.                              +
+                                                                             +
+     1. The owner of the library and all objects in it can be set            +
+        to a new one.                                                        +
+                                                                             +
+     2. An authorization list can be specified for all non-file              +
+        objects and/or PF/LF file objects. If *SAME is not specified         +
+        then specify *GRT to grant or *RVK to revoke the authorization       +
+        lists for the objects. Specify *NO for INCLMDAUT to skip the         +
+        menu file and data area objects (CAPPSSAMF* and CAPPSSAMD*).         +
+        Specify *ONLY for INCLMDAUT to *only* process the menu file          +
+        and data area objects. Specify *YES for INCLSPFAUT to include        +
+        the source PF's. Specify *ONLY to *only* process te source PF's.     +
+                                                                             +
+     3. Public authority of all non-file objects and/or PF/LF file           +
+        objects can be set to *USE, *EXCLUDE or *AUTL. If set then all       +
+        public authority is first revoked. Specify *NO for INCLMDAUT         +
+        to skip the menu file and data area objects (CAPPSSAMF* and          +
+        CAPPSSAMD*). Specify *ONLY for INCLMDAUT to *only* process           +
+        the menu file and data area objects. Specify *YES for INCLSPFAUT     +
+        to include the source PF's. Specify *ONLY to *only* process the      +
+        source PF's.                                                         +
+                                                                             +
+     4. A user profile name can be given which has the role of the           +
+        menu administrator. If *SAME is not specified then specify           +
+        *GRT to grant or *RVK to revoke *CHANGE authorization for            +
+        the menu file and data area objects (CAPPSSAMF* and CAPPSSAMD*).     +
+        Also, the user profile name is added to (*GRT) or removed from       +
+        (*RVK) the *ADMIN menu group.                                        +
+                                                                             +
+     Be sure to have *ALLOBJ special authority when using this command.      +
+                                                                             +
 */
              CMD        PROMPT('CAF - Set Authorities')
              PARM       KWD(CAFLIB) TYPE(*CHAR) LEN(10) MIN(1) +

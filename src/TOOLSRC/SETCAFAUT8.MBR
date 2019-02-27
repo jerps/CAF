@@ -1,5 +1,8 @@
 
-      /include QINCSRC,PGM_HEAD1
+       // (c) 2019 John Erps
+
+
+      /include QINCSRC,PGM_HEAD2
 
 
      d names           s             10    dim(9999)
@@ -40,7 +43,9 @@
          endif;
        else;
          if num1 = 0;
+           clear names;
            num1 = 1;
+           num2 = 0;
            names(1) = objnm;
          elseif num1 < 9999;
            i = %lookup(objnm:names:1:num1);

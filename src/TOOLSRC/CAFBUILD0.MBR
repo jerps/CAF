@@ -1,7 +1,6 @@
              PGM        PARM(&CAFLIB)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
 
-
              /* SETCAFAUT */
              DLTF       FILE(QTEMP/SETCAFAUTD)
              MONMSG     MSGID(CPF0000)

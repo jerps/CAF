@@ -1,3 +1,8 @@
+
+/*                                                                           +
+     (c) 2019 John Erps                                                      +
+                                                                             +
+*/                                                                           +
              PGM        PARM(&SLIB &TLIB)
              DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10)
@@ -8,20 +13,29 @@
              CHGDTAARA  DTAARA(&TLIB/CAPPSSAMD0 *ALL) VALUE(&A50)
 
              CPYF       FROMFILE(&SLIB/CSYSBASEF0) +
-                          TOFILE(&TLIB/CSYSBASEF0) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CSYSBASEF0) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CSYSBASEF1) +
-                          TOFILE(&TLIB/CSYSBASEF1) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CSYSBASEF1) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CSYSBASEF2) +
-                          TOFILE(&TLIB/CSYSBASEF2) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CSYSBASEF2) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CSYSSQLSF1) +
-                          TOFILE(&TLIB/CSYSSQLSF1) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CSYSSQLSF1) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CAPPSSAMF1) +
-                          TOFILE(&TLIB/CAPPSSAMF1) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CAPPSSAMF1) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CAPPSSAMF2) +
-                          TOFILE(&TLIB/CAPPSSAMF2) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CAPPSSAMF2) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CAPPSSAMF3) +
-                          TOFILE(&TLIB/CAPPSSAMF3) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CAPPSSAMF3) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
              CPYF       FROMFILE(&SLIB/CAPPSSAMF4) +
-                          TOFILE(&TLIB/CAPPSSAMF4) MBROPT(*REPLACE)
+                          TOFILE(&TLIB/CAPPSSAMF4) MBROPT(*REPLACE) +
+                          FMTOPT(*MAP *DROP)
 
              ENDPGM
+

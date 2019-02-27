@@ -1,4 +1,7 @@
 
+       // (c) 2019 John Erps
+
+
        // Process Source Compile Commands
 
        // Parameter 1: IN - Source type:
@@ -9,20 +12,22 @@
        //           3: IN - Source file
        //           4: IN - Source member
        //           5: IN - Command selector
-       //                     Selects the commands in the source to be pro-
-       //                     cessed with QCMDEXC. Each source line can con-
-       //                     tain at most one command to process. A command
-       //                     can not continue on the next line. The line must
-       //                     be a comment line without a specification type,
-       //                     i.e. it must start with at least 6 spaces which
-       //                     are immediately followed with either "*$X" (RPG
-       //                     or RPGLE) or "//$X". The X denotes the command
-       //                     selector, which can be one of the following.
+       //                     Selects the commands in the source to be
+       //                     processed with QCMDEXC. Each source line
+       //                     can contain one command to process. A cmd can
+       //                     not continue on the next line. The line must
+       //                     be a comment. For type RPG positions 7-9
+       //                     must contain "*$X". For type RPGLE the line
+       //                     must start with any number of blanks followed
+       //                     by "//$X". The rest of the line contains the
+       //                     command to be executed. The X denotes the
+       //                     command selector, which can be one of the
+       //                     following:
        //                       B: "before" commands
        //                       A: "after" commands
 
 
-     h dftactgrp(*NO) actgrp(*NEW)
+      /include QINCSRC,PGM_HEAD2
 
 
      fSOURCE    if   f  200        disk    extfile('QTEMP/COPSCCSRC')
@@ -49,10 +54,10 @@
 
      d srcl            ds           200
      d cmd             s            200
-
+     d f               s               n
+     d i               s             10i 0
 
       /free
-
 
        *inlR = *on;
 
@@ -79,30 +84,30 @@
        open SOURCE;
 
        read SOURCE srcl;
-       dow     not %eof
-           and %subst(srcl:1:6) = '';
+       dow not %eof;
 
-         if srcl <> '';
+         f = *off;
 
-           srcl = %triml(srcl);
-
-           select;
-           when     (   srctype = 'RPG'
-                     or srctype = 'RPGLE')
-                and %subst(srcl:1:1) = '*';
-             srcl = %subst(srcl:2);
-           when     srctype = 'RPGLE'
-                and %subst(srcl:1:2) = '//';
-             srcl = %subst(srcl:3);
-           other;
-             leave;
-           endsl;
-
-           if     %subst(srcl:1:1) = '$'
-              and %subst(srcl:2:1) = cmdsel;
-             ExecCmd(%subst(srcl:3));
+         select;
+         when     srctype = 'RPG'
+              and %subst(srcl:7:2) = '*$'
+              and %subst(srcl:9:1) = cmdsel;
+           f = *on;
+           srcl = %subst(srcl:10);
+         when srctype = 'RPGLE'
+              and %subst(srcl:8:3) = '//$'
+              and %subst(srcl:11:1) = cmdsel;
+           i = %check(' ':srcl);
+           if     i > 0
+              and %subst(srcl:i:3) = '//$'
+              and %subst(srcl:i+3:1) = cmdsel;
+             f = *on;
+             srcl = %subst(srcl:i+4);
            endif;
+         endsl;
 
+         if f and srcl <> '';
+           ExecCmd(srcl);
          endif;
 
          read SOURCE srcl;
@@ -116,7 +121,6 @@
        endmon;
 
        return;
-
 
       /end-free
 

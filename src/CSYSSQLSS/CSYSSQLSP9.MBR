@@ -18,7 +18,7 @@
      h            :'CSYSBASE'
      h       )
 
-      /include QINCSRC,PGM_HEAD1
+      /include QINCSRC,PGM_HEAD2
 
 
      d Main            pr                  extpgm('CSYSSQLSP9')
@@ -31,8 +31,6 @@
      d Main            pi
 
       /free
-
-       *inlR = *on;
 
        // Release all resources.
        RlsSpCSYSSQLS();
