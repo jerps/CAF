@@ -87,7 +87,7 @@ parse arg sp
 say ' '
 say 'BUILDING 'sp' . . .'
 call ex 'CO SRCFILE(CAF0900/'||sp||'S) SRCMBR('||sp||'B0) TGTLIB(CAF0900)'
-call ex 'CALL PGM(CAF0900/'||sp||'B0) PARM(CAF0900 CAF0900)'
+call ex 'CALL PGM(CAF0900/'||sp||'B0) PARM(CAF0900)'
 return
 ex:
 parse arg c,q

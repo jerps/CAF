@@ -192,23 +192,20 @@
        // value for "sbcadd" and "sbcsub" is simply blank. So just providing
        // parameter "sbc" should be enough for most cases.
        // The default value for parameter "sbcpass" is "IJKX". These codes
-       // must therefore be reserved for the following special behaviors:
+       // indicate the following special behaviors:
        //   I = inhibit in-line updating;
        //   J = do not allow adding or copying;
        //   K = do not allow deleting;
        //   X = do not allow resize.
-       // Constant "CSbcPassToCallee" contains all special behavior codes that
-       // should be passed by default from the caller to the callee.
-       // Character "*" can be used with "sbcpass" to indicate that the default
-       // codes listed above must all be passed to the callee (IFF the codes
-       // are in "sbc"), in addition to the other codes specified in "sbcpass".
-       // Thus, value "*" for "sbcpass" has the same affect as when the value
-       // is blank or when the parameter is not provided.
-       // Note: because of it's special treatment an asterisk ("*") can not be
-       // used as a special behavior code.
-     d CalleeSpcBhvr   pr            20    extproc('CalleeSpcBhvr')
-     d   sbc                         20    const
-     d   sbcpass                     20    const options(*nopass:*omit)
-     d   sbcadd                      20    const options(*nopass:*omit)
-     d   sbcsub                      20    const options(*nopass)
+       // Constant "CSbcPassToCallee" contains the special behavior codes
+       // listed above that should be passed by default from the caller to
+       // the callee.
+       // Character "*" can be used with "sbcpass" to indicate that all
+       // codes in "sbc" should be passed.
+       // Note: Don't use an asterisk ("*") as a special behavior code.
+     d CalleeSpcBhvr   pr            10    extproc('CalleeSpcBhvr')
+     d   sbc                         10    const
+     d   sbcpass                     10    const options(*nopass:*omit)
+     d   sbcadd                      10    const options(*nopass:*omit)
+     d   sbcsub                      10    const options(*nopass)
 

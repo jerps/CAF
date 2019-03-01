@@ -105,6 +105,7 @@
              EXPORT     SYMBOL('CondValDec')
              EXPORT     SYMBOL('SortBytes')
              EXPORT     SYMBOL('RtvObjText')
+             EXPORT     SYMBOL('RtvUsrPrfGrps')
              EXPORT     SYMBOL('IsSrcPF')
              EXPORT     SYMBOL('ExecCmd')
              EXPORT     SYMBOL('ExecCmdCE')

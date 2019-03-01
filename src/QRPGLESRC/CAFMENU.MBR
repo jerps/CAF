@@ -14,7 +14,8 @@
 
        //   2 I  (10)    : Special behavior codes.
        //                  This field can contain one or more letters listed
-       //                  below to indicate special behaviors.
+       //                  below to indicate special behaviors. Letters not
+       //                  listed here are ignored.
        //                    V - Force DSPMOD(*NORMAL) on program init.
        //                    W - Force DSPMOD(*WIDE) on program init.
        //                    X - Do not allow resize/refresh (F9).
@@ -1057,8 +1058,7 @@
            endif;
          endif;
          // F4
-         if    Screen = 2
-            or Screen = 3;
+         if Screen = 3;
            AddToAppOpts(FunText(4):DspOpts:DspWide);
            if not DspWide;
              L_AddHelpText(FunText(4));
@@ -1426,16 +1426,13 @@
 
          PcfSimUser = *on;
 
-         D_SIMUSER = %trim(D_SIMUSER);
-
          if D_SIMUSER = '';
-           L_SetErr(RtvAMsgAM(5052:CAmsFatal):'D_SIMUSER');
+           D_SIMUSER = '*';
          else;
-           SfcSimUser = *off;
-           if ModeUpdate and SimDisplay;
-             MenuUser = D_SIMUSER;
-           endif;
+           D_SIMUSER = %trim(D_SIMUSER);
          endif;
+         SfcSimUser = *off;
+         MenuUser = D_SIMUSER;
 
        endsr;
 
@@ -1575,15 +1572,11 @@
          DspStatMsg(Text(7));
 
          if ModeUpdate;
-           flag = MnuLoadMenu(ErrMsg);
+           MnuLoadMenu();
          else;
-           flag = MnuLoadMenu(ErrMsg:MenuUser);
+           MnuLoadMenu(MenuUser);
          endif;
-         if flag;
-           DspMsg = RtvAMsgAM(5208);
-         else;
-           L_SetErr(ErrMsg);
-         endif;
+         DspMsg = RtvAMsgAM(5208);
          if CurUserPage = 0;
            CurUserPage = 1;
          endif;
@@ -1598,12 +1591,8 @@
        begsr ReloadAuth;
 
          DspStatMsg(Text(9));
-
-         if MnuLoadAuth(ErrMsg);
-           DspMsg = RtvAMsgAM(5209);
-         else;
-           L_SetErr(ErrMsg);
-         endif;
+         MnuLoadAuth();
+         DspMsg = RtvAMsgAM(5209);
 
        endsr;
 
@@ -2420,8 +2409,7 @@
        begsr SelectItem;
 
          select;
-         when    Screen = 2
-              or Screen = 3;
+         when Screen = 3;
            select;
            when    D__CURSFLD = 'D_GROUP1'
                 or D__CURSFLD = 'D_GROUP2'
@@ -2496,7 +2484,6 @@
      dL_FillMenuFlds   pi
 
      d dsp             s               n
-     d allow           s               n
      d pt              s                   like(MenuPage.title)
      d opt             s                   like(D_OPT101)
      d blankmot        s                   like(MenuOption.text) static inz('')
@@ -2513,13 +2500,6 @@
       /free
 
        dsp = not ModeUpdate or SimDisplay;
-
-       allow =     CurMenuPage > 0
-               and (   not dsp
-                    or not ModeUpdate
-                    or MenuUser = '*'
-                    or MnuOptAllowed(MenuUser:0:0)
-                    or MnuOptAllowed(MenuUser:CurMenuPage:0));
 
        // Initialize strips.
        if dsp;
@@ -2878,8 +2858,8 @@
                  l = l + 2;
                endif;
              endif;
-           elseif    allow
-                  or MnuOptAllowed(MenuUser:CurMenuPage:0-s);
+           elseif     CurMenuPage > 0
+                  and MnuOptAllowed(MenuUser:CurMenuPage:s);
              so = *on;
              hopts = *on;
              if f;

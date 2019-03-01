@@ -159,6 +159,19 @@
      d   type                        10    const
      d   lib                         10    const options(*nopass)
 
+       // RtvUsrPrfGrps - Retrieve User Profile Groups
+       // Retrieve the group profile and up to 15 supplemental groups
+       // for user profile "user". Return the number of group profiles
+       // that where retrieved with parameter "num". Return an array
+       // array of 16 10-character elements. The first element contains
+       // the group profile and the rest contain the supplemental
+       // groups. Return a blank array with "num" having value 0 if
+       // an error occurred or if "user" has no group profile and has
+       // and has no supplemental groups.
+     d RtvUsrPrfGrps   pr            10    dim(16) extproc('RtvUsrPrfGrps')
+     d   user                        10    const
+     d   num                         10i 0
+
        // IsSrcPF - Is Source Physical File
        // Return *on if the file identified with "name" and "lib"
        // is a source physical file, else return *off.

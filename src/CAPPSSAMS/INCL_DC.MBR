@@ -176,15 +176,18 @@
 
        // DC_AM_Group - Db Cmd: Group
        // Add, update or delete a menu group.
-       // If parameters "members_n" and "members_t" are both given, then
-       // add/update the members of the group with the non-blank elements
-       // in "members_n" and the corresponding member types (having the
-       // same index) in "members_t". If the group exists then the existing
-       // group members are replaced. To delete all members from a group,
-       // specify "members" with only blank elements (parameter "members_t"
-       // must also be given to have any effect but it's content is ignored).
-       // If "ctype" is "*DELETE", parameters "members_n" and "members_t"
-       // are ignored and all members are first deleted from the group.
+       // If ctype is *ADD or *UPDATE then parameters "members_n" and
+       // "members_i" must be both given to add/update the members of
+       // the group. Otherwise only the group record is added/updated.
+       // The non-blank elements in members_n contain the member names
+       // and their corresponding elements in "members_t" specify their
+       // types (0 or 1). Type 0 specifies a group and type 1 specifies
+       // a user. When updating the existing members are first deleted
+       // from the database. if ctype is *DELETE then "members_n" and
+       // "members_t" are ignored.
+       // Updating the database is synchronized by locking/releasing
+       // data area CAPPSSAMD0. Thus only one program can add, update
+       // or delete a group or changing the menu at the same time.
        // Note that a maximum of "CNumGrpMembers" can be specified.
      dDC_AM_Group$     ds                  qualified inz
      d   GROUP                             like(TAM_GROUP)

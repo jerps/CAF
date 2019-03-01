@@ -33,7 +33,7 @@
 
        // ----- Sync Data Area
 
-       // The "Sync" sata area is used to synchronize menu loads and saves,
+       // The "Sync" data area is used to synchronize menu loads and saves,
        // and to hold global menu data such as the version counter.
 
      d CAPPSSAMD0      ds            50    qualified dtaara
@@ -118,9 +118,19 @@
        // a menu page.
      d DirtyUserPages  s               n   inz(*on)
 
+       // Array "ChkGrpUsrPrf" is an array with all group user profiles
+       // for user profile "ChkGrpUsrPrfU". It is used within procedure
+       // "L_IsUsrGrpMbr" which checks whether a user or it's group
+       // profiles is a member of a group. Whenever a user other than
+       // "ChkGrpUsrPrfU" is checked procedure "L_ChkGrpUsrPrf" is called
+       // to retrieve the group profiles for the new user.
+       // Variable "ChkGrpUsrPrf#" contains the number of group profiles
+       // in "ChkGrpUsrPrf".
+     d ChkGrpUsrPrf    s             10    dim(16)
+     d ChkGrpUsrPrf#   s             10i 0
+     d ChkGrpUsrPrfU   s             10    inz(x'00')
 
-       // ----- Authorisation Data
-
+       // Authorisation Data
        // If the menu is loaded with all options for all users then all
        // authorisation data, i.e. all members and their groups, is also
        // loaded. Dynamic array "AuthUsers" contains all user-id's that
@@ -191,7 +201,7 @@
        // "IsGrpMember" is used which checks against the database.
        // If parameter "option" is given with value "*CURRENT" then
        // procedure "IsGrpMember" is always used.
-     dL_IsOptGrpMbr    pr              n
+     dL_IsUsrGrpMbr    pr              n
      d   user                        10    value
      d   group                       16    value
      d   option                      10    value options(*nopass)
@@ -246,6 +256,10 @@
      dL_UpdUserPages   pr
      d   user                        10    value
 
+       // Retrieve the group profiles for "user" into "ChkGrpUsrPrf".
+     dL_ChkGrpUsrPrf   pr
+     d   user                        10    value
+
        // Return *on if arrays "grps1" and "grps2" are the same, else
        // return *off.
      dL_EqualGrps      pr              n
@@ -260,28 +274,6 @@
      d   cmd1                          *   value
      d   cmd2                          *   value
 
-       // Read data area CAPPSSAMD0 with *LOCK, and return the version
-       // counter. If necessary, initialize the version counter in the
-       // data area with 00000000. Return -1 if an error occurred trying
-       // to access the data area.
-       // Parameter "curbin" returns the current bin (0 or 1), if given.
-     dL_SdaReadLock    pr             8s 0
-     d   curbin                       1s 0       options(*nopass)
-
-       // Write data area CAPPSSAMD0.
-       // Update and UNLOCK the data area. Return *on if successful,
-       // else return *off.
-       // If parameters "vcounter" and/or "vreload" are given the data
-       // area's version counter in pos. 1-8 and/or the "reload" version
-       // in pos. 9-16 are updated with the given values. Also, if par.
-       // "vcounter" is given, the current bin number in pos. 19 is
-       // flipped, and the current user is written to pos. 21-30. If a
-       // parameter is not given, the data area is updated with the value
-       // in data structure CAPPSSAMD0.
-     dL_SdaWrite       pr              n
-     d   vcounter                     8s 0 const options(*nopass)
-     d   vreload                      8s 0 const options(*nopass)
-
        // Normalize the version counter data given with parameter "data"
        // that was read from data CAPPSSAMD0. Initialize it to "00000000"
        // if the given data contains any other character than digits.
@@ -293,13 +285,11 @@
 
 
      p MnuLoadMenu     b                   export
-     d MnuLoadMenu     pi              n
-     d   errmsg                     200
+     d MnuLoadMenu     pi
      d   user                        10    const options(*nopass)
 
-     d vc              s                   like(L_SdaReadLock)
+     d vc              s                   like(I_SdaReadLock)
      d cb              s              1s 0
-     d em              s            200
      d pg              s             10i 0
      d opts            s               n
      d mattrs          s               n
@@ -311,13 +301,15 @@
 
       /free
 
-       errmsg = '';
-
-       L_ClearMenu();
+       reset ChkGrpUsrPrfU;
 
        MenuUser = '';
-       if %parms > 1;
+       if %parms > 0;
          MenuUser = user;
+       endif;
+
+       if MenuUser = '';
+         MnuLoadAuth();
        endif;
 
        if not %open(CAPPSSAMF1);
@@ -328,11 +320,7 @@
        endif;
 
        // LOCK DATA AREA
-       vc = L_SdaReadLock(cb);
-       if vc < 0;
-         errmsg = RtvAMsgAM(9901:CAmsFatal:CSyncDaName);
-         return *off;
-       endif;
+       vc = I_SdaReadLock(cb);
 
        mattrs = *off; // menu attrs read?
        mnmbr  = *off; // user is member of a menu group?
@@ -368,7 +356,7 @@
                if     optgrp <> ''
                   and %lookup(optgrp:Menu.groups) = 0;
                  if    MenuUser = ''
-                    or L_IsOptGrpMbr(MenuUser:optgrp);
+                    or L_IsUsrGrpMbr(MenuUser:optgrp);
                    mnmbr = *on; // user is member of a menu group
                  endif;
                  Menu.groups(n) = optgrp;
@@ -411,7 +399,8 @@
                  if     optgrp <> ''
                     and %lookup(optgrp:MenuPage.groups) = 0;
                    if    MenuUser = ''
-                      or L_IsOptGrpMbr(MenuUser:optgrp);
+                      or     not mnmbr
+                         and L_IsUsrGrpMbr(MenuUser:optgrp);
                      pgmbr = *on; // user is member of a page group
                    endif;
                    MenuPage.groups(n) = optgrp;
@@ -447,7 +436,9 @@
                  if     optgrp <> ''
                     and %lookup(optgrp:MenuOption.groups) = 0;
                    if    MenuUser = ''
-                      or L_IsOptGrpMbr(MenuUser:optgrp);
+                      or     not mnmbr
+                         and not pgmbr
+                         and L_IsUsrGrpMbr(MenuUser:optgrp);
                      // Option is allowed.
                      allowed = *on;
                    endif;
@@ -492,26 +483,13 @@
        close(e) CAPPSSAMF2;
 
        // UNLOCK DATA AREA
-       if not L_SdaWrite();
-         L_ClearMenu();
-         errmsg = RtvAMsgAM(9901:CAmsFatal:CSyncDaName);
-         return *off;
-       endif;
+       I_SdaWrite();
 
        MenuVersion = vc;
 
-       if     MenuUser = ''
-          and not MnuLoadAuth(em);
-         L_ClearMenu();
-         errmsg = em;
-         return *off;
-       endif;
+       L_UpdUserPages(MenuUser);
 
-       if MenuUser <> '';
-         L_UpdUserPages(MenuUser);
-       endif;
-
-       return *on;
+       return;
 
        begsr setpage;
          if    MenuUser = ''
@@ -683,12 +661,11 @@
 
 
      p MnuLoadAuth     b                   export
-     d MnuLoadAuth     pi              n
-     d   errmsg                     200
+     d MnuLoadAuth     pi
 
      d chunksz         c                   20
      d usr             s                   like(TAM_MBRN)
-     d grps            s                   like(TAM_GROUP) dim(32767)
+     d grps            s                   like(TAM_GROUP) dim(32767) static
      d grps#           s             10i 0
      d supergroups     s               *
      d supergroups#    s             10i 0
@@ -697,25 +674,20 @@
 
       /free
 
-       errmsg = '';
-
-       if not MnuIsLoaded();
-         errmsg = RtvAMsgAM(1001:CAmsFatal);
-         return *off;
-       endif;
-       if MenuUser <> '';
-         errmsg = RtvAMsgAM(1012:CAmsFatal);
-         return *off;
+       if     MnuIsLoaded()
+          or  MenuUser <> '';
+         return;
        endif;
 
        L_ClearAuth();
+
+       reset ChkGrpUsrPrfU;
 
        if not %open(CAPPSSAMF4);
          open CAPPSSAMF4;
        endif;
 
-       grps(*) = *allx'FF';
-       grps#   = 0;
+       grps# = 0;
 
        usr = *loval;
 
@@ -754,7 +726,8 @@
            // has been read. Add this group and all it's direct and
            // indirect predecessors to array "grps".
            if     grps# < %elem(grps)
-              and %lookup(MENUMGROUP:grps:1:grps#) = 0;
+              and (   grps# = 0
+                   or %lookup(MENUMGROUP:grps:1:grps#) = 0);
              grps# = grps# + 1;
              grps(grps#) = MENUMGROUP;
            endif;
@@ -785,27 +758,26 @@
 
        close(e) CAPPSSAMF4;
 
-       if UserPagesUser <> '';
-         L_UpdUserPages(UserPagesUser);
-       endif;
+       L_UpdUserPages(MenuUser);
 
-       return *on;
+       return;
 
        begsr read_grps;
          if grps# <= 0;
            leavesr;
          endif;
-         sorta grps;
          for g = 1 to grps#;
-           if %rem(AuthUserds.groups#:chunksz) = 0;
-             AuthGroups@ = %realloc(AuthGroups@:
-                 %size(AuthGroups) *(chunksz+AuthUserds.groups#));
-             AuthUserds.groups = AuthGroups@;
+           if    AuthUserds.groups# = 0
+              or %lookup(grps(g):AuthGroups:1:AuthUserds.groups#) = 0;
+             if %rem(AuthUserds.groups#:chunksz) = 0;
+               AuthGroups@ = %realloc(AuthGroups@:
+                   %size(AuthGroups) *(chunksz+AuthUserds.groups#));
+               AuthUserds.groups = AuthGroups@;
+             endif;
+             AuthUserds.groups# = AuthUserds.groups# + 1;
+             AuthGroups(AuthUserds.groups#) = grps(g);
            endif;
-           AuthUserds.groups# = AuthUserds.groups# + 1;
-           AuthGroups(AuthUserds.groups#) = grps(g);
          endfor;
-         grps(*) = *allx'FF';
          grps#   = 0;
        endsr;
 
@@ -846,10 +818,7 @@
          return *off;
        endif;
 
-       in(e) CAPPSSAMD0;
-       if %error;
-         return *off;
-       endif;
+       in CAPPSSAMD0;
 
        L_SdaNormVC(CAPPSSAMD0.vcounter);
 
@@ -868,10 +837,7 @@
          return *off;
        endif;
 
-       in(e) CAPPSSAMD0;
-       if %error;
-         return *off;
-       endif;
+       in CAPPSSAMD0;
 
        L_SdaNormVC(CAPPSSAMD0.vreload);
 
@@ -893,7 +859,7 @@
      d eattr           s                   like(errattr)
      d epage           s                   like(errpage)
      d eslot           s                   like(errslot)
-     d vc              s                   like(L_SdaReadLock)
+     d vc              s                   like(I_SdaReadLock)
      d cb              s              1s 0
      d ob              s              1s 0
      d f               s               n
@@ -938,18 +904,61 @@
          return *off;
        endif;
 
+       // LOCK DATA AREA
+       vc = I_SdaReadLock(cb);
+
+       // Check whether the groups specified for the menu exist.
+       for g = 1 to %elem(Menu.groups);
+         if     Menu.groups(g) <> ''
+            and not GroupExists(Menu.groups(g));
+           errmsg = RtvAMsgAM(1021:CAmsFatal
+                        :%trimr(Menu.groups(g)));
+           exsr exit_with_error;
+         endif;
+       endfor;
+
+       // Check whether the groups specified for the pages exist.
+       for p = 1 to %elem(MenuPages);
+         MenuPage@ = MenuPages(p);
+         if MenuPage@ <> *null;
+           for g = 1 to %elem(MenuPage.groups);
+             if     MenuPage.groups(g) <> ''
+                and not GroupExists(MenuPage.groups(g));
+               errmsg = RtvAMsgAM(1022:CAmsFatal
+                            :%trimr(MenuPage.groups(g)):%char(p));
+               exsr exit_with_error;
+             endif;
+           endfor;
+         endif;
+       endfor;
+
+       // Check whether the groups specified for the options exist.
+       for p = 1 to %elem(MenuPages);
+         MenuPage@ = MenuPages(p);
+         if MenuPage@ <> *null;
+           for s = 1 to %elem(MenuPage.slots);
+             MenuOption@ = MenuPage.slots(s);
+             if     MenuOption@ <> *null
+                and MenuOption.choice <> '';
+               for g = 1 to %elem(MenuOption.groups);
+                 if     MenuOption.groups(g) <> ''
+                    and not GroupExists(MenuOption.groups(g));
+                   errmsg = RtvAMsgAM(1023:CAmsFatal
+                                :%trimr(MenuOption.groups(g))
+                                :%trim(MenuOption.choice):%char(p));
+                   exsr exit_with_error;
+                 endif;
+               endfor;
+             endif;
+           endfor;
+         endif;
+       endfor;
+
        if not %open(CAPPSSAMF1);
          open CAPPSSAMF1;
        endif;
        if not %open(CAPPSSAMF2);
          open CAPPSSAMF2;
-       endif;
-
-       // LOCK DATA AREA
-       vc = L_SdaReadLock(cb);
-       if vc < 0;
-         errmsg = RtvAMsgAM(9902:CAmsFatal:CSyncDaName);
-         return *off;
        endif;
 
        // Save to the other bin ("ob").
@@ -1105,24 +1114,25 @@
        if     %parms > 1
           and %addr(option) <> *null
           and option = '*RELOAD';
-         L_SdaWrite(vc+1:vc+1);
+         I_SdaWrite(vc+1:vc+1);
        else;
-         L_SdaWrite(vc+1);
+         I_SdaWrite(vc+1);
        endif;
 
        MenuUpdated = *off;
 
-       if not MnuLoadAuth(emsg);
-         errmsg = emsg;
-         return *off;
-       endif;
+       MnuLoadAuth();
 
        return *on;
 
-       begsr exit_with_db_error;
-         L_SdaWrite();
-         errmsg = RtvAMsgAM(9903:CAmsFatal);
+       begsr exit_with_error;
+         I_SdaWrite();
          return *off;
+       endsr;
+
+       begsr exit_with_db_error;
+         errmsg = RtvAMsgAM(9903:CAmsFatal);
+         exsr exit_with_error;
        endsr;
 
       /end-free
@@ -2182,28 +2192,32 @@
       /free
 
        if    not MnuIsLoaded()
-          or user = ''
           or     MenuUser <> ''
              and MenuUser <> user
-          or pag < 0
+          or pag <= 0
           or pag > %elem(MenuPages)
-          or     pag > 0
-             and MnuIsBlankPage(pag)
-          or %abs(slot) > %elem(MenuPage.slots);
+          or MnuIsBlankPage(pag)
+          or slot <= 0
+          or slot > %elem(MenuPage.slots);
          return *off;
        endif;
 
-       if pag > 0;
-         MenuPage@ = MenuPages(pag);
+       MenuPage@ = MenuPages(pag);
+       if MenuPage@ = *null;
+         return *off;
        endif;
 
-       if slot <> 0;
-         MenuOption@ = MenuPage.slots(%abs(slot));
-         if    MenuOption@ = *null
-            or MenuOption.choice = '';
-           // Slot is empty or contains a header.
-           return *off;
-         endif;
+       MenuOption@ = MenuPage.slots(slot);
+       if    MenuOption@ = *null
+          or MenuOption.choice = '';
+         // Slot is empty or contains a header.
+         return *off;
+       endif;
+
+       if    user = ''
+          or     MenuUser = ''
+             and user = '*';
+         return *on;
        endif;
 
        if     %parms > 3
@@ -2211,46 +2225,36 @@
          cur = '*CURRENT';
        else;
          cur = '';
-         if     user = MenuUser
-            and slot <> 0;
+         if user = MenuUser;
+           // The menu is loaded for a specific user.
+           // Just check for existance of the option.
            return *on;
          endif;
        endif;
 
-       if    pag = 0
-          or slot > 0;
-         // Check whether the user is a member of one of the groups
-         // specified for the menu.
-         for g = 1 to %elem(Menu.groups);
-           if     Menu.groups(g) <> ''
-              and L_IsOptGrpMbr(user:Menu.groups(g):cur);
-             return *on;
-           endif;
-         endfor;
-         if pag = 0;
-           return *off;
+       // Check whether the user is a member of one of the groups
+       // specified for the menu.
+       for g = 1 to %elem(Menu.groups);
+         if     Menu.groups(g) <> ''
+            and L_IsUsrGrpMbr(user:Menu.groups(g):cur);
+           return *on;
          endif;
-       endif;
+       endfor;
 
-       if slot >= 0;
-         // Check whether the user is a member of one of the groups
-         // specified for the page.
-         for g = 1 to %elem(MenuPage.groups);
-           if     MenuPage.groups(g) <> ''
-              and L_IsOptGrpMbr(user:MenuPage.groups(g):cur);
-             return *on;
-           endif;
-         endfor;
-         if slot = 0;
-           return *off;
+       // Check whether the user is a member of one of the groups
+       // specified for the page.
+       for g = 1 to %elem(MenuPage.groups);
+         if     MenuPage.groups(g) <> ''
+            and L_IsUsrGrpMbr(user:MenuPage.groups(g):cur);
+           return *on;
          endif;
-       endif;
+       endfor;
 
        // Check whether the user is a member of one of the groups
        // specified for the option.
        for g = 1 to %elem(MenuOption.groups);
          if     MenuOption.groups(g) <> ''
-            and L_IsOptGrpMbr(user:MenuOption.groups(g):cur);
+            and L_IsUsrGrpMbr(user:MenuOption.groups(g):cur);
            return *on;
          endif;
        endfor;
@@ -2268,10 +2272,15 @@
 
       /free
 
-       if     not MnuIsLoaded()
+       if    not MnuIsLoaded()
           or     MenuUser <> ''
              and MenuUser <> user;
          return 0;
+       endif;
+
+       if    DirtyUserPages
+          or user <> UserPagesUser;
+         L_UpdUserPages(user);
        endif;
 
        if user = '';
@@ -2283,11 +2292,6 @@
            return %abs(userpage);
          endif;
          return %elem(MenuPages);
-       endif;
-
-       if    DirtyUserPages
-          or user <> UserPagesUser;
-         L_UpdUserPages(user);
        endif;
 
        if %parms > 1;
@@ -2314,15 +2318,67 @@
        // ----- Implementation - Internal
 
 
-     pI_GetCurBin      b                   export
-     dI_GetCurBin      pi             1s 0
+     pI_SdaReadLock    b                         export
+     dI_SdaReadLock    pi             8s 0
+     d   curbin                       1s 0       options(*nopass)
 
       /free
 
-       in(e) CAPPSSAMD0;
-       if %error;
-         return 0;
+       if %parms > 0;
+         curbin = 0;
        endif;
+
+       in *LOCK CAPPSSAMD0;
+
+       L_SdaNormVC(CAPPSSAMD0.vcounter);
+
+       if %parms > 0;
+         if CAPPSSAMD0.curbin = '1';
+           curbin = 1;
+         else;
+           curbin = 0;
+         endif;
+       endif;
+
+       return CvtTxtToInt(CAPPSSAMD0.vcounter);
+
+      /end-free
+     p                 e
+
+
+     pI_SdaWrite       b                   export
+     dI_SdaWrite       pi
+     d   vcounter                     8s 0 const options(*nopass)
+     d   vreload                      8s 0 const options(*nopass)
+
+      /free
+
+       if %parms > 1;
+         CAPPSSAMD0.vreload  = %editc(vreload :'X');
+       endif;
+       if %parms > 0;
+         CAPPSSAMD0.vcounter = %editc(vcounter:'X');
+         if CAPPSSAMD0.curbin = '1';
+           CAPPSSAMD0.curbin = '0';
+         else;
+           CAPPSSAMD0.curbin = '1';
+         endif;
+         CAPPSSAMD0.suser = PSI.curuser;
+         out CAPPSSAMD0;
+       else;
+         unlock CAPPSSAMD0;
+       endif;
+
+      /end-free
+     p                 e
+
+
+     pI_SdaCurBin      b                   export
+     dI_SdaCurBin      pi             1s 0
+
+      /free
+
+       in CAPPSSAMD0;
 
        if CAPPSSAMD0.curbin = '1';
          return 1;
@@ -2532,13 +2588,15 @@
      p                 e
 
 
-     pL_IsOptGrpMbr    b
-     dL_IsOptGrpMbr    pi              n
+     pL_IsUsrGrpMbr    b
+     dL_IsUsrGrpMbr    pi              n
      d   user                        10    value
      d   group                       16    value
      d   option                      10    value options(*nopass)
 
      d grp             s             15
+     d u               s             10
+     d p               s             10i 0
      d n               s               n
      d g               s               n
      d i               s             10i 0
@@ -2553,25 +2611,45 @@
          n = *off;
        endif;
 
-       if     MenuUser = ''
-          and (   %parms < 3
-               or option <> '*CURRENT');
-         i = %lookup(user:AuthUsers:1:AuthUsers#);
-         if i > 0;
-           AuthUserds@ = AuthUserdata(i);
-           AuthGroups@ = AuthUserds.groups;
-           i = %lookup(grp:AuthGroups:1:AuthUserds.groups#);
+       u = user;
+       exsr check;
+
+       if user <> ChkGrpUsrPrfU;
+         L_ChkGrpUsrPrf(user);
+       endif;
+
+       for p = 1 to ChkGrpUsrPrf#;
+         u = ChkGrpUsrPrf(p);
+         exsr check;
+       endfor;
+
+       return *off;
+
+       begsr check;
+
+         if     MenuUser = ''
+            and (   %parms < 3
+                 or option <> '*CURRENT');
+           i = %lookup(u:AuthUsers:1:AuthUsers#);
+           if i > 0;
+             AuthUserds@ = AuthUserdata(i);
+             AuthGroups@ = AuthUserds.groups;
+             i = %lookup(grp:AuthGroups:1:AuthUserds.groups#);
+           endif;
+           g = i > 0;
+         else;
+           g = IsGrpMember(u:*off:grp);
          endif;
-         g = i > 0;
-       else;
-         g = IsGrpMember(user:*off:grp);
-       endif;
 
-       if n;
-         g = not g;
-       endif;
+         if n;
+           g = not g;
+         endif;
 
-       return g;
+         if g;
+           return *on;
+         endif;
+
+       endsr;
 
       /end-free
      p                 e
@@ -3114,9 +3192,8 @@
 
       /free
 
-       if     user = ''
-          or     MenuUser <> ''
-             and MenuUser <> user;
+       if     MenuUser <> ''
+          and MenuUser <> user;
          return;
        endif;
 
@@ -3127,45 +3204,42 @@
        NumUserPages    = 0;
        UserPagesUser   = user;
 
-       // Collect all pages with one or more (allowed) options.
-       // Check whether an option is allowed for "user" with procedure
-       // "MnuOptAllowed", but only if the menu is loaded with all options
-       // for all users and "user" is not an asterisk.
-       // Simply collect all pages with one or more loaded options if the
-       // menu has been loaded for a specific "user" ("MenuUser" <> ''),
-       // or if "user" is "*".
-
-
-       if     MenuUser = ''
-          and user <> '*'
-          and not MnuOptAllowed(user:0:0);
+       if user = '';
          return;
        endif;
 
+       // Collect all pages with one or more (allowed) options.
        for p = 1 to %elem(MenuPages);
-         if    MenuUser <> ''
-            or user = '*'
-            or MnuOptAllowed(user:p:0);
-           MenuPage@ = MenuPages(p);
-           if MenuPage@ <> *null;
-             for s = 1 to %elem(MenuPage.slots);
-               MenuOption@ = MenuPage.slots(s);
-               if     MenuOption@ <> *null
-                  and MenuOption.choice <> ''
-                  and (   MenuUser <> ''
-                       or user = '*'
-                       or MnuOptAllowed(user:p:0-s));
-                 NumUserPages = NumUserPages + 1;
-                 UserPages(NumUserPages) = p;
-                 UserPagesInv(p) = NumUserPages;
-                 leave;
-               endif;
-             endfor;
-           endif;
+         MenuPage@ = MenuPages(p);
+         if MenuPage@ <> *null;
+           for s = 1 to %elem(MenuPage.slots);
+             MenuOption@ = MenuPage.slots(s);
+             if     MenuOption@ <> *null
+                and MenuOption.choice <> ''
+                and MnuOptAllowed(user:p:s);
+               NumUserPages = NumUserPages + 1;
+               UserPages(NumUserPages) = p;
+               UserPagesInv(p) = NumUserPages;
+               leave;
+             endif;
+           endfor;
          endif;
        endfor;
 
        return;
+
+      /end-free
+     p                 e
+
+
+     pL_ChkGrpUsrPrf   b
+     dL_ChkGrpUsrPrf   pi
+     d   user                        10    value
+
+      /free
+
+       ChkGrpUsrPrf = RtvUsrPrfGrps(user:ChkGrpUsrPrf#);
+       ChkGrpUsrPrfU = user;
 
       /end-free
      p                 e
@@ -3213,69 +3287,6 @@
            or     cmd1 <> *null
               and cmd2 <> *null
               and %trim(%str(cmd1)) = %trim(%str(cmd2));
-
-      /end-free
-     p                 e
-
-
-     pL_SdaReadLock    b
-     dL_SdaReadLock    pi             8s 0
-     d   curbin                       1s 0       options(*nopass)
-
-      /free
-
-       if %parms > 0;
-         curbin = 0;
-       endif;
-
-       in(e) *LOCK CAPPSSAMD0;
-       if %error;
-         return -1;
-       endif;
-
-       L_SdaNormVC(CAPPSSAMD0.vcounter);
-
-       if %parms > 0;
-         if CAPPSSAMD0.curbin = '1';
-           curbin = 1;
-         else;
-           curbin = 0;
-         endif;
-       endif;
-
-       return CvtTxtToInt(CAPPSSAMD0.vcounter);
-
-      /end-free
-     p                 e
-
-
-     pL_SdaWrite       b
-     dL_SdaWrite       pi              n
-     d   vcounter                     8s 0 const options(*nopass)
-     d   vreload                      8s 0 const options(*nopass)
-
-      /free
-
-       if %parms > 1;
-         CAPPSSAMD0.vreload  = %editc(vreload :'X');
-       endif;
-       if %parms > 0;
-         CAPPSSAMD0.vcounter = %editc(vcounter:'X');
-         if CAPPSSAMD0.curbin = '1';
-           CAPPSSAMD0.curbin = '0';
-         else;
-           CAPPSSAMD0.curbin = '1';
-         endif;
-         CAPPSSAMD0.suser = PSI.curuser;
-         out(e) CAPPSSAMD0;
-       else;
-         unlock(e) CAPPSSAMD0;
-       endif;
-       if %error;
-         return *off;
-       endif;
-
-       return *on;
 
       /end-free
      p                 e

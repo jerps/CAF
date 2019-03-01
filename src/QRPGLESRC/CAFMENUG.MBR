@@ -19,7 +19,8 @@
 
        //   2 I  (10)    : Special behavior codes.
        //                  This field can contain one or more letters listed
-       //                  below to indicate special behaviors.
+       //                  below to indicate special behaviors. Letters not
+       //                  listed here are ignored.
        //                    A - Keep the program active; do NOT end the
        //                        program on ENTER. Normally, the program is
        //                        ended when there are no pending actions or
@@ -1554,8 +1555,6 @@
 
          for SflRec = 1 to sflrecs;
 
-           DspMsg = '';
-
            select;
            // when Screen = 1;
            other;
@@ -1655,20 +1654,20 @@
                    if Prc = 0 or Prc = 11 or Prc = 12;
                      select;
                      when D_SFLOPT = ' 2';
-                       DspMsg = RtvAMsgAB(1019);
+                       AddToDspMsgList(RtvAMsgAB(1019));
                      when D_SFLOPT = ' 3';
-                       DspMsg = RtvAMsgAB(1034);
+                       AddToDspMsgList(RtvAMsgAB(1034));
                      when D_SFLOPT = ' 4';
-                       DspMsg = RtvAMsgAB(1021);
+                       AddToDspMsgList(RtvAMsgAB(1021));
                      endsl;
                    elseif Prc = 7;
                      select;
                      when D_SFLOPT = ' 2';
-                       DspMsg = RtvAMsgAB(1018);
+                       AddToDspMsgList(RtvAMsgAB(1018));
                      when D_SFLOPT = ' 3';
-                       DspMsg = RtvAMsgAB(1033);
+                       AddToDspMsgList(RtvAMsgAB(1033));
                      when D_SFLOPT = ' 4';
-                       DspMsg = RtvAMsgAB(1020);
+                       AddToDspMsgList(RtvAMsgAB(1020));
                      endsl;
                    endif;
 
@@ -1691,12 +1690,12 @@
                         or D_SFLOPT = ' 4';
                        chain (DrKey.f1) CAPPSSAMF3;
                        if %found;
+                         //  Update subfile record data.
+                         exsr SetFldDFSFR1;
                          if D_SFLOPT = ' 2';
                            // Set "stale" status.
                            D__STAT = 'S';
                          endif;
-                         //  Update subfile record data.
-                         exsr SetFldDFSFR1;
                        else;
                          // Set "deleted" status.
                          D__STAT = 'D';
@@ -1841,7 +1840,7 @@
 ** FEMap (nnnnnnnnnnnnii, field/attribute name where ?=any, indicator)
 XXX         31
 ** CursLocs (snrrccc, screensize/screen#/row/col, s=W/N/blank, n=blank=all)
- 107006
+ 107008
 N 22001
 W 25001
 ** Text

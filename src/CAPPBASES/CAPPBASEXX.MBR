@@ -301,27 +301,28 @@
 
 
      p CalleeSpcBhvr   b                   export
-     d CalleeSpcBhvr   pi            20
-     d   sbc                         20    const
-     d   sbcpass                     20    const options(*nopass:*omit)
-     d   sbcadd                      20    const options(*nopass:*omit)
-     d   sbcsub                      20    const options(*nopass)
+     d CalleeSpcBhvr   pi            10
+     d   sbc                         10    const
+     d   sbcpass                     10    const options(*nopass:*omit)
+     d   sbcadd                      10    const options(*nopass:*omit)
+     d   sbcsub                      10    const options(*nopass)
 
      d cpass           s                   like(sbcpass)
      d cadd            s                   like(sbcadd)
      d csub            s                   like(sbcsub)
-     d passdft         s               n
+     d passall         s               n
      d r               s            100    varying
      d c               s              1
      d p               s             10i 0
 
       /free
 
-       if     %parms > 1
-          and %addr(sbcpass) <> *null;
-         cpass = sbcpass;
+       if    %parms < 2
+          or %addr(sbcpass) = *null
+          or sbcpass = '';
+         cpass = CSbcPassToCallee;
        else;
-         cpass = '*';
+         cpass = sbcpass;
        endif;
        if     %parms > 2
           and %addr(sbcadd) <> *null;
@@ -335,7 +336,7 @@
          csub = '';
        endif;
 
-       passdft = %scan('*':cpass) > 0;
+       passall = %scan('*':cpass) > 0;
 
        r = '';
 
@@ -343,9 +344,8 @@
        for p = 1 to %len(sbc);
          c = %subst(sbc:p:1);
          if     c <> ''
-            and (   %scan(c:cpass) > 0
-                 or     passdft
-                    and %scan(c:CSbcPassToCallee) > 0);
+            and     passall
+                 or %scan(c:cpass) > 0;
            exsr add_c_to_r;
          endif;
        endfor;

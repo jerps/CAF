@@ -26,7 +26,7 @@
              else;
                rc = prc;
              endif;
-             return rc;
+             exsr exit;
            endif;
          endfor;
 

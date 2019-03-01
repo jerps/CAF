@@ -69,8 +69,8 @@
      A  76                                  DSPATR(ND)
      A            D_GMTEXT      50   O 12 21
      A  76                                  DSPATR(ND)
-     A            D__GMBRT  R        H      REFFLD(TAM_MBRT)
-     A            D__GMBRN  R        H      REFFLD(TAM_MBRN)
+     A            D__GMEMBR1R        H      REFFLD(D_GMEMBER *SRC)
+     A            D__GMEMBR2R        H      REFFLD(D_GMEMBER *SRC)
      A          R DFSCREEN1                 SFLCTL(DFSCREEN1S)
      A                                      SFLSIZ(0012)
      A                                      SFLPAG(0011)

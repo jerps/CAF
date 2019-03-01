@@ -15,6 +15,7 @@
 
              DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
              DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
+             DCL        VAR(&USR) TYPE(*CHAR) LEN(10)
 
              DCL        VAR(&ERRORSW_) TYPE(*LGL)
              DCL        VAR(&MSGID_) TYPE(*CHAR) LEN(7)
@@ -54,8 +55,11 @@
              MONMSG     MSGID(CPF9801) EXEC(DO)
              CHGVAR     VAR(&INID0) VALUE('1')
              CRTDTAARA  DTAARA(&TLIB/CAPPSSAMD0) TYPE(*CHAR) LEN(50) +
-                          TEXT('CAPPSSAM/DataArea 0: Sync access / +
-                          Global data')
+                          VALUE('0000000000000000  0') +
+                          TEXT('CAPPSSAM/DataArea 0: Sync Global +
+                          Menu Data')
+             RTVJOBA    USER(&USR)
+             CHGDTAARA  DTAARA(&TLIB/CAPPSSAMD0 (21 10)) VALUE(&USR)
              ENDDO
 
              /* FILE CAPPSSAMF1 */

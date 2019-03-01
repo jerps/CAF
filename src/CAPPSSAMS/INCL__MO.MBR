@@ -17,11 +17,28 @@
 
        // ----- Prototypes
 
-       // I_GetCurBin - Get Current Bin
-       // Return the current bin number, 0 or 1.
-       // Return 0 if the sync data area ("CSyncDaName") could not be
-       // accessed, or if the stored current bin number is not "0" or "1".
-     dI_GetCurBin      pr             1s 0 extproc('I_GetCurBin')
+       // Read data area CAPPSSAMD0 with *LOCK, and return the version
+       // counter. If given, parameter "curbin" returns the current bin
+       // (0 or 1).
+     dI_SdaReadLock    pr             8s 0
+     d   curbin                       1s 0       options(*nopass)
+
+       // Write data area CAPPSSAMD0.
+       // Update and UNLOCK the data area.
+       // If parameters "vcounter" and/or "vreload" are given the data
+       // area's version counter in pos. 1-8 and/or the "reload" version
+       // in pos. 9-16 are updated with the given values. Also, if par.
+       // "vcounter" is given, the current bin number in pos. 19 is
+       // flipped, and the current user is written to pos. 21-30.
+       // If no parameters are given the data area is only unlocked; no
+       // data is written.
+     dI_SdaWrite       pr
+     d   vcounter                     8s 0 const options(*nopass)
+     d   vreload                      8s 0 const options(*nopass)
+
+       // I_SdaCurBin - Get Current Bin
+       // Return the current bin number, 0 or 1, of data area CAPPSSAMD0.
+     dI_SdaCurBin      pr             1s 0 extproc('I_GetCurBin')
 
        // I_RlsModMO - Release Module MO
        // Release all resources (such as Open Data Paths and dynamically

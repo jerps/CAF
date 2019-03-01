@@ -30,7 +30,8 @@
        // options are loaded for which the user is authorised. I.e. all
        // options with one or more groups - which includes the groups
        // specified for the page containing the option and the groups
-       // specified for the menu - of which the user is a member.
+       // specified for the menu - of which the user or one of it's
+       // group profiles is a member.
 
        // The complete menu definition consists of all "CNumPages" pages
        // in array "MenuPages" with the available options and headers, and
@@ -80,20 +81,20 @@
 
        // The groups and their members, i.e. the authorisation data which
        // determines the allowable options for a user, are not part of the
-       // menu definition. This information is only read from the database
+       // menu definition. This information is checked against the database
        // when the menu is being loaded for a specific user, to determine
        // which options are allowed for that user (only these are loaded).
        // If the menu is loaded with all options for all users then all
        // groups and their members are also loaded from the database into
        // memory using procedure "MnuLoadAuth". Updates in the database to
        // these groups and members (e.g. a new group is added or a user-id
-       // is removed from a group) are out of the control and scope of this
-       // module and are not reflected until "MnuLoadMenu", "MnuLoadAuth"
-       // or "MnuSaveMenu" is called.
+       // is removed from a group) are not reflected until "MnuLoadAuth"
+       // is called again, or indirectly by calling "MnuLoadMenu" or
+       // "MnuSaveMenu".
 
        // Because several users may want to read and/or update the menu
-       // definition at the same time a special data area, named "CSyncDaName",
-       // is used to synchronize access to the stored menu definition. Every
+       // definition at the same time a special data area, CAPPSSAMD0, is
+       // used to synchronize access to the stored menu definition. Every
        // time, while the menu is being loaded or saved with "MnsLoadMenu"
        // "MnsSaveMenu" resp., the data area is first read with *LOCK and
        // when the procedure ends the data area is released again. This
@@ -101,7 +102,7 @@
        // because only one user at a time accesses the menu definition in
        // the database.
 
-       // Data area "CSyncDaName" not only synchronizes access to the menu
+       // Data area CAPPSSAMD0 not only synchronizes access to the menu
        // definition, it also contains the following global menu data.
        //    1 -  8  : Current menu version
        //              An 8-digit version counter which is increased by 1
@@ -230,8 +231,7 @@
        // If the menu has already been loaded it is replaced with the most
        // current version.
        // Calling this procedure always first clears the current menu in
-       // memory. If an error occurs (i.e. *off is returned) then proc.
-       // "MnuIsLoaded" will return *on.
+       // memory.
        // Only load the allowable options. If "user" is not given or blank
        // then all options for all users are loaded. Updates to the menu
        // definition are only possible if all options for all users have
@@ -245,10 +245,7 @@
        // all authorisation data (all groups and users) into memory at once
        // for later use (e.g. in proc. "MnuOptAllowed"). In this case, proc.
        // "MnuLoadAuth" can be called again to explicitly reload this data.
-       // Return *on if successful, else return *off and set "errmsg" to an
-       // appropriate error message.
-     d MnuLoadMenu     pr              n   extproc('MnuLoadMenu')
-     d   errmsg                     200
+     d MnuLoadMenu     pr                  extproc('MnuLoadMenu')
      d   user                        10    const options(*nopass)
 
        // MnuGetSlotChoice - Get Slot with Choice
@@ -302,10 +299,7 @@
        // memory.
        // The authorisation data can only be loaded if the menu is loaded
        // with all options for all users.
-       // Return *on if successful, else return *off and set "errmsg"
-       // to an appropriate error message.
-     d MnuLoadAuth     pr              n   extproc('MnuLoadAuth')
-     d   errmsg                     200
+     d MnuLoadAuth     pr                  extproc('MnuLoadAuth')
 
        // MnuIsLoaded - Is Loaded
        // Return *on if the menu has been loaded with "MnsLoadMenu",
@@ -320,7 +314,7 @@
 
        // MnuVersionChanged - Version Changed
        // Return *on if the version counter that was read from data area
-       // "CSyncDaName" (pos. 1-8) when the menu was loaded with procedure
+       // CAPPSSAMD0 (pos. 1-8) when the menu was loaded with procedure
        // "MnuLoadMenu" is different from the current version number
        // stored in the data area, else return *off.
      d MnuVersionChanged...
@@ -328,9 +322,9 @@
 
        // MnuMustReload - Must Reload
        // Return *on if the version counter that was read from data area
-       // "CSyncDaName" (pos. 1-8) is less than the number that is currently
-       // stored in positions 9-16 in data area "CSyncDaName", else return
-       // *off. Always return *off if pos. 9-16 in data area "CSyncDaName"
+       // CAPPSSAMD0 (pos. 1-8) is less than the number that is currently
+       // stored in positions 9-16 in data area CAPPSSAMD0, else return
+       // *off. Always return *off if pos. 9-16 in data area CAPPSSAMD0
        // does not contain a number (i.e. only digits).
      d MnuMustReload   pr              n   extproc('MnuMustReload')
 
@@ -341,7 +335,7 @@
        // error is found then "errattr", "errpage", "errslot" contain the
        // attribute/page/slot in error (see "MnuValNormMenu" for info).
        // Increase the current version counter in positions 1-8 in data
-       // area "CSyncDaName" by 1.
+       // area CAPPSSAMD0 by 1.
        // If parameter "option" is given with value "*RELOAD", then the
        // increased version counter is written to positions 9-16 of the
        // data area, which indicates that other users who currently have
@@ -680,28 +674,17 @@
 
        // MnuOptAllowed - Option Allowed
        // Return *on if "slot" on page "pag" contains a menu option which
-       // is allowed for "user", else return *off. Return *off if the slot
-       // does not contain an option (it is empty or it contains a header),
-       // or the page is blank or *null, or the menu is not loaded.
-       // Always return *off if "user" is blank, or if the menu has been
-       // loaded for a specific user, which is different than "user".
-       // An option is allowed if "user" is a member of at least one of the
-       // groups specified for the menu, the option's page, or the option.
-       // If "slot" is positive, all groups are checked, i.e. the groups
-       // specified for the menu, the page and the option are all checked
-       // to see whether "user" is in one of these groups. If so, the option
-       // is allowed, else it is not.
-       // If "pag" and "slot" are both 0 then check only the groups specified
-       // for the menu, and return *on if the option is allowed according to
-       // the menu's groups only.
-       // If "slot" is 0 then check only the page's groups, and return *on
-       // if the option is allowed according to the page's groups only.
-       // If slot is negative, it's absolute value is used as "slot", and
-       // only the option's groups are checked, not the groups specified for
-       // the page or the menu.
-       // If "slot" is not given then return *on if there is at least one
-       // slot in page "pag" with an option that is allowed for "user", else
-       // return *off.
+       // is allowed for "user", else return *off. Return *off when the
+       // slot does not contain an option (it is empty or it contains a
+       // header), when the page is blank or *null, when the menu is not
+       // loaded, or when the menu has been loaded for a specific user
+       // different than "user".
+       // Always return *on when the slot contains an option and "user"
+       // is blank, or "MenuUser" is blank and "user" contains an asterisk
+       // ("*").
+       // An option is allowed if "user" or one of its group profiles is
+       // a member of at least one of theg roups specified for the menu,
+       // the option's page, or the option.
        // Return *off if "pag" or "slot" refers to a non-existing page or
        // slot.
        // If the menu was loaded for a specific user then this procedure
@@ -713,10 +696,9 @@
        // If the menu was loaded with all options for all users then the
        // authorisation data in memory (loaded with procedure "MnuLoadAuth")
        // is used, unless parameter "option" with value "*CURRENT" is given.
-       // Parameter "option" with value "*CURRENT" is only possible for
-       // individual slots, not for a complete page. If it is given, the most
+       // If parameter "option" with value "*CURRENT" is given then the most
        // current authorisation data is used (i.e. what is currenly stored
-       // in the database) instead  of the authorisation data in memory. This
+       // in the database) instead of the authorisation data in memory. This
        // takes much more time because of the database I/O involved. Option
        // "*CURRENT" uses procedure "IsGrpMember" in module DQ to query the
        // database.

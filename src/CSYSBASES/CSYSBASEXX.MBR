@@ -78,6 +78,16 @@
      d   attr2                        1
      d   data                       700
 
+       // Format USRI0200 for API QSYRUSRI
+     d OS4USRI0200     ds                  qualified inz
+     d   bytesrtn                    10i 0
+     d   bytesavl                    10i 0
+     d   data1                       35
+     d   grpprf                      10
+     d   data2                       47
+     d   numsuppgrps                 10i 0
+     d   suppgrps                    10    dim(15)
+
        // Format RTVM0100 for API QMHRTVM
      d OS4RTVM0100     ds                  qualified inz
      d   bytesrtn                    10i 0
@@ -143,6 +153,14 @@
      d   procoverride                 1    const
      d   system                      10    const
      d   fmttype                     10    const
+     d   apierr                                  like(OS4Error)
+
+       // API QSYRUSRI
+     d CallQSYRUSRI    pr                  extpgm('QSYRUSRI')
+     d   userinf                                 like(OS4USRI0200)
+     d   userinflen                  10i 0 const
+     d   fmtname                      8    const
+     d   usrprfnm                    10    const
      d   apierr                                  like(OS4Error)
 
        // API QCMDEXC
@@ -639,6 +657,56 @@
         endif;
 
         return OS4OBJD0200.objtextdescr;
+
+      /end-free
+     p                 e
+
+
+     p RtvUsrPrfGrps   b                   export
+     d RtvUsrPrfGrps   pi            10    dim(16)
+     d   user                        10    const
+     d   num                         10i 0
+
+     d grps            s             10    dim(16)
+     d i               s             10i 0
+     d j               s             10i 0
+
+      /free
+
+       num = 0;
+
+       reset OS4Error;
+       clear OS4USRI0200;
+
+       CallQSYRUSRI(
+           OS4USRI0200:%size(OS4USRI0200):'USRI0200':
+           user:
+           OS4Error);
+
+        if    OS4Error.bavl > 0
+           or OS4USRI0200.bytesrtn <= 0;
+          return '';
+        endif;
+
+        clear grps;
+
+        i = 0;
+        if     OS4USRI0200.grpprf <> ''
+           and OS4USRI0200.grpprf <> '*NONE';
+          i = i + 1;
+          grps(i) = OS4USRI0200.grpprf;
+        endif;
+        for j = 1 to OS4USRI0200.numsuppgrps;
+          if     i < %elem(grps)
+             and OS4USRI0200.suppgrps(j) <> '';
+            i = i + 1;
+            grps(i) = %triml(OS4USRI0200.suppgrps(j));
+          endif;
+        endfor;
+
+        num = i;
+
+        return grps;
 
       /end-free
      p                 e

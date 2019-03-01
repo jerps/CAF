@@ -54,6 +54,7 @@
 
       /include CAPPSSAMS,INCL__DC
       /include CAPPSSAMS,INCL__DQ
+      /include CAPPSSAMS,INCL__MO
 
       /include CAPPSSAMS,INCL__MODD
 
@@ -104,6 +105,8 @@
           and not cDel;
          return -1;
        endif;
+
+       I_SdaReadLock();
 
        // First, ensure that all needed files are opened.
        // Files should be left open; they are closed in "I_RlsModDC".
@@ -212,11 +215,15 @@
 
        exsr return_on_error;
 
-       if islocked;
-         unlock(e) CAPPSSAMF3;
-       endif;
+       exsr exit;
 
-       return rc;
+       begsr exit;
+         if islocked;
+           unlock(e) CAPPSSAMF3;
+         endif;
+         I_SdaWrite();
+         return rc;
+       endsr;
 
        // Delete all members from group "data.GROUP".
        begsr delete_members;
@@ -227,9 +234,6 @@
              leave;
            endif;
            reade(e) (data.GROUP) CAPPSSAMF6;
-           if %error;
-             leave;
-           endif;
            dow     not %eof
                and not %error;
              delete(e) MENUMGREC6;

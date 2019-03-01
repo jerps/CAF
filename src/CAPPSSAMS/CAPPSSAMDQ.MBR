@@ -503,6 +503,8 @@
      d IsGroupUsed     pi            30
      d   group                             const like(TAM_GROUP)
 
+     d cb              s              1s 0
+
       /free
 
        if not %open(CAPPSSAMF4);
@@ -516,14 +518,17 @@
        if not %open(CAPPSSAMF5);
          open CAPPSSAMF5;
        endif;
-       chain (I_GetCurBin():group:0) CAPPSSAMF5;
+       cb = I_SdaCurBin();
+       chain (cb:group:0) CAPPSSAMF5;
        if %found;
          return 'the menu';
        endif;
-       chain (I_GetCurBin():group) CAPPSSAMF5;
+       chain (cb:group) CAPPSSAMF5;
        if %found;
          return 'a page and/or an option';
        endif;
+
+       return '';
 
       /end-free
      p                 e

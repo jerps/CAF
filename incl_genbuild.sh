@@ -108,7 +108,7 @@ echo "parse arg sp"                                                             
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say 'BUILDING 'sp' . . .'"                                                                                    >> $BUILDMBR
 echo "call ex 'CO SRCFILE($HLIB/'||sp||'S) SRCMBR('||sp||'B0) TGTLIB($HLIB)'"                                       >> $BUILDMBR
-echo "call ex 'CALL PGM($HLIB/'||sp||'B0) PARM($HLIB $HLIB)'"                                                       >> $BUILDMBR
+echo "call ex 'CALL PGM($HLIB/'||sp||'B0) PARM($HLIB)'"                                                             >> $BUILDMBR
 echo "return"                                                                                                       >> $BUILDMBR
 echo "ex:"                                                                                                          >> $BUILDMBR
 echo "parse arg c,q"                                                                                                >> $BUILDMBR

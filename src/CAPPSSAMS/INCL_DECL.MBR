@@ -58,9 +58,6 @@
        // Number of members that can be specified for a group.
      dCNumGrpMembers   c                   200
 
-       // Name of sync data area.
-     dCSyncDaName      c                   'CAPPSSAMD0'
-
        // Each constant below ("CEf..*" where .. is the subsystem id)
        // defines a (database) field or (logical) attribute name which
        // can be associated with a message that is produced within

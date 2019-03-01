@@ -125,6 +125,9 @@
 1003: The menu is not loaded for user "%1".
 1011: Can not update or save the menu if it's loaded for a specific user.
 1012: Can not load authorisation data; the menu is loaded for a specific user.
+1021: Can not save menu; group %1 in the menu does not exist.
+1022: Can not save menu; group %1 in page %2 does not exist.
+1023: Can not save menu; group %1 for option %2 in page %3 does not exist.
 
 1901: Can not perform option; no command is specified for the option.
 1990: The current user (%2) is not authorised to perform option "%1".
@@ -209,7 +212,6 @@
 5025: The menu has been updated; press enter to save the menu.
 5050: The chosen option is not visible; press F9 first and try again.
 5051: Page number not recognized.
-5052: Enter a user-id, or an asterisk (*) for all options.
 5053: Can not edit slot; command is too long (%1 > %2).
 5054: Can not edit page attributes; command is too long (%1 > %2).
 5055: Can not edit menu attributes; command is too long (%1 > %2).
@@ -247,9 +249,11 @@
 5213: The MENU attributes have been UPDATED.
 
 6001: Too many members specified; a maximum of %1 is allowed.
-6002: The db contains %1 members for this group; can not handle this many.
+6002: DATABASE CONTAINED TOO MANY MEMBERS (%1).
+6003: DATABASE CONTAINED TOO MANY MEMBERS (%1); CAN NOT PROCEED.
 6011: Group "%1" is specified more than once.
 6012: User-id "%1" is specified more than once.
+6013: Group name can not be blank.
 
 9001: Database ERROR trying to add menu group; SEE JOB LOG.
 9002: Database ERROR trying to update menu group; SEE JOB LOG.

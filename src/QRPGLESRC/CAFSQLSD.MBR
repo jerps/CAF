@@ -38,7 +38,8 @@
 
        //   2 I  (10)    : Special behavior codes.
        //                  This field can contain one or more letters listed
-       //                  below to indicate special behaviors.
+       //                  below to indicate special behaviors. Letters not
+       //                  listed here are ignored.
        //                    A - Keep the program active; do NOT end the
        //                        program on ENTER. Normally, the program is
        //                        ended when the data record has been added,
@@ -520,7 +521,7 @@
                    or ModeUpdate
                    or ModeCopy);
              // Pagedown pressed in add/update/copy mode; add blank page.
-             exsr AddBlankPage;
+             exsr SflAddBlankPage;
            elseif KeyPressed(KsPageDown);
              DspMsg = RtvAMsgAB(1012);
            elseif KeyPressed(KsPageUp);
@@ -681,6 +682,7 @@
                    else;
                      // No errors; program goes to "idle state".
                      IdleState = *on;
+                     exsr SflIntoIdleMode;
                      if DspMsg = '';
                        // Set informational message.
                        select;
@@ -1151,27 +1153,25 @@
              endif;
            endif;
 
-           if ModeUpdate;
+         elseif ModeUpdate;
 
-             // Check if any text has been entered for the SQL statement.
-             flag = *on;
-             for SflRec = 1 to SFLR1#T;
-               chain SflRec DFSCREEN1S;
-               if D_SLINE <> '';
-                 flag = *off;
-                 leave;
-               endif;
-             endfor;
-             if flag;
-               chain 1 DFSCREEN1S;
-               *in75 = *on;
-               *in76 = *off;
-               *in91 = *on; // error ind.
-               update DFSCREEN1S;
-               AddDCVMsg(RtvAMsgAB(5001:CAmsFatal));
-               D__CURREC = 1;
+           // Check if any text has been entered for the SQL statement.
+           flag = *on;
+           for SflRec = 1 to SFLR1#T;
+             chain SflRec DFSCREEN1S;
+             if D_SLINE <> '';
+               flag = *off;
+               leave;
              endif;
-
+           endfor;
+           if flag;
+             chain 1 DFSCREEN1S;
+             *in75 = *on;
+             *in76 = *off;
+             *in91 = *on; // error ind.
+             update DFSCREEN1S;
+             AddDCVMsg(RtvAMsgAB(5001:CAmsFatal));
+             D__CURREC = 1;
            endif;
 
          endif;
@@ -1497,7 +1497,7 @@
 
        // Add a blank subfile page after pressing PageDown on the last
        // page, but only if the last page is currently not all blanks.
-       begsr AddBlankPage;
+       begsr SflAddBlankPage;
 
          SflRec = SFLR1#T - PgLen + 1;
          if SflRec > 0;
@@ -1529,6 +1529,25 @@
                D__CURREC = SFLR1#T;
              endif;
            endif;
+         endfor;
+
+       endsr;
+
+
+       // Program goes into idle mode; update the subfile fields
+       // to make fields non-editable.
+       begsr SflIntoIdleMode;
+
+         for SflRec = 1 to SFLR1#T;
+           select;
+           // when Screen = ?;
+           other;
+             // Screen 1 is default.
+             chain SflRec DFSCREEN1S;
+             *in75 = *off;
+             *in76 = *off;
+             update DFSCREEN1S;
+           endsl;
          endfor;
 
        endsr;

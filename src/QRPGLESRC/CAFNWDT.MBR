@@ -19,7 +19,8 @@
 
        //   2 I  (10)    : Special behavior codes.
        //                  This field can contain one or more letters listed
-       //                  below to indicate special behaviors.
+       //                  below to indicate special behaviors. Letters not
+       //                  listed here are ignored.
        //                    A - Keep the program active; do NOT end the
        //                        program on ENTER. Normally, the program is
        //                        ended when there are no pending actions or

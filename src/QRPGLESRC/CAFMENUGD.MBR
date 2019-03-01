@@ -29,7 +29,8 @@
 
        //   2 I  (10)    : Special behavior codes.
        //                  This field can contain one or more letters listed
-       //                  below to indicate special behaviors.
+       //                  below to indicate special behaviors. Letters not
+       //                  listed here are ignored.
        //                    A - Keep the program active; do NOT end the
        //                        program on ENTER. Normally, the program is
        //                        ended when the data record has been added,
@@ -306,6 +307,7 @@
      d ConfirmRefresh  s               n
      d ConfirmResize   s               n
      d ConfirmDelete   s               n
+     d ConfirmVal      s               n
 
        // Header displayed on screen.
      d HdrText         s            100
@@ -500,6 +502,8 @@
            ConfirmDelete = *off;
          endif;
 
+         ConfirmVal = *off;
+
          PrevScreen = Screen;
 
          // RETAIN CURSOR LOCATION BY DEFAULT
@@ -517,7 +521,7 @@
                    or ModeUpdate
                    or ModeCopy);
              // Pagedown pressed in add/update/copy mode; add blank page.
-             exsr AddBlankPage;
+             exsr SflAddBlankPage;
            elseif KeyPressed(KsPageDown);
              DspMsg = RtvAMsgAB(1012);
            elseif KeyPressed(KsPageUp);
@@ -652,7 +656,9 @@
                 or DataFound;
                // Validate screen.
                exsr ValScreen;
-               if not Err.e;
+               if ConfirmVal;
+                 DspMsg = RtvAMsgAB(1004:CAmsInfo:'Enter');
+               elseif not Err.e;
                  // No errors; process screen.
                  if     KeyPressed(KsF14)
                     and not ConfirmDelete;
@@ -681,6 +687,7 @@
                    else;
                      // No errors; program goes to "idle state".
                      IdleState = *on;
+                     exsr SflIntoIdleMode;
                      if DspMsg = '';
                        // Set informational message.
                        select;
@@ -910,10 +917,8 @@
          if     Msg = ''
             and not IdleState;
            // Set informational message.
-           if TooManyMembers;
-             Msg = RtvAMsgAM(6002:%char(NumDbMembers));
-           elseif    ModeAdd
-                  or ModeCopy;
+           if    ModeAdd
+              or ModeCopy;
              Msg = RtvAMsgAB(1026);
            elseif not DataFound;
              Msg = RtvAMsgAB(1013);
@@ -1109,11 +1114,7 @@
                other;
                  // Screen 1 is default.
                  chain SflRec DFSCREEN1S;
-                 if        D__GMBRT = 0
-                       and (   %subst(D_GMEMBER:1:1) <> '-'
-                            or %subst(D_GMEMBER:2)   <> D__GMBRN)
-                    or     D__GMBRT <> 0
-                       and D_GMEMBER <> D__GMBRN;
+                 if D_GMEMBER <> D__GMEMBR1;
                    ChgDspFld = *on;
                    leave;
                  endif;
@@ -1138,7 +1139,7 @@
          //leavesr;
 
          if TooManyMembers;
-           L_SetErr(RtvAMsgAM(6002:CAmsFatal:%char(NumDbMembers))
+           L_SetErr(RtvAMsgAM(6003:CAmsFatal:%char(NumDbMembers))
                    :'AMMBRN');
            leavesr;
          endif;
@@ -1153,58 +1154,66 @@
            endif;
          endif;
 
-         // Fill sorted array "gmembers" with all members in the subfile,
-         // and set "NumSfMembers" to the number of members specified in
-         // the subfile. If a subfile record contains a group name, the
-         // first position must be a hyphen ("-") and the group name starts
-         // at the second position.
-         // If an element in "gmembers" contains a group name, the first
-         // position is x'00' and the group name starts at position 2.
-         // Set an errormessage if there are more than "CNumGrpMembers"
-         // members, or if a duplicate member is found.
-         // Then, if no errors, replace the contents of the subfile with the
-         // sorted members (groups first), but only if "ChgDspFld" is *on.
-         gmembers(*) = *hival;
-         NumSfMembers = 0;
-         for SflRec = 1 to SFLR1#T;
-           chain SflRec DFSCREEN1S;
-           if     D_GMEMBER <> ''
-              and D_GMEMBER <> *hival;
-             NumSfMembers = NumSfMembers + 1;
-             if not Err.e;
-               if %subst(D_GMEMBER:1:1) = '-';
-                 gmember = x'00' + %subst(D_GMEMBER:2);
-               else;
-                 gmember = D_GMEMBER;
-               endif;
-               if %lookup(gmember:gmembers) > 0;
-                 if %subst(gmember:1:1) = x'00';
-                   L_SetErr(RtvAMsgAM(6011:CAmsFatal
-                                     :%trimr(%subst(gmember:2))):
-                       '??MBRN');
-                 else;
-                   L_SetErr(RtvAMsgAM(6012:CAmsFatal:%trimr(gmember)):
-                       '??MBRN');
-                 endif;
-               elseif NumSfMembers <= CNumGrpMembers;
-                 gmembers(NumSfMembers) = gmember;
-               else;
-                 L_SetErr(RtvAMsgAM(6001:CAmsFatal:%char(CNumGrpMembers)):
+         if ChgDspFld;
+           // Fill sorted array "gmembers" with all members in the subfile,
+           // and set "NumSfMembers" to the number of members specified in
+           // the subfile. If a subfile record contains a group name, the
+           // first position must be a hyphen ("-") and the group name starts
+           // at the second position.
+           // If an element in "gmembers" contains a group name, the first
+           // position is x'00' and the group name starts at position 2.
+           // Set an errormessage if there are more than "CNumGrpMembers"
+           // members, or if a duplicate member is found.
+           // Then, if no errors, replace the contents of the subfile with the
+           // sorted members (groups first).
+           gmembers(*) = *hival;
+           NumSfMembers = 0;
+           for SflRec = 1 to SFLR1#T;
+             chain SflRec DFSCREEN1S;
+             if D_GMEMBER <> D__GMEMBR2;
+               ConfirmVal = *on;
+             endif;
+             if     D_GMEMBER <> ''
+                and D_GMEMBER <> *hival;
+               NumSfMembers = NumSfMembers + 1;
+               if     %subst(D_GMEMBER:1:1) = '-'
+                  and %subst(D_GMEMBER:2) = '';
+                 L_SetErr(RtvAMsgAM(6013:CAmsFatal):
                      '??MBRN');
                endif;
+               if not Err.e;
+                 if %subst(D_GMEMBER:1:1) = '-';
+                   gmember = x'00' + %subst(D_GMEMBER:2);
+                 else;
+                   gmember = D_GMEMBER;
+                 endif;
+                 if %lookup(gmember:gmembers) > 0;
+                   if %subst(gmember:1:1) = x'00';
+                     L_SetErr(RtvAMsgAM(6011:CAmsFatal
+                                       :%trimr(%subst(gmember:2))):
+                         '??MBRN');
+                   else;
+                     L_SetErr(RtvAMsgAM(6012:CAmsFatal:%trimr(gmember)):
+                         '??MBRN');
+                   endif;
+                 elseif NumSfMembers <= CNumGrpMembers;
+                   gmembers(NumSfMembers) = gmember;
+                 else;
+                   L_SetErr(RtvAMsgAM(6001:CAmsFatal:%char(CNumGrpMembers)):
+                       '??MBRN');
+                 endif;
+               endif;
              endif;
+           endfor;
+           if Err.e;
+             leavesr;
            endif;
-         endfor;
-         if Err.e;
-           leavesr;
-         endif;
-         sorta gmembers;
-         for i = 1 to %elem(gmembers);
-           if gmembers(i) = *hival;
-             gmembers(i) = '';
-           endif;
-         endfor;
-         if ChgDspfld;
+           sorta gmembers;
+           for i = 1 to %elem(gmembers);
+             if gmembers(i) = *hival;
+               gmembers(i) = '';
+             endif;
+           endfor;
            // Replace the subfile contents with the sorted members.
            for SflRec = 1 to SFLR1#T;
              chain SflRec DFSCREEN1S;
@@ -1227,6 +1236,7 @@
                  endif;
                endif;
              endif;
+             D__GMEMBR2 = D_GMEMBER;
              *in75 =     not IdleState
                      and (ModeAdd or (ModeUpdate or ModeCopy) and DataFound);
              *in76 = not ModeAdd and not DataFound;
@@ -1283,21 +1293,25 @@
          other;
            ctype = '*ADD';
          endsl;
-         gmembers_t(*) = 0;
-         gmembers_n(*) = '';
-         for i = 1 to %elem(gmembers);
-           gmember = gmembers(i);
-           if gmember <> '';
-             if %subst(gmember:1:1) = x'00';
-               gmembers_t(i) = 0;
-               gmembers_n(i) = %subst(gmember:2);
-             else;
-               gmembers_t(i) = 1;
-               gmembers_n(i) = gmember;
+         if ctype = '*ADD';
+           dbcrc = DC_AM_Group(ctype:DC_AM_Group$);
+         else;
+           gmembers_t(*) = 0;
+           gmembers_n(*) = '';
+           for i = 1 to %elem(gmembers);
+             gmember = gmembers(i);
+             if gmember <> '';
+               if %subst(gmember:1:1) = x'00';
+                 gmembers_t(i) = 0;
+                 gmembers_n(i) = %subst(gmember:2);
+               else;
+                 gmembers_t(i) = 1;
+                 gmembers_n(i) = gmember;
+               endif;
              endif;
-           endif;
-         endfor;
-         dbcrc = DC_AM_Group(ctype:DC_AM_Group$:gmembers_n:gmembers_t);
+           endfor;
+           dbcrc = DC_AM_Group(ctype:DC_AM_Group$:gmembers_n:gmembers_t);
+         endif;
 
          select;
          when dbcrc >= -59 and dbcrc <= -30;
@@ -1501,7 +1515,7 @@
 
          // Set "NumDbMembers" to the number of members in the database.
          // Fill the subfile with the retrieved members. If the member is
-         // a group name, it must added to the subfile prefixed with a
+         // a group name, it must be added to the subfile prefixed with a
          // hyphen ("-").
 
          NumDbMembers = 0;
@@ -1518,6 +1532,7 @@
          if Qds_AM_GroupAll$.rc = 11;
            // Group has too many members.
            TooManyMembers = *on;
+           Msg = RtvAMsgAM(6002:%char(NumDbMembers));
          endif;
 
          if DspMsg = '';
@@ -1558,8 +1573,8 @@
                  D_GMTEXT = Text(13);
                endif;
              endif;
-             D__GMBRT = Qds_AM_GroupAll$.gmembers_t(i);
-             D__GMBRN = Qds_AM_GroupAll$.gmembers_n(i);
+             D__GMEMBR1 = D_GMEMBER;
+             D__GMEMBR2 = D_GMEMBER;
              SFLR1# = SFLR1#T + 1;
              write DFSCREEN1S;
              SFLR1#T = SFLR1#;
@@ -1609,7 +1624,7 @@
 
        // Add a blank subfile page after pressing PageDown on the last
        // page, but only if the last page is currently not all blanks.
-       begsr AddBlankPage;
+       begsr SflAddBlankPage;
 
          SflRec = SFLR1#T - PgLen + 1;
          if SflRec > 0;
@@ -1639,6 +1654,25 @@
                D__CURREC = SFLR1#T;
              endif;
            endif;
+         endfor;
+
+       endsr;
+
+
+       // Program goes into idle mode; update the subfile fields
+       // to make fields non-editable.
+       begsr SflIntoIdleMode;
+
+         for SflRec = 1 to SFLR1#T;
+           select;
+           // when Screen = ?;
+           other;
+             // Screen 1 is default.
+             chain SflRec DFSCREEN1S;
+             *in75 = *off;
+             *in76 = *off;
+             update DFSCREEN1S;
+           endsl;
          endfor;
 
        endsr;
