@@ -69,6 +69,9 @@
      A            D__CURSPOS     4S 0H
      A            D__CURSROW     3  0H
      A            D__CURSCOL     3  0H
+     A
+     A  81        D_COPYTXT     55      3  2
+     A                                      DSPATR(RI)
      A  76                              3  2'SIMULATE'
      A                                      DSPATR(RI)
      A  76                              3 11': User:'
@@ -80,7 +83,10 @@
      AO       93                            DSPATR(PC)
      A            D_PAGENO      20   O  3112
      A  *NORMAL                         3 60
-     A            D_PTITLE      34   B  4 50CHECK(LC)
+     A  80        D_PTITLED     34   B  3 50CHECK(LC)
+     A  *NORMAL                         3 24
+     A                                      DSPATR(HI)
+     A N80        D_PTITLE      34   B  4 50CHECK(LC)
      A  *NORMAL                         4 24
      A    N32                               DSPATR(HI)
      A  75N32                               DSPATR(UL)
@@ -252,8 +258,8 @@
      A    N46                               DSPATR(UL)
      A     46                               DSPATR(RI PC)
      A                                 14 28'Y/N'
-     A                                 15  1'Default err handler? :'
-     A            D_DFTEH        1   B 15 24
+     A                                 15  1'Use command handler? :'
+     A            D_USECH        1   B 15 24
      A    N47                               DSPATR(UL)
      A     47                               DSPATR(RI PC)
      A                                 15 28'Y/N'

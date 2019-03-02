@@ -128,7 +128,7 @@
        // in "ChkGrpUsrPrf".
      d ChkGrpUsrPrf    s             10    dim(16)
      d ChkGrpUsrPrf#   s             10i 0
-     d ChkGrpUsrPrfU   s             10    inz(x'00')
+     d ChkGrpUsrPrfU   s             10    inz(*allx'00')
 
        // Authorisation Data
        // If the menu is loaded with all options for all users then all
@@ -156,6 +156,16 @@
      d   groups#                     10i 0
      d AuthGroups      s                   like(TAM_MBRN)     dim(32767)
      d                                     based(AuthGroups@) ascend
+
+
+       // ----- Call Prototypes
+
+       // Command Handler Program
+     dPgmCAPPSSAMCH    pr                  extpgm('CAPPSSAMCH')
+     d   cmd                        500    const
+     d   menuctx                      6    const
+     d   text                        34    const
+     d   errmsg                     150
 
 
        // ----- Local Prototypes
@@ -252,7 +262,7 @@
        // Do nothing if the menu is loaded for a specific user (i.e. "MenuUser"
        // is not blank) and "user" is different from "MenuUser".
        // Parameter "user" can have special value "*" which indicates that
-       // all options are included in the "user pages".
+       // all options are included in the "user pages" (if "MenuUser" is blank).
      dL_UpdUserPages   pr
      d   user                        10    value
 
@@ -563,6 +573,9 @@
      d s               s             10i 0
      d ss              s             10i 0
      d em              s            200
+     d em2             s            150
+     d mc              s              6
+     d mcp             s              3  0
 
       /free
 
@@ -596,8 +609,12 @@
        MenuPage@   = MenuPages(pag);
        MenuOption@ = MenuPage.slots(slot);
 
-       if    MenuOption.command = *null
-          or %str(MenuOption.command) = '';
+       if     (    Menu.command = *null
+               or %str(Menu.command) = '')
+          and (    MenuPage.command = *null
+               or %str(MenuPage.command) = '')
+          and (    MenuOption.command = *null
+               or %str(MenuOption.command) = '');
          errmsg = RtvAMsgAM(1901:CAmsFatal);
          return *off;
        endif;
@@ -611,43 +628,71 @@
          return *off;
        endif;
 
-       if    %scan(CMsbDftEH:Menu.specb) > 0
-          or %scan(CMsbDftEH:MenuPage.specb) > 0
-          or %scan(CMsbDftEH:MenuOption.specb) > 0;
+       if     MenuUser <> ''
+          and (   %scan(CMsbUseCH:Menu.specb) > 0
+               or %scan(CMsbUseCH:MenuPage.specb) > 0
+               or %scan(CMsbUseCH:MenuOption.specb) > 0);
 
-         // Perform option; use default error handler.
+         // Perform option; use command handler.
 
          if     Menu.command <> *null
             and %str(Menu.command) <> '';
-           ExecCmd(%str(Menu.command));
-         endif;
-         if     MenuPage.command <> *null
-            and %str(MenuPage.command) <> '';
-           ExecCmd(%str(MenuPage.command));
+           em2 = '';
+           PgmCAPPSSAMCH(%str(Menu.command):'M     ':Menu.title:em2);
+           if em2 <> '';
+             errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
+             return *off;
+           endif;
          endif;
 
-         ExecCmd(%str(MenuOption.command));
+         if     MenuPage.command <> *null
+            and %str(MenuPage.command) <> '';
+           em2 = '';
+           mc = 'P';
+           mcp = pag;
+           %subst(mc:2:3) = %editc(mcp:'X');
+           PgmCAPPSSAMCH(%str(MenuPage.command):mc:MenuPage.title:em2);
+           if em2 <> '';
+             errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
+             return *off;
+           endif;
+         endif;
+
+         if     MenuOption.command <> *null
+            and %str(MenuOption.command) <> '';
+           em2 = '';
+           mc = 'O';
+           mcp = pag;
+           %subst(mc:2:3) = %editc(mcp:'X');
+           %subst(mc:5:2) = MenuOption.choice;
+           PgmCAPPSSAMCH(%str(MenuOption.command):mc:MenuOption.text:em2);
+           if em2 <> '';
+             errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
+             return *off;
+           endif;
+         endif;
 
        else;
 
-         // Perform option; catch exceptions.
+         // Perform option.
 
          if     Menu.command <> *null
-            and %str(Menu.command) <> '';
-           if not ExecCmdCE(em:%str(Menu.command));
-             errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
-             return *off;
-           endif;
-         endif;
-         if     MenuPage.command <> *null
-            and %str(MenuPage.command) <> '';
-           if not ExecCmdCE(em:%str(MenuPage.command));
-             errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
-             return *off;
-           endif;
+            and %str(Menu.command) <> ''
+            and not ExecCmdCE(em:%str(Menu.command));
+           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
+           return *off;
          endif;
 
-         if not ExecCmdCE(em:%str(MenuOption.command));
+         if     MenuPage.command <> *null
+            and %str(MenuPage.command) <> ''
+            and not ExecCmdCE(em:%str(MenuPage.command));
+           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
+           return *off;
+         endif;
+
+         if     MenuOption.command <> *null
+            and %str(MenuOption.command) <> ''
+            and not ExecCmdCE(em:%str(MenuOption.command));
            errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
            return *off;
          endif;
@@ -1217,8 +1262,8 @@
        endif;
 
        if not L_EqualGrps(mn.groups:Menu.groups);
-         MenuUpdated = *on;
          DirtyUserPages = *on;
+         MenuUpdated = *on;
        endif;
 
        // The contents of "mn" replaces the contents of "Menu".
@@ -1359,8 +1404,8 @@
              and not L_EqualGrps(mp.groups:'')
           or     MenuPage@ <> *null
              and not L_EqualGrps(mp.groups:MenuPage.groups);
-         MenuUpdated = *on;
          DirtyUserPages = *on;
+         MenuUpdated = *on;
        endif;
 
        if MenuPage@ <> *null;
@@ -1419,16 +1464,21 @@
 
        MenuPage@ = MenuPages(pag);
 
-       if MenuPage@ <> *null;
-         for s = 1 to %elem(MenuPage.slots);
-           if MenuPage.slots(s) <> *null;
-             MenuOption@ = MenuPage.slots(s);
-             if MenuOption.choice <> '';
-               DirtyUserPages = *on;
-               leave;
+       if     MenuPage@ <> *null
+          and not DirtyUserPages;
+         if not L_EqualGrps(MenuPage.groups:'');
+           DirtyUserPages = *on;
+         else;
+           for s = 1 to %elem(MenuPage.slots);
+             if MenuPage.slots(s) <> *null;
+               MenuOption@ = MenuPage.slots(s);
+               if MenuOption.choice <> '';
+                 DirtyUserPages = *on;
+                 leave;
+               endif;
              endif;
-           endif;
-         endfor;
+           endfor;
+         endif;
          L_RlsMenuPage();
          MenuPages(pag) = *null;
          MenuUpdated = *on;
@@ -1493,9 +1543,8 @@
          p1 = p2;
        endfor;
 
-       MenuUpdated = *on;
-
        DirtyUserPages = *on;
+       MenuUpdated = *on;
 
        return *on;
 
@@ -1560,9 +1609,8 @@
          p1 = p2;
        endfor;
 
-       MenuUpdated = *on;
-
        DirtyUserPages = *on;
+       MenuUpdated = *on;
 
        return *on;
 
@@ -1594,6 +1642,41 @@
        endif;
 
        return MenuOption.text;
+
+      /end-free
+     p                 e
+
+
+     p MnuGetOptChoice...
+     p                 b                   export
+     d MnuGetOptChoice...
+     d                 pi                  like(MenuOption.choice)
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > %elem(MenuPages)
+          or MenuPages(pag) = *null
+          or slot < 1
+          or slot > %elem(MenuPage.slots);
+         return '';
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+       MenuOption@ = MenuPage.slots(slot);
+
+       if MenuOption@ = *null;
+         return '';
+       endif;
+
+       if MenuOption.choice = '';
+         return '';
+       endif;
+
+       return MenuOption.choice;
 
       /end-free
      p                 e
@@ -1720,16 +1803,16 @@
        endif;
 
        if        MenuOption@ = *null
-             and opt.choice <> ''
-             and not L_EqualGrps(opt.groups:'')
+             and (   opt.choice <> ''
+                  or not L_EqualGrps(opt.groups:''))
           or     MenuOption@ <> *null
              and (        MenuOption.choice = ''
                       and opt.choice <> ''
                   or      MenuOption.choice <> ''
                       and opt.choice = ''
                   or not L_EqualGrps(opt.groups:MenuOption.groups));
-         MenuUpdated = *on;
          DirtyUserPages = *on;
+         MenuUpdated = *on;
        endif;
 
        if MenuOption@ <> *null;
@@ -2431,9 +2514,7 @@
 
        L_ClearAuth();
 
-       if UserPagesUser <> '';
-         L_UpdUserPages(UserPagesUser);
-       endif;
+       L_UpdUserPages(UserPagesUser);
 
        return;
 
@@ -2777,7 +2858,7 @@
 
        // Validate menu attributes.
 
-       n = %check(' '+CMsbMenu:mn.specb);
+       n = %check(' '+CMssbMenu:mn.specb);
        if n > 0;
          // Special behavior not supported.
          errmsg  = RtvAMsgAM(2007:CAmsFatal:%subst(mn.specb:n:1));
@@ -2906,7 +2987,7 @@
 
        // Validate page attributes.
 
-       n = %check(' '+CMsbPage:MenuPage.specb);
+       n = %check(' '+CMssbPage:MenuPage.specb);
        if n > 0;
          // Special behavior not supported.
          errmsg  = RtvAMsgAM(2006:CAmsFatal:%subst(MenuPage.specb:n:1));
@@ -3113,14 +3194,7 @@
          MenuOption@ = ptr;
        endif;
 
-       if MenuOption.command = *null;
-         // Command
-         errmsg  = RtvAMsgAM(2012:CAmsFatal);
-         errattr = CEfAMOCOMMAND;
-         return *off;
-       endif;
-
-       n = %check(' '+CMsbOption:MenuOption.specb);
+       n = %check(' '+CMssbOption:MenuOption.specb);
        if n > 0;
          // Special behavior not supported.
          errmsg  = RtvAMsgAM(2005:CAmsFatal:%subst(MenuOption.specb:n:1));
@@ -3167,12 +3241,6 @@
            grps(n) = grp;
          endif;
        endfor;
-       if n = 0;
-         // An option must have at least one group specified for it.
-         errmsg  = RtvAMsgAM(2011:CAmsFatal);
-         errattr = CEfAMOGROUP + '1';
-         return *off;
-       endif;
 
        // Option ok.
        return *on;

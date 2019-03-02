@@ -129,8 +129,9 @@
 1022: Can not save menu; group %1 in page %2 does not exist.
 1023: Can not save menu; group %1 for option %2 in page %3 does not exist.
 
-1901: Can not perform option; no command is specified for the option.
+1901: Can not perform option; no cmd specified for the menu, page and option.
 1990: The current user (%2) is not authorised to perform option "%1".
+1998: CAPPSSAMCH: %1
 1999: ERROR: %1
 
 2001: An option (or header) must have a text.
@@ -143,8 +144,6 @@
 2008: Group "%1" occurs more than once.
 2009: Group "%1" does not exist in the database.
 2010: Group inversion character is not directly followed by a group name.
-2011: An option must have at least one group specified for it.
-2012: An option must have a command.
 2013: An option can not be directly preceded or followed by a header.
 
 2111: To move options/headers down, the bottom slot must be empty.
@@ -201,7 +200,6 @@
 5014: Previous non-blank page not found.
 5015: Next non-blank page not found.
 5016: This page is blank; nothing to choose.
-5017: Place the cursor on the option to be performed.
 5018: No option with choice "%1" found on the current page.
 5019: There are %1 options with choice "%2" on the current page.
 5020: Option "%1" not performed; no confirmation.
@@ -210,6 +208,8 @@
 5023: Edit attributes for page %1.
 5024: Edit MENU ATTRIBUTES.
 5025: The menu has been updated; press enter to save the menu.
+5031: Place the cursor on the option to be performed and press enter.
+5032: Place the cursor on the option to be edited and press enter.
 5050: The chosen option is not visible; press F9 first and try again.
 5051: Page number not recognized.
 5053: Can not edit slot; command is too long (%1 > %2).

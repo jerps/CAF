@@ -46,7 +46,7 @@
                           ALWVAR(*YES) PROMPT('Target library')
              PARM       KWD(TGTOBJTYPE) TYPE(*CHAR) LEN(10) +
                           RSTD(*YES) DFT(*DEFAULT) VALUES(*DEFAULT +
-                          *PGM *MODULE) MIN(0) ALWVAR(*YES) +
+                          *MODULE) MIN(0) ALWVAR(*YES) +
                           PROMPT('Target object type')
              PARM       KWD(ACTGRP) TYPE(*NAME) LEN(10) +
                           DFT(*DEFAULT) SPCVAL((*DEFAULT *DEFAULT) +

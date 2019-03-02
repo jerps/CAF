@@ -19,7 +19,8 @@
      A            TAM_MPAGE      5S 0       COLHDG('Menu' 'Page')
      A            TAM_MSLOT      2S 0       COLHDG('Menu' 'Slot')
      A            TAM_MCHC       2          COLHDG('Menu' 'Choice')
-     A            TAM_MOTEXT    34          COLHDG('Menu/Option' 'Text')
+     A            TAM_MTEXT     34          COLHDG('Menu/Page/Option' -
+     A                                             'Title/Text')
      A            TAM_MBIN       1S 0       COLHDG('Menu' 'Bin')
 
       * Group / Member

@@ -1069,16 +1069,6 @@
              = '  ' + %trim(HdrText);
          write DFHEADER;
 
-         // Footer.
-         DspOpts = '';
-         AddToAppOpts(FunText( 1):DspOpts:DspWide);
-         if     ModeEdit
-            and not SbNoAdd;
-           AddToAppOpts(FunText( 6):DspOpts:DspWide);
-         endif;
-         D__FTTEXT  = DspOpts;
-         D__FTTEXTW = DspOpts;
-
          // Subfile options.
          DspOpts = '';
          if ModeSelect;
@@ -1099,6 +1089,16 @@
          endif;
          D__SFOPTS  = DspOpts;
          D__SFOPTSW = DspOpts;
+
+         // Footer.
+         DspOpts = '';
+         AddToAppOpts(FunText( 1):DspOpts:DspWide);
+         if     ModeEdit
+            and not SbNoAdd;
+           AddToAppOpts(FunText( 6):DspOpts:DspWide);
+         endif;
+         D__FTTEXT  = DspOpts;
+         D__FTTEXTW = DspOpts;
 
          // Subfile headers.
          D_SFHDR1 = '';

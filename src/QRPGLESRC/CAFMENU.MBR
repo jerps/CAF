@@ -243,6 +243,11 @@
        // A message number.
      d Msg#            s             10i 0
 
+       // Number of "options" parts (see "AddToAppOpts").
+     d OptsNum         s             10i 0
+       // Current "options" part.
+     d Opts#           s             10i 0
+
        // Standard program parameter fields.
      d Pmode           s             10
      d Pspcbhvr        s             10
@@ -331,6 +336,14 @@
        // Contains the value to which "CurUserPage" is set when
        // switching back from simulate display mode to normal mode.
      d SimPgNorm       s             10i 0
+
+       // If greater than 0 then an option/header or a page is about
+       // to be copied. If "CopySlot" is greater than 0 than an option
+       // header is to be copied, else a page.
+     d CopyPage        s             10i 0
+     d CopySlot        s             10i 0
+     d CopyHdr         s               n
+     d CopyText        s             35
 
        // An error message / attribute / page / slot.
      d ErrMsg          s            200
@@ -502,6 +515,13 @@
            SelectedSlot    = 0;
          endif;
 
+         if     not KeyPressed(KsF06)
+            and not KeyPressed(KsPageDown)
+            and not KeyPressed(KsPageUp);
+           CopyPage = 0;
+           CopySlot = 0;
+         endif;
+
          // Check which screen values have been changed by the user.
          SfcPageTitle = D_PTITLE  <> PsvPageTitle;
          SfcSimUser   = D_SIMUSER <> PsvSimUser;
@@ -598,6 +618,14 @@
              DspMsg = RtvAMsgAM(5105);
            endif;
          elseif     KeyPressed(KsF06)
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay
+                and not MnuIsBlankPage(CurMenuPage);
+           // F06 pressed in menu in update mode; copy opt/hdr/page.
+           SetCurs = *on;
+           exsr CopyOptHdrPage;
+         elseif     KeyPressed(KsF06)
                 and (   Screen = 3
                      or Screen = 4
                      or Screen = 5);
@@ -622,6 +650,12 @@
                 and ModeUpdate;
            // F11 pressed in menu in update mode; switch sim. display.
            exsr SwitchSimDisplay;
+         elseif     KeyPressed(KsF12)
+                and Screen = 1
+                and CopyPage > 0;
+           // F12 pressed while copying; cancel copy.
+           CopyPage = 0;
+           CopySlot = 0;
          elseif     KeyPressed(KsF12)
                 and Screen > 1;
            // F12 pressed; return to previous screen.
@@ -690,6 +724,11 @@
                      or Screen = 5);
            // F14 pressed in screen "edit attrs"; delete group.
            exsr DeleteGroup;
+         elseif     KeyPressed(KsF15)
+                and Screen = 1
+                and ModeUpdate and not SimDisplay;
+           // F15 pressed in menu in update mode; work with groups.
+           exsr WorkWithMenuGroups;
          elseif     KeyPressed(KsF16)
                 and Screen = 1
                 and CurUserPage > 0
@@ -930,6 +969,32 @@
          *in75 = ModeUpdate and not SimDisplay;
          *in76 = ModeUpdate and SimDisplay;
 
+         *in80 = ModeDisplay;
+         if ModeDisplay;
+           D_PTITLED = D_PTITLE;
+         endif;
+
+         if     Screen = 1
+            and CopyPage > 0;
+           *in81 = *on;
+           if CopySlot > 0;
+             if CopyHdr;
+               D_COPYTXT = SubstText(%trim(Text(28)):%trim(CopyText)
+                               :%char(CopyPage))
+                         + CDacNormal;
+             else;
+               D_COPYTXT = SubstText(%trim(Text(27)):%trim(CopyText)
+                               :%char(CopyPage))
+                         + CDacNormal;
+             endif;
+           else;
+             D_COPYTXT = SubstText(%trim(Text(26)):%char(CopyPage))
+                       + CDacNormal;
+           endif;
+         else;
+           *in81 = *off;
+         endif;
+
          // Set cursor on field, if requested, and no field error
          // indicator is *on.
          flag = *off;
@@ -1046,38 +1111,53 @@
 
          // Footer.
          DspOpts = '';
+         OptsNum = 0;
          // F1
-         AddToAppOpts(FunText(1):DspOpts:DspWide);
+         OptsNum = AddToAppOpts(FunText(1):DspOpts:DspWide
+                               :FunText(24));
          // F2
          if     Screen = 1
             and CurUserPage > 0
             and ModeUpdate and not SimDisplay;
-           AddToAppOpts(FunText(2):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(2):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(2));
            endif;
          endif;
          // F4
          if Screen = 3;
-           AddToAppOpts(FunText(4):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(4):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(4));
            endif;
          endif;
          // F5
          if Screen = 1;
-           AddToAppOpts(FunText(5):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(5):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(5));
            endif;
          endif;
          // F6
-         if    Screen = 3
-            or Screen = 4
-            or Screen = 5;
-           AddToAppOpts(FunText(6):DspOpts:DspWide);
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay
+            and not MnuIsBlankPage(CurMenuPage);
+           OptsNum = AddToAppOpts(FunText(6):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(6));
+           endif;
+         elseif    Screen = 3
+                or Screen = 4
+                or Screen = 5;
+           OptsNum = AddToAppOpts(FunText(35):DspOpts:DspWide
+                                 :FunText(24));
+           if not DspWide;
+             L_AddHelpText(FunText(35));
            endif;
          endif;
          // F7, F8
@@ -1085,45 +1165,52 @@
             and CurUserPage > 0
             and ModeUpdate and not SimDisplay
             and not MnuIsBlankPage(CurMenuPage);
-           AddToAppOpts(FunText(7):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(7):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(7));
            endif;
-           AddToAppOpts(FunText(8):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(8):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(8));
            endif;
          endif;
          // F11
-         if    Screen = 1
+         if     Screen = 1
             and CurUserPage > 0
             and ModeUpdate;
            if SimDisplay;
-             AddToAppOpts(FunText(31):DspOpts:DspWide);
+             OptsNum = AddToAppOpts(FunText(31):DspOpts:DspWide
+                                 :FunText(24));
              if not DspWide;
                L_AddHelpText(FunText(31));
              endif;
            else;
-             AddToAppOpts(FunText(11):DspOpts:DspWide);
+             OptsNum = AddToAppOpts(FunText(11):DspOpts:DspWide
+                                   :FunText(24));
              if not DspWide;
                L_AddHelpText(FunText(11));
              endif;
+           endif;
+         endif;
+         // F12
+         if     Screen = 1
+            and CopyPage > 0;
+           OptsNum = AddToAppOpts(FunText(12):DspOpts:DspWide
+                                 :FunText(24));
+           if not DspWide;
+             L_AddHelpText(FunText(12));
            endif;
          endif;
          // F13
          if     Screen = 1
             and CurUserPage > 0
             and ModeUpdate;
-           AddToAppOpts(FunText(13):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(13):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(13));
-           endif;
-         elseif    Screen = 3
-                or Screen = 4
-                or Screen = 5;
-           AddToAppOpts(FunText(36):DspOpts:DspWide);
-           if not DspWide;
-             L_AddHelpText(FunText(36));
            endif;
          endif;
          // F14
@@ -1131,35 +1218,49 @@
             and CurUserPage > 0
             and ModeUpdate and not SimDisplay
             and not MnuIsBlankPage(CurMenuPage);
-           AddToAppOpts(FunText(14):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(14):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(14));
            endif;
          elseif         Screen = 2
                 and (   MnuSlotHasOpt(SelectedPage:SelectedSlot)
                      or MnuSlotHasHdr(SelectedPage:SelectedSlot));
-           AddToAppOpts(FunText(32):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(32):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(32));
            endif;
          elseif    Screen = 3
                 or Screen = 4;
-           AddToAppOpts(FunText(33):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(33):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(33));
+           endif;
+         endif;
+         // F15
+         if     Screen = 1
+            and ModeUpdate and not SimDisplay;
+           OptsNum = AddToAppOpts(FunText(15):DspOpts:DspWide
+                                 :FunText(24));
+           if not DspWide;
+             L_AddHelpText(FunText(15));
            endif;
          endif;
          // F16
          if     Screen = 1
             and CurUserPage > 0
             and ModeUpdate and not SimDisplay;
-           AddToAppOpts(FunText(16):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(16):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(16));
            endif;
          elseif     Screen = 4
             and CurUserPage > 0;
-           AddToAppOpts(FunText(34):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(34):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(34));
            endif;
@@ -1168,17 +1269,29 @@
          if     Screen = 1
             and CurUserPage > 0
             and ModeUpdate and not SimDisplay;
-           AddToAppOpts(FunText(19):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(19):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(19));
            endif;
-           AddToAppOpts(FunText(20):DspOpts:DspWide);
+           OptsNum = AddToAppOpts(FunText(20):DspOpts:DspWide
+                                 :FunText(24));
            if not DspWide;
              L_AddHelpText(FunText(20));
            endif;
          endif;
          //D__FTTEXT  = DspOpts;
-         D__FTTEXTW = DspOpts;
+         if OptsNum > 1;
+           AddToAppOpts(FunText(24):DspOpts:DspWide);
+           if not DspWide;
+             L_AddHelpText(FunText(24));
+           endif;
+         endif;
+         if Opts# < 1;
+           Opts# = 1;
+         elseif Opts# > OptsNum;
+           Opts# = OptsNum;
+         endif;
 
          if not DspWide;
            L_AddHelpText('----------');
@@ -1187,9 +1300,14 @@
          dou not (   KeyPressed(KsF01)
                   or KeyPressed(KsF10)
                   or KeyPressed(KsF22)
+                  or     KeyPressed(KsF24)
+                     and OptsNum > 1
+                     and DspWide
                   or     (   KeyPressed(KsPageDown)
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
+
+           D__FTTEXTW = GetAppOptsPart(Opts#:DspOpts:DspWide);
 
            D__FTMSG1  = Msg;
            D__FTMSG1W = Msg;
@@ -1279,6 +1397,15 @@
              elseif MoreMsgs;
                ShowDspMsgs();
              endif;
+           elseif     KeyPressed(KsF24)
+                  and OptsNum > 1
+                  and DspWide;
+             SetCurs = *on;
+             if Opts# < OptsNum;
+               Opts# = Opts# + 1;
+             else;
+               Opts# = 1;
+             endif;
            elseif     (   KeyPressed(KsPageDown)
                        or KeyPressed(KsPageUp))
                   and GetCursRow() = DspMsgRow;
@@ -1339,12 +1466,14 @@
        // Set current page info.
        begsr SetPageInfo;
          if ModeUpdate and SimDisplay;
-           evalr D_PAGENO = 'Page' + x'22' + %char(CurUserPage) + x'20' +
-                            '(' + %char(CurMenuPage) + ') '             +
-                            'of ' + %char(MnuUserPage(MenuUser));
+           evalr D_PAGENO =
+               'Page' + CDacHighInt + %char(CurUserPage) + CDacNormal +
+               '(' + %char(CurMenuPage) + ') '             +
+               'of ' + %char(MnuUserPage(MenuUser));
          else;
-           evalr D_PAGENO = 'Page' + x'22' + %char(CurUserPage) + x'20' +
-                            'of ' + %char(MnuUserPage(MenuUser));
+           evalr D_PAGENO =
+               'Page' + CDacHighInt + %char(CurUserPage) + CDacNormal +
+               'of ' + %char(MnuUserPage(MenuUser));
          endif;
        endsr;
 
@@ -1493,13 +1622,17 @@
 
          if D_CHOICE = '';
 
-           // Perform option on cursor location.
+           // Perform/edit option on cursor location.
 
            if    SlotAtCursor < 1
               or SlotAtCursor > %elem(DspSlots)
               or DspSlots(SlotAtCursor) = 0
               or not MnuSlotHasOpt(CurMenuPage:DspSlots(SlotAtCursor));
-             L_SetErr(RtvAMsgAM(5017:CAmsFatal));
+             if not ModeUpdate or SimDisplay;
+               L_SetErr(RtvAMsgAM(5031:CAmsFatal));
+             else;
+               L_SetErr(RtvAMsgAM(5032:CAmsFatal));
+             endif;
              leavesr;
            endif;
 
@@ -1514,9 +1647,11 @@
            s = MnuGetSlotChoice(CurMenuPage:D_CHOICE:n);
            if s = 0;
              if n = 0;
-               L_SetErr(RtvAMsgAM(5018:CAmsFatal:D_CHOICE):'D_CHOICE');
+               L_SetErr(RtvAMsgAM(5018:CAmsFatal
+                            :%trim(D_CHOICE)):'D_CHOICE');
              else;
-               L_SetErr(RtvAMsgAM(5019:CAmsFatal:%char(n):D_CHOICE):'D_CHOICE');
+               L_SetErr(RtvAMsgAM(5019:CAmsFatal
+                            :%char(n):%trim(D_CHOICE)):'D_CHOICE');
              endif;
              leavesr;
            endif;
@@ -1817,17 +1952,25 @@
 
          clear *all DFWINDOW1;
 
-         if MenuPage@ = *null;
-           MenuOption@ = *null;
+         if     CopyPage > 0
+            and CopySlot > 0;
+           MenuPage@ = MenuPages(CopyPage);
+           if MenuPage@ = *null;
+             MenuOption@ = *null;
+           else;
+             MenuOption@ = MenuPage.slots(CopySlot);
+           endif;
+           CopyPage = 0;
+           CopySlot = 0;
          else;
-           MenuOption@ = MenuPage.slots(SlotAtCursor);
+           if MenuPage@ = *null;
+             MenuOption@ = *null;
+           else;
+             MenuOption@ = MenuPage.slots(SlotAtCursor);
+           endif;
          endif;
 
-         if MenuOption@ = *null;
-           // Empty slot; create new option or header.
-
-         else;
-           // Non-empty slot; update existing option or header.
+         if MenuOption@ <> *null;
            if MenuOption.command <> *null;
              n = %len(%trimr(%str(MenuOption.command)));
              if n > %len(D_COMMAND);
@@ -1851,7 +1994,7 @@
          clear *all DFWINDOW2;
          D_PROMPTXT = Text(23);
          D_CONFPO = 'N';
-         D_DFTEH  = 'N';
+         D_USECH  = 'N';
          if     MenuOption@ <> *null
             and MenuOption.choice <> '';
            D_TITLETXT = MenuOption.text;
@@ -1870,8 +2013,8 @@
            if %scan(CMsbConfPO:MenuOption.specb) > 0;
              D_CONFPO = 'Y';
            endif;
-           if %scan(CMsbDftEH:MenuOption.specb) > 0;
-             D_DFTEH = 'Y';
+           if %scan(CMsbUseCH:MenuOption.specb) > 0;
+             D_USECH = 'Y';
            endif;
          endif;
 
@@ -1977,6 +2120,65 @@
        endsr;
 
 
+       // Copy option, header or page.
+       begsr CopyOptHdrPage;
+
+         if CurUserPage <= 0;
+           L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           CopyPage = 0;
+           CopySlot = 0;
+           leavesr;
+         endif;
+
+         if     CopyPage > 0
+            and CopyPage = CurMenuPage
+            and (   CopySlot = 0
+                 or CopySlot = SlotAtCursor);
+           CopyPage = 0;
+           CopySlot = 0;
+           leavesr;
+         endif;
+
+         if CopyPage > 0;
+           if CopySlot > 0;
+             if SlotAtCursor = 0;
+               CopyPage = 0;
+               CopySlot = 0;
+             else;
+               exsr EditSlot;
+             endif;
+           else;
+           endif;
+         else;
+           if MnuIsBlankPage(CurMenuPage);
+             L_SetErr(RtvAMsgAM(3004:CAmsFatal:%char(CurMenuPage)));
+             leavesr;
+           endif;
+           CopyPage = CurMenuPage;
+           CopySlot = SlotAtCursor;
+           if CopySlot > 0;
+             if    MnuSlotHasOpt(CopyPage:CopySlot)
+                or MnuSlotHasHdr(CopyPage:CopySlot);
+               CopyText = %trim(MnuGetOptChoice(CopyPage:CopySlot));
+               CopyHdr = CopyText = '';
+               if CopyHdr;
+                 CopyText = %trim(MnuGetOptText(CopyPage:CopySlot));
+               else;
+                 CopyText = %trim(CopyText) + ' '
+                          + %trim(MnuGetOptText(CopyPage:CopySlot));
+               endif;
+             else;
+               L_SetErr(RtvAMsgAM(2121:CAmsFatal));
+               CopyPage = 0;
+               CopySlot = 0;
+               leavesr;
+             endif;
+           endif;
+         endif;
+
+       endsr;
+
+
        // Edit page attributes.
        begsr EditPageAttr;
 
@@ -1984,7 +2186,7 @@
          D_PROMPTXT = Text(24);
 
          D_CONFPO = 'N';
-         D_DFTEH  = 'N';
+         D_USECH  = 'N';
 
          MenuPage@ = MenuPages(CurMenuPage);
 
@@ -2013,8 +2215,8 @@
            if %scan(CMsbConfPO:MenuPage.specb) > 0;
              D_CONFPO = 'Y';
            endif;
-           if %scan(CMsbDftEH:MenuPage.specb) > 0;
-             D_DFTEH = 'Y';
+           if %scan(CMsbUseCH:MenuPage.specb) > 0;
+             D_USECH = 'Y';
            endif;
          endif;
 
@@ -2038,7 +2240,7 @@
          D_PROMPTXT = Text(25);
 
          D_CONFPO = 'N';
-         D_DFTEH  = 'N';
+         D_USECH  = 'N';
 
          if Menu.command <> *null;
            n = %len(%trimr(%str(Menu.command)));
@@ -2064,8 +2266,8 @@
          if %scan(CMsbConfPO:Menu.specb) > 0;
            D_CONFPO = 'Y';
          endif;
-         if %scan(CMsbDftEH:Menu.specb) > 0;
-           D_DFTEH = 'Y';
+         if %scan(CMsbUseCH:Menu.specb) > 0;
+           D_USECH = 'Y';
          endif;
 
          OrigUserPage = 0;
@@ -2073,7 +2275,7 @@
 
          // Set window title and go to screen 5: edit menu attr
          Screen = 5;
-         D__WDWTIT2 = SubstText(Text(17):x'21':x'20');
+         D__WDWTIT2 = SubstText(Text(17):CDacRevImg:CDacHighInt);
 
        endsr;
 
@@ -2105,9 +2307,9 @@
            L_SetErr(RtvAMsgAB(5101:CAmsFatal):'D_CONFPO');
            leavesr;
          endif;
-         if     D_DFTEH <> 'Y'
-            and D_DFTEH <> 'N';
-           L_SetErr(RtvAMsgAB(5101:CAmsFatal):'D_DFTEH');
+         if     D_USECH <> 'Y'
+            and D_USECH <> 'N';
+           L_SetErr(RtvAMsgAB(5101:CAmsFatal):'D_USECH');
            leavesr;
          endif;
 
@@ -2115,8 +2317,8 @@
          if D_CONFPO = 'Y';
            specb = %trim(specb) + CMsbConfPO;
          endif;
-         if D_DFTEH = 'Y';
-           specb = %trim(specb) + CMsbDftEH;
+         if D_USECH = 'Y';
+           specb = %trim(specb) + CMsbUseCH;
          endif;
 
          if Screen = 3;
@@ -2636,9 +2838,11 @@
                 and lh > 0
                 and not hopts;
            l = lh;
-           if     CurMenuPage = SelectedPage
-              and DspSlots(l) = SelectedSlot;
-             opt = x'21'+'   '+blankmot+x'20';
+           if     (   CurMenuPage = SelectedPage
+                   or CurMenuPage = CopyPage)
+              and (   DspSlots(l) = SelectedSlot
+                   or DspSlots(l) = CopySlot);
+             opt = CDacRevImg+'   '+blankmot+CDacNormal;
            else;
              opt = '';
            endif;
@@ -2699,9 +2903,11 @@
                 and lh > 0
                 and not hopts;
            l = lh;
-           if     CurMenuPage = SelectedPage
-              and DspSlots(l) = SelectedSlot;
-             opt = x'21'+'   '+blankmot+x'20';
+           if     (   CurMenuPage = SelectedPage
+                   or CurMenuPage = CopyPage)
+              and (   DspSlots(l) = SelectedSlot
+                   or DspSlots(l) = CopySlot);
+             opt = CDacRevImg+'   '+blankmot+CDacNormal;
            else;
              opt = '';
            endif;
@@ -2762,9 +2968,11 @@
                 and lh > 0
                 and not hopts;
            l = lh;
-           if     CurMenuPage = SelectedPage
-              and DspSlots(l) = SelectedSlot;
-             opt = x'21'+'   '+blankmot+x'20';
+           if     (   CurMenuPage = SelectedPage
+                   or CurMenuPage = CopyPage)
+              and (   DspSlots(l) = SelectedSlot
+                   or DspSlots(l) = CopySlot);
+             opt = CDacRevImg+'   '+blankmot+CDacNormal;
            else;
              opt = '';
            endif;
@@ -2817,18 +3025,20 @@
          so = *off;
          ld = 0;
          hdr = *off;
-         f =     CurMenuPage = SelectedPage
-             and s = SelectedSlot;
+         f =     (   CurMenuPage = SelectedPage
+                  or CurMenuPage = CopyPage)
+             and (   s = SelectedSlot
+                  or s = CopySlot);
          if dsp;
            if f;
-             opt = x'21'+'   '+blankmot+x'20';
+             opt = CDacRevImg+'   '+blankmot+CDacNormal;
            else;
              opt = '';
            endif;
          else;
            if f;
              %subst(blankmot:1:1) = '.';
-             opt = x'21'+'   '+blankmot+x'20';
+             opt = CDacRevImg+'   '+blankmot+CDacNormal;
              %subst(blankmot:1:1) = ' ';
            else;
              opt = '    .';
@@ -2844,9 +3054,9 @@
              so = *on;
              hdr = *on;
              if f;
-               opt = x'21'+'   '+MenuOption.text+x'20';
+               opt = CDacRevImg+'   '+MenuOption.text+CDacNormal;
              else;
-               opt = '   '+x'22'+MenuOption.text+x'20';
+               opt = '   '+CDacHighInt+MenuOption.text+CDacNormal;
              endif;
              if dsp;
                ld = 1;
@@ -2863,9 +3073,10 @@
              so = *on;
              hopts = *on;
              if f;
-               opt = x'21'+MenuOption.choice+' '+MenuOption.text+x'20';
+               opt = CDacRevImg+MenuOption.choice+' '+MenuOption.text+
+                     CDacNormal;
              else;
-               opt = x'22'+MenuOption.choice+x'20'+MenuOption.text;
+               opt = CDacHighInt+MenuOption.choice+CDacNormal+MenuOption.text;
              endif;
              if dsp;
                l = l + 1;
@@ -2945,7 +3156,7 @@ D_CHOICE    33
 D_COMMAND   45
 ???COMMAND  45
 D_CONFPO    46
-D_DFTEH     47
+D_USECH     47
 D_TITLETXT  50
 ??OTEXT     50
 ???TITLE    50
@@ -2998,22 +3209,25 @@ Save Menu (NOT UPDATED)
 Option text . . . . .:
 Page title  . . . . .:
 Menu title  . . . . .:
+COPY PAGE %1
+COPY OPTION %1, PAGE %2
+COPY HEADER %1, PAGE %2
 ** FunText
 F1=Help
 F2=Save Menu
 F3=
 F4=Select/Prompt
 F5=Reload menu
-F6=Insert group
+F6=Copy opt/hdr/page
 F7=OptUp/PgLeft
 F8=OptDown/PgRight
 F9=
 F10=
 F11=Start simulate
-F12=
+F12=Cancel copy
 F13=Reload auth.
 F14=Clear page
-F15=
+F15=Work w/ groups
 F16=Edit page/menu
 F17=
 F18=
@@ -3022,7 +3236,7 @@ F20=Next nb page
 F21=
 F22=
 F23=
-F24=
+F24=More keys
 25:RESERVED
 26:RESERVED
 27:RESERVED
@@ -3033,4 +3247,4 @@ F11=Stop simulate
 F14=Delete opt/hdr
 F14=Delete group
 F16=Edit MENU attr
-F13=Work w/ groups
+F6=Ins blank group

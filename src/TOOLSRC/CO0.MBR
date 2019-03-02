@@ -116,11 +116,11 @@ NOIDBGSRC:
              IF         COND(&SRCTYPE *EQ CLP *OR &SRCTYPE *EQ CLLE) +
                           THEN(DO)
              IF         COND(&TGTOBJTYPE *NE *DEFAULT *AND +
-                          &TGTOBJTYPE *NE *MODULE *AND &TGTOBJTYPE +
-                          *NE *PGM) THEN(SNDPGMMSG MSGID(CPF9897) +
-                          MSGF(QCPFMSG) MSGDTA('Target object type +
-                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
-                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          &TGTOBJTYPE *NE *MODULE) THEN(SNDPGMMSG +
+                          MSGID(CPF9897) MSGF(QCPFMSG) +
+                          MSGDTA('Target object type ' *CAT +
+                          &TGTOBJTYPE *TCAT ' not valid for source +
+                          type ' *CAT &SRCTYPE *TCAT '.') +
                           MSGTYPE(*ESCAPE))
              IF         COND(&TGTOBJTYPE *EQ *MODULE) THEN(CALL +
                           PGM(COCLMOD) PARM(&SLIB &SRCFILE &SRCMBR +
@@ -136,11 +136,11 @@ NOIDBGSRC:
              IF         COND(&SRCTYPE *EQ RPG *OR &SRCTYPE *EQ +
                           RPGLE) THEN(DO)
              IF         COND(&TGTOBJTYPE *NE *DEFAULT *AND +
-                          &TGTOBJTYPE *NE *MODULE *AND &TGTOBJTYPE +
-                          *NE *PGM) THEN(SNDPGMMSG MSGID(CPF9897) +
-                          MSGF(QCPFMSG) MSGDTA('Target object type +
-                          ' *CAT &TGTOBJTYPE *TCAT ' not valid for +
-                          source type ' *CAT &SRCTYPE *TCAT '.') +
+                          &TGTOBJTYPE *NE *MODULE) THEN(SNDPGMMSG +
+                          MSGID(CPF9897) MSGF(QCPFMSG) +
+                          MSGDTA('Target object type ' *CAT +
+                          &TGTOBJTYPE *TCAT ' not valid for source +
+                          type ' *CAT &SRCTYPE *TCAT '.') +
                           MSGTYPE(*ESCAPE))
              IF         COND(&TGTOBJTYPE *EQ *MODULE) THEN(CALL +
                           PGM(CORPGMOD) PARM(&SLIB &SRCFILE &SRCMBR +

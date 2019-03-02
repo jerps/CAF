@@ -167,7 +167,7 @@
        // Data structure "Menu" contains attributes which apply to the menu
        // as a whole.
      d Menu            ds                  qualified inz
-     d   title                             like(TAM_MOTEXT)
+     d   title                             like(TAM_MTEXT)
      d   groups                      16    dim(CNumGroups)
      d   specb                             like(TAM_SPECB)
      d   command                       *
@@ -204,7 +204,7 @@
        // not *null points to an instance of "MenuOption", representing one
        // menu option or header.
      d MenuPage        ds                  qualified based(MenuPage@)
-     d   title                             like(TAM_MOTEXT)
+     d   title                             like(TAM_MTEXT)
      d   slots                         *   dim(CNumSlots)
      d   groups                      16    dim(CNumGroups)
      d   specb                             like(TAM_SPECB)
@@ -217,7 +217,7 @@
        // be unique among all other options within the same page.
      d MenuOption      ds                  qualified based(MenuOption@)
      d   choice                            like(TAM_MCHC)
-     d   text                              like(TAM_MOTEXT)
+     d   text                              like(TAM_MTEXT)
      d   groups                      16    dim(CNumGroups)
      d   specb                             like(TAM_SPECB)
      d   command                       *
@@ -275,19 +275,25 @@
        // is called with option "*CURRENT" so that the most current authorisa-
        // tion data in the database is used.
        // The option is performed by executing up to three commands. First the
-       // the command specified for the menu, if any, is executed. The the
-       // command specified for the page, if any, is exected. Then the command
-       // specified for the option is executed.
+       // the command specified for the menu, if any, is executed. Then the
+       // command specified for the page, if any, is executed. And finally is
+       // the command specified for the option executed, if any.
        // Special behavior "CMsbConfPO" (confirm perform option) is ignored.
        // It is the responsibility of the client program to present the user
        // with a confirmation screen (or not).
        // Return *off with fatal message AMF1990 if the option is not allowed.
-       // Return *off with fatal message AMF1999 if an exception occurs
-       // while the commands specified for the menu, the page and the option
-       // are executed, unless special behavior code "CMsbDftEH" (use default
-       // error handler) is specified for the option, the page or the menu.
-       // Return *on if successful, else return *off and set "errmsg" to an
-       // appropriate error message.
+       // Return *off with fatal message AMF1999 if an error occurs while
+       // the commands specified for the menu, the page and the option are
+       // executed. If special behavior code "CMsbUseCH" (use command handler)
+       // is specified for the option, the page or the menu then the commands
+       // are executed by calling program CAPPSSAMCH. If it reports an error
+       // then return *off with fatal message AMF1998.
+       // If an error occurs when executing a command the the rest of the
+       // commands are not executed. Thus if the command for the menu returns
+       // an error then the commands specified for the page and the option
+       // are not executed.
+       // Return *on if successful, else return *off and set "errmsg" to the
+       // error message.
      d MnuPerformOpt   pr              n   extproc('MnuPerformOpt')
      d   errmsg                     200
      d   pag                         10i 0 const
@@ -431,7 +437,7 @@
        // Return *on if the page at index "pag" in array "MenuPages"
        // is blank or the element is *null, or if the menu is not
        // loaded, else return *off.
-       // A blank page has no (blank) attributes.
+       // A blank page has no attributes.
      d MnuIsBlankPage  pr              n   extproc('MnuIsBlankPage')
      d   pag                         10i 0 const
 
@@ -479,6 +485,16 @@
        // does not contain an option or header.
      d MnuGetOptText   pr                  like(MenuOption.text)
      d                                     extproc('MnuGetOptText')
+     d   pag                         10i 0 const
+     d   slot                        10i 0 const
+
+       // MnuGetOptChoice - Get Option Choice
+       // Return the choice of the option on page "pag" and "slot".
+       // Return blanks if the page or slot does not exist, or if the slot
+       // does not contain an option.
+     d MnuGetOptChoice...
+     d                 pr                  like(MenuOption.choice)
+     d                                     extproc('MnuGetOptChoice')
      d   pag                         10i 0 const
      d   slot                        10i 0 const
 

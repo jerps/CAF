@@ -52,6 +52,7 @@
              EXPORT     SYMBOL('MnuMovePagesRight')
              EXPORT     SYMBOL('MnuMovePagesLeft')
              EXPORT     SYMBOL('MnuGetOptText')
+             EXPORT     SYMBOL('MnuGetOptChoice')
              EXPORT     SYMBOL('MnuSetOptAttr')
              EXPORT     SYMBOL('MnuSetOptHdr')
              EXPORT     SYMBOL('MnuDeleteOpt')

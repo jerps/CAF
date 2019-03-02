@@ -40,6 +40,10 @@
              CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMP1) +
                           TGTLIB(&TLIB)
 
+             /* PGM CAPPSSAMCH */
+             CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPSSAMCH) +
+                          TGTLIB(&TLIB)
+
              /*----- BUILD END -----*/
 
 

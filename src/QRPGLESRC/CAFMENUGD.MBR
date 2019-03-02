@@ -1175,7 +1175,6 @@
              endif;
              if     D_GMEMBER <> ''
                 and D_GMEMBER <> *hival;
-               NumSfMembers = NumSfMembers + 1;
                if     %subst(D_GMEMBER:1:1) = '-'
                   and %subst(D_GMEMBER:2) = '';
                  L_SetErr(RtvAMsgAM(6013:CAmsFatal):
@@ -1196,7 +1195,8 @@
                      L_SetErr(RtvAMsgAM(6012:CAmsFatal:%trimr(gmember)):
                          '??MBRN');
                    endif;
-                 elseif NumSfMembers <= CNumGrpMembers;
+                 elseif NumSfMembers < CNumGrpMembers;
+                   NumSfMembers = NumSfMembers + 1;
                    gmembers(NumSfMembers) = gmember;
                  else;
                    L_SetErr(RtvAMsgAM(6001:CAmsFatal:%char(CNumGrpMembers)):
@@ -1209,18 +1209,12 @@
              leavesr;
            endif;
            sorta gmembers;
-           for i = 1 to %elem(gmembers);
-             if gmembers(i) = *hival;
-               gmembers(i) = '';
-             endif;
-           endfor;
            // Replace the subfile contents with the sorted members.
            for SflRec = 1 to SFLR1#T;
              chain SflRec DFSCREEN1S;
-             if SflRec > %elem(gmembers);
-               D_GMEMBER = '';
-               D_GMTEXT  = '';
-             else;
+             D_GMEMBER = '';
+             D_GMTEXT  = '';
+             if SflRec <= NumSfMembers;
                gmember = gmembers(SflRec);
                if %subst(gmember:1:1) = x'00';
                  D_GMEMBER = '-' + %subst(gmember:2);
@@ -1293,12 +1287,12 @@
          other;
            ctype = '*ADD';
          endsl;
-         if ctype = '*ADD';
+         if ctype = '*DELETE';
            dbcrc = DC_AM_Group(ctype:DC_AM_Group$);
          else;
            gmembers_t(*) = 0;
            gmembers_n(*) = '';
-           for i = 1 to %elem(gmembers);
+           for i = 1 to NumSfMembers;
              gmember = gmembers(i);
              if gmember <> '';
                if %subst(gmember:1:1) = x'00';

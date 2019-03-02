@@ -34,17 +34,19 @@
        // Group inverse character
      dCCharGrpInv      c                   '!'
 
+       // Special behavior codes.
+       // Each constant starting with "CMsb" specifies a special behavior
+       // that can be specified for a menu, a page and/or an option.
+       // - Confirm perform option.
+     dCMsbConfPO       c                   'C'
+       // - Use command handler program CAPPSSAMCH.
+     dCMsbUseCH        c                   'H'
+
        // All special behavior codes that are supported for
        // an option, a page or the menu.
-     dCMsbOption       c                   'CE'
-     dCMsbPage         c                   'CE'
-     dCMsbMenu         c                   'CE'
-
-       // Special behavior codes.
-       // - Confirm perform option (option/page)
-     dCMsbConfPO       c                   'C'
-       // - Use default error handler (option/page)
-     dCMsbDftEH        c                   'E'
+     dCMssbOption      c                   'CH'
+     dCMssbPage        c                   'CH'
+     dCMssbMenu        c                   'CH'
 
        // Number of pages that can be defined for the menu.
      dCNumPages        c                   999

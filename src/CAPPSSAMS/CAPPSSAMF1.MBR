@@ -60,11 +60,10 @@
       *                  C - Confirm perform option.
       *                      If specified, the user must first confirm before
       *                      a chosen option is actually performed.
-      *                  E - Use default error handler.
-      *                      If specified, the default error handler is used
-      *                      when an exception is generated while performing
-      *                      a menu option.
-      *                Special behaviors C and E can be specified for the menu
+      *                  H - Use command handler.
+      *                      If specified, command handler program CAPPSSAMCH
+      *                      is executed to execute the command.
+      *                Special behaviors C and H can be specified for the menu
       *                (MENUSPAGE=0), a page (MENUSPAGE>0 and MENUSLOT=0), or
       *                an option, but not for a header. If specified for a page,
       *                it has the same effect as if it was specified for all
@@ -97,7 +96,7 @@
      A            MENUSPAGE R               REFFLD(TAM_MPAGE)
      A            MENUSLOT  R               REFFLD(TAM_MSLOT)
      A            MENUSCHC  R               REFFLD(TAM_MCHC)
-     A            MENUSTEXT R               REFFLD(TAM_MOTEXT)
+     A            MENUSTEXT R               REFFLD(TAM_MTEXT)
      A            MENUSSPECBR               REFFLD(TAM_SPECB)
      A            MENUSCMD  R               REFFLD(TAM_CMD)
      A          K MENUSBIN
