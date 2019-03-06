@@ -163,6 +163,7 @@
        // Command Handler Program
      dPgmCAPPSSAMCH    pr                  extpgm('CAPPSSAMCH')
      d   cmd                        500    const
+     d   user                        10    const
      d   menuctx                      6    const
      d   text                        34    const
      d   errmsg                     150
@@ -212,15 +213,15 @@
        // If parameter "option" is given with value "*CURRENT" then
        // procedure "IsGrpMember" is always used.
      dL_IsUsrGrpMbr    pr              n
-     d   user                        10    value
-     d   group                       16    value
-     d   option                      10    value options(*nopass)
+     d  user                         10    value
+     d  group                        16    value
+     d  option                       10    value options(*nopass)
 
        // Return *on of the instance of "MenuPage" pointed to by "pg@"
        // represents a "blank" page, else return *off.
        // Retain the value of "MenuPage@".
      dL_IsBlankPage    pr              n
-     d   pg@                           *   value
+     d  pg@                            *   value
 
        // Validate and normalize "mn", an instance of data structure "Menu".
        // Return *on if ok, else return *off and set "errmsg" and
@@ -228,9 +229,9 @@
        // Normalize the menu's attributes (e.g. the title is always
        // left aligned).
      dL_ValNormMenu    pr              n
-     d   errmsg                     200
-     d   errattr                     10
-     d   mn                                likeds(Menu)
+     d  errmsg                      200
+     d  errattr                      10
+     d  mn                                 likeds(Menu)
 
        // Validate and normalize the instance of ds "MenuPage" pointed
        // to by "MenuPage@", before it's assigned to array "MenuPages".
@@ -241,8 +242,8 @@
        // Do not validate the individual slots.
        // Do not change "MenuPage@".
      dL_ValNormPage    pr              n
-     d   errmsg                     200
-     d   errattr                     10
+     d  errmsg                      200
+     d  errattr                      10
 
        // Validate and normalize the instance of ds "MenuOption" pointed
        // to by "MenuOption@", before it's assigned to "slot" on the
@@ -253,9 +254,9 @@
        // right aligned).
        // Do not change "MenuOption@".
      dL_ValNormOption  pr              n
-     d   errmsg                     200
-     d   errattr                     10
-     d   slot                        10i 0 const
+     d  errmsg                      200
+     d  errattr                      10
+     d  slot                         10i 0 const
 
        // Update array "UserPages" for "user".
        // Initialize "UserPages" ("NumUserPages" := 0) if "user" is blank.
@@ -264,31 +265,31 @@
        // Parameter "user" can have special value "*" which indicates that
        // all options are included in the "user pages" (if "MenuUser" is blank).
      dL_UpdUserPages   pr
-     d   user                        10    value
+     d  user                         10    value
 
        // Retrieve the group profiles for "user" into "ChkGrpUsrPrf".
      dL_ChkGrpUsrPrf   pr
-     d   user                        10    value
+     d  user                         10    value
 
        // Return *on if arrays "grps1" and "grps2" are the same, else
        // return *off.
      dL_EqualGrps      pr              n
-     d   grps1                             value like(MenuOption.groups)
+     d  grps1                              value like(MenuOption.groups)
      d                                           dim(CNumGroups)
-     d   grps2                             value like(MenuOption.groups)
+     d  grps2                              value like(MenuOption.groups)
      d                                           dim(CNumGroups)
 
        // Return *on if the command strings pointed to by "cmd1" and "cmd2"
        // are equal or if "cmd1" and "cmd2" are both *null, else return *off.
      dL_EqualCmd       pr              n
-     d   cmd1                          *   value
-     d   cmd2                          *   value
+     d  cmd1                           *   value
+     d  cmd2                           *   value
 
        // Normalize the version counter data given with parameter "data"
        // that was read from data CAPPSSAMD0. Initialize it to "00000000"
        // if the given data contains any other character than digits.
      dL_SdaNormVC      pr
-     d   data                         8
+     d  data                          8
 
 
        // ----- Implementation
@@ -318,9 +319,7 @@
          MenuUser = user;
        endif;
 
-       if MenuUser = '';
-         MnuLoadAuth();
-       endif;
+       L_ClearMenu();
 
        if not %open(CAPPSSAMF1);
          open CAPPSSAMF1;
@@ -497,6 +496,10 @@
 
        MenuVersion = vc;
 
+       if MenuUser = '';
+         MnuLoadAuth();
+       endif;
+
        L_UpdUserPages(MenuUser);
 
        return;
@@ -628,17 +631,17 @@
          return *off;
        endif;
 
-       if     MenuUser <> ''
-          and (   %scan(CMsbUseCH:Menu.specb) > 0
-               or %scan(CMsbUseCH:MenuPage.specb) > 0
-               or %scan(CMsbUseCH:MenuOption.specb) > 0);
+        if    %scan(CMsbUseCH:Menu.specb) > 0
+           or %scan(CMsbUseCH:MenuPage.specb) > 0
+           or %scan(CMsbUseCH:MenuOption.specb) > 0;
 
          // Perform option; use command handler.
 
          if     Menu.command <> *null
             and %str(Menu.command) <> '';
            em2 = '';
-           PgmCAPPSSAMCH(%str(Menu.command):'M     ':Menu.title:em2);
+           PgmCAPPSSAMCH(%str(Menu.command):MenuUser
+                        :'M     ':Menu.title:em2);
            if em2 <> '';
              errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
              return *off;
@@ -651,7 +654,8 @@
            mc = 'P';
            mcp = pag;
            %subst(mc:2:3) = %editc(mcp:'X');
-           PgmCAPPSSAMCH(%str(MenuPage.command):mc:MenuPage.title:em2);
+           PgmCAPPSSAMCH(%str(MenuPage.command):MenuUser
+                        :mc:MenuPage.title:em2);
            if em2 <> '';
              errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
              return *off;
@@ -665,7 +669,8 @@
            mcp = pag;
            %subst(mc:2:3) = %editc(mcp:'X');
            %subst(mc:5:2) = MenuOption.choice;
-           PgmCAPPSSAMCH(%str(MenuOption.command):mc:MenuOption.text:em2);
+           PgmCAPPSSAMCH(%str(MenuOption.command):MenuUser
+                        :mc:MenuOption.text:em2);
            if em2 <> '';
              errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
              return *off;
@@ -719,8 +724,8 @@
 
       /free
 
-       if     MnuIsLoaded()
-          or  MenuUser <> '';
+       if    not MnuIsLoaded()
+          or MenuUser <> '';
          return;
        endif;
 
@@ -2398,12 +2403,125 @@
      p                 e
 
 
+     p MnuCopyPgSlots  b                   export
+     d MnuCopyPgSlots  pi
+     d   pags                        10i 0 const
+     d   pagt                        10i 0 const
+
+     d mp              ds                  likeds(MenuPage) based(mp@)
+     d mo              ds                  likeds(MenuOption) based(mo@)
+     d s               s             10i 0
+     d f               s               n
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pags < 1
+          or pags > CNumPages
+          or pagt < 1
+          or pagt > CNumPages;
+         return;
+       endif;
+
+       MenuPage@ = MenuPages(pagt);
+       if MenuPage@ <> *null;
+         for s = 1 to CNumSlots;
+           MenuOption@ = MenuPage.slots(s);
+           if MenuOption@ <> *null;
+             MenuUpdated = *on;
+             L_RlsMenuOpt();
+             MenuPage.slots(s) = *null;
+           endif;
+         endfor;
+       endif;
+
+       f = *off;
+       MenuPage@ = MenuPages(pags);
+       if MenuPage@ <> *null;
+         for s = 1 to CNumSlots;
+           MenuOption@ = MenuPage.slots(s);
+           if MenuOption@ <> *null;
+             if not f;
+               f = *on;
+               mp@ = MenuPages(pagt);
+               if mp@ = *null;
+                 mp@ = %alloc(%size(mp));
+                 clear mp;
+                 MenuPages(pagt) = mp@;
+               endif;
+             endif;
+             mo@ = %alloc(%size(mo));
+             mo = L_CopyOption();
+             mp.slots(s) = mo@;
+           endif;
+         endfor;
+       endif;
+
+       if f;
+         MenuUpdated = *on;
+       endif;
+
+       return;
+
+      /end-free
+     p                 e
+
+
+     p MnuSwapSlotSeq  b                   export
+     d MnuSwapSlotSeq  pi
+     d   pag                         10i 0 const
+     d   slot1                       10i 0 const
+     d   slot2                       10i 0 const
+     d   num                         10i 0 const
+
+     d p1              ds                  likeds(MenuPage) based(p1@)
+     d p2              ds                  likeds(MenuPage) based(p2@)
+     d s               s               *
+     d n               s             10i 0
+     d s1              s             10i 0
+     d s2              s             10i 0
+
+      /free
+
+       if    not MnuIsLoaded()
+          or pag < 1
+          or pag > CNumPages
+          or slot1 < 1
+          or slot1 > CNumSlots
+          or slot2 < 1
+          or slot2 > CNumSlots
+          or slot1 + num > CNumSlots + 1
+          or slot2 + num > CNumSlots + 1;
+         return;
+       endif;
+
+       MenuPage@ = MenuPages(pag);
+       s1 = slot1;
+       s2 = slot2;
+       for n = 1 to num;
+         if    MenuPage.slots(s1) <> *null
+            or MenuPage.slots(s2) <> *null;
+           MenuUpdated = *on;
+         endif;
+         s = MenuPage.slots(s1);
+         MenuPage.slots(s1) = MenuPage.slots(s2);
+         MenuPage.slots(s2) = s;
+         s1 = s1 + 1;
+         s2 = s2 + 1;
+       endfor;
+
+       return;
+
+      /end-free
+     p                 e
+
+
        // ----- Implementation - Internal
 
 
      pI_SdaReadLock    b                         export
      dI_SdaReadLock    pi             8s 0
-     d   curbin                       1s 0       options(*nopass)
+     d  curbin                        1s 0       options(*nopass)
 
       /free
 
@@ -2431,8 +2549,8 @@
 
      pI_SdaWrite       b                   export
      dI_SdaWrite       pi
-     d   vcounter                     8s 0 const options(*nopass)
-     d   vreload                      8s 0 const options(*nopass)
+     d  vcounter                      8s 0 const options(*nopass)
+     d  vreload                       8s 0 const options(*nopass)
 
       /free
 
@@ -2524,7 +2642,7 @@
 
      pL_ClearMenuDs    b
      dL_ClearMenuDs    pi
-     d   mds                               likeds(Menu)
+     d  mds                                likeds(Menu)
 
       /free
 
@@ -2671,9 +2789,9 @@
 
      pL_IsUsrGrpMbr    b
      dL_IsUsrGrpMbr    pi              n
-     d   user                        10    value
-     d   group                       16    value
-     d   option                      10    value options(*nopass)
+     d  user                         10    value
+     d  group                        16    value
+     d  option                       10    value options(*nopass)
 
      d grp             s             15
      d u               s             10
@@ -2738,7 +2856,7 @@
 
      pL_IsBlankPage    b
      dL_IsBlankPage    pi              n
-     d   pg@                           *   value
+     d  pg@                            *   value
 
      d p@              s               *
      d i               s             10i 0
@@ -2748,6 +2866,15 @@
        p@ = MenuPage@;
 
        MenuPage@ = pg@;
+
+       // Check attributes.
+       if    MenuPage.title <> ''
+          or MenuPage.specb <> ''
+          or     MenuPage.command <> *null
+             and %str(MenuPage.command) = '';
+         MenuPage@ = p@;
+         return *off;
+       endif;
 
        // Check slots.
        for i = 1 to %elem(MenuPage.slots);
@@ -2765,15 +2892,6 @@
          endif;
        endfor;
 
-       // Check other attributes.
-       if    MenuPage.title <> ''
-          or MenuPage.specb <> ''
-          or     MenuPage.command <> *null
-             and %str(MenuPage.command) = '';
-         MenuPage@ = p@;
-         return *off;
-       endif;
-
        MenuPage@ = p@;
 
        return *on;
@@ -2784,9 +2902,9 @@
 
      pL_ValNormMenu    b
      dL_ValNormMenu    pi              n
-     d   errmsg                     200
-     d   errattr                     10
-     d   mn                                likeds(Menu)
+     d  errmsg                      200
+     d  errattr                      10
+     d  mn                                 likeds(Menu)
 
 
      d cmd             s                   like(TAM_CMD)
@@ -2915,8 +3033,8 @@
 
      pL_ValNormPage    b
      dL_ValNormPage    pi              n
-     d   errmsg                     200
-     d   errattr                     10
+     d  errmsg                      200
+     d  errattr                      10
 
      d cmd             s                   like(TAM_CMD)
      d grp             s                   like(MenuOption.groups)
@@ -3044,9 +3162,9 @@
 
      pL_ValNormOption  b
      dL_ValNormOption  pi              n
-     d   errmsg                     200
-     d   errattr                     10
-     d   slot                        10i 0 const
+     d  errmsg                      200
+     d  errattr                      10
+     d  slot                         10i 0 const
 
      d cmd             s                   like(TAM_CMD)
      d grp             s                   like(MenuOption.groups)
@@ -3251,7 +3369,7 @@
 
      pL_UpdUserPages   b
      dL_UpdUserPages   pi
-     d   user                        10    value
+     d  user                         10    value
 
      d mnmbr           s               n
      d pgmbr           s               n
@@ -3302,7 +3420,7 @@
 
      pL_ChkGrpUsrPrf   b
      dL_ChkGrpUsrPrf   pi
-     d   user                        10    value
+     d  user                         10    value
 
       /free
 
@@ -3315,9 +3433,9 @@
 
      pL_EqualGrps      b
      dL_EqualGrps      pi              n
-     d   grps1                             value like(MenuOption.groups)
+     d  grps1                              value like(MenuOption.groups)
      d                                           dim(CNumGroups)
-     d   grps2                             value like(MenuOption.groups)
+     d  grps2                              value like(MenuOption.groups)
      d                                           dim(CNumGroups)
 
      d g               s             10i 0
@@ -3338,8 +3456,8 @@
 
      pL_EqualCmd       b
      dL_EqualCmd       pi              n
-     d   cmd1                          *   value
-     d   cmd2                          *   value
+     d  cmd1                           *   value
+     d  cmd2                           *   value
 
      d g               s             10i 0
 
@@ -3362,7 +3480,7 @@
 
      pL_SdaNormVC      b
      dL_SdaNormVC      pi
-     d   data                         8
+     d  data                          8
 
       /free
 

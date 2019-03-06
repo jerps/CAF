@@ -2,7 +2,9 @@
       *  (c) 2019 John Erps
 
 
-      *  Common App - Menu
+      *  CAF - Menu
+
+      *  Display File
 
 
       *  Indicator usage:
@@ -15,12 +17,15 @@
 
       *   10 - DSPMOD(*WIDE)
       *   27 - Set cursor location (CSRLOC)
-      *   30 - Global error indicator
+      *   30 - Global error indicator (31-69 error ind)
       *   75 - *UPDATE mode
       *   76 - *UPDATE mode and "SimDisplay" is *on
-      *   91 - Set cursor on "page no"
-      *   92 - Set cursor on "simulated user"
-      *   93 - Set cursor on "choice"
+      *   80 - Control page title line
+      *   91 - Position cursor on "page title"
+      *   92 - Position cursor on "page no"
+      *   93 - Position cursor on "simulated user"
+      *   94 - Position cursor on "choice"
+      *   95 - Position cursor on "groups", edit option
 
 
      A                                      DSPSIZ(27 132 *WIDE 24 80 *NORMAL)
@@ -70,7 +75,7 @@
      A            D__CURSROW     3  0H
      A            D__CURSCOL     3  0H
      A
-     A  81        D_COPYTXT     55      3  2
+     A  81        D_ACTTXT      56      3  2
      A                                      DSPATR(RI)
      A  76                              3  2'SIMULATE'
      A                                      DSPATR(RI)
@@ -94,8 +99,8 @@
      A  75 32
      AO 75    91                            DSPATR(PC)
      A N75                                  DSPATR(PR)
-     A            D_NEWPAGE      5   I  4127CHECK(ER)
-     A  *NORMAL                         4 75
+     A            D_NEWPAGE      4   I  4129
+     A  *NORMAL                         4 77
      A        92                            DSPATR(PC)
 
       * Left strip
@@ -172,7 +177,7 @@
      A  27                                  CSRLOC(D__CURSROW D__CURSCOL)
      A            D__WDWROW1     2S 0P
      A            D__WDWCOL1     3S 0P
-     A            D__WDWTIT1    60   P
+     A            D__WDWTIT1    51   P
      A            D__CURSREC    10   H
      A            D__CURSFLD    10   H
      A            D__CURSPOS     4S 0H
@@ -219,7 +224,9 @@
      A                                  6  1'  *ALL,*NONE,*ADMIN   '
      A            D_GROUP1      16   B  4 24
      A    N51                               DSPATR(UL)
-     A     51                               DSPATR(RI PC)
+     A     51                               DSPATR(RI)
+     A     51
+     AO 95                                  DSPATR(PC)
      A            D_GROUP2      16   B  4 41
      A    N52                               DSPATR(UL)
      A     52                               DSPATR(RI PC)

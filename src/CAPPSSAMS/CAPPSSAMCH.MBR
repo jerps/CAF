@@ -12,7 +12,12 @@
                1. Command (500A, input)                                      +
                   The command to be executed.                                +
                                                                              +
-               2. Menu context (6A, input)                                   +
+               2. User (10A, input)                                          +
+                  The user for which the command is executed. If blank       +
+                  then the menu is loaded with all options for all users     +
+                  (i.e. update mode).                                        +
+                                                                             +
+               3. Menu context (6A, input)                                   +
                   Indicates where in the menu the command is specified.      +
                   If the value is 'M     ' then the command is specified     +
                   for the menu. If the value is 'Pnnn  ', where nnn is       +
@@ -21,20 +26,21 @@
                   where aa is 2 characters, then the command is specified    +
                   for option aa, in page nnn.                                +
                                                                              +
-               3. Text (34A, input)                                          +
+               4. Text (34A, input)                                          +
                   If parameter 2 is 'M     ' then this parameter contains    +
                   the menu title. If parameter 2 starts with 'P' then        +
                   it contains the page title. Else it contains the           +
                   option text.                                               +
                                                                              +
-               4. Error message (150A, output)                               +
+               5. Error message (150A, output)                               +
                   If this output parameter is not blank then an error        +
                   occurred during execution of the command handler and       +
                   this parameter contains the error message.                 +
                                                                              +
  */
-             PGM        PARM(&CMD &MENUCTX &TEXT &ERRMSG)
+             PGM        PARM(&CMD &USER &MENUCTX &TEXT &ERRMSG)
              DCL        VAR(&CMD) TYPE(*CHAR) LEN(500)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
              DCL        VAR(&MENUCTX) TYPE(*CHAR) LEN(6)
              DCL        VAR(&TEXT) TYPE(*CHAR) LEN(34)
              DCL        VAR(&ERRMSG) TYPE(*CHAR) LEN(100)

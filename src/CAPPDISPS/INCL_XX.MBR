@@ -58,6 +58,8 @@
        // the user can enter "Y" or "N" ("N" is the default), and then
        // must press enter to continue. Return *on if the user entered "Y",
        // else return *off.
+       // If "dftyes" is given and is *on then the default is "Y".
      d PresentConfWdw  pr              n   extproc('PresentConfWdw')
      d   text                        40    const
+     d   dftyes                        n   const options(*nopass)
 

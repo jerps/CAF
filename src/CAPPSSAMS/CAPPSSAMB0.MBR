@@ -15,24 +15,11 @@
              DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
              DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
 
-             DCL        VAR(&ERRORSW_) TYPE(*LGL)
-             DCL        VAR(&MSGID_) TYPE(*CHAR) LEN(7)
-             DCL        VAR(&MSG_) TYPE(*CHAR) LEN(512)
-             DCL        VAR(&MSGDTA_) TYPE(*CHAR) LEN(512)
-             DCL        VAR(&MSGF_) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&MSGFLIB_) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&KEYVAR_) TYPE(*CHAR) LEN(4)
-             DCL        VAR(&KEYVAR2_) TYPE(*CHAR) LEN(4)
-             DCL        VAR(&RTNTYPE_) TYPE(*CHAR) LEN(2)
-
-             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(STDERR1))
-
              CHGVAR     VAR(&TLIB) VALUE(&TGTLIB)
              CHGVAR     VAR(&SLIB) VALUE(&SRCLIB)
              MONMSG     MSGID(MCH3601)
              IF         COND(&SLIB *EQ ' ') THEN(CHGVAR VAR(&SLIB) +
                           VALUE(&TLIB))
-
 
              /*----- BUILD BEGIN -----*/
 
@@ -57,36 +44,6 @@
              CALL       PGM(CAPPSSAMB9) PARM(&TLIB &SLIB)
 
              /*----- BUILD END -----*/
-
-
-             RETURN
-
- STDERR1:
-             IF         COND(&ERRORSW_) THEN(SNDPGMMSG +
-                          MSGID(CPF9871) MSGF(QCPFMSG) +
-                          MSGTYPE(*ESCAPE))
-             CHGVAR     VAR(&ERRORSW_) VALUE('1')
-             RCVMSG     MSGTYPE(*EXCP) RMV(*NO) KEYVAR(&KEYVAR_)
-
- STDERR2:    RCVMSG     MSGTYPE(*PRV) MSGKEY(&KEYVAR_) RMV(*NO) +
-                          KEYVAR(&KEYVAR2_) MSG(&MSG_) +
-                          MSGDTA(&MSGDTA_) MSGID(&MSGID_) +
-                          RTNTYPE(&RTNTYPE_) MSGF(&MSGF_) +
-                          SNDMSGFLIB(&MSGFLIB_)
-             IF         COND(&RTNTYPE_ *NE '02') THEN(GOTO +
-                          CMDLBL(STDERR3))
-             IF         COND(&MSGID_ *NE ' ') THEN(SNDPGMMSG +
-                          MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
-                          MSGDTA(&MSGDTA_) MSGTYPE(*DIAG))
-             IF         COND(&MSGID_ *EQ ' ') THEN(SNDPGMMSG +
-                          MSG(&MSG_) MSGTYPE(*DIAG))
-             RMVMSG     MSGKEY(&KEYVAR2_)
-
- STDERR3:    RCVMSG     MSGKEY(&KEYVAR_) MSGDTA(&MSGDTA_) +
-                          MSGID(&MSGID_) MSGF(&MSGF_) +
-                          SNDMSGFLIB(&MSGFLIB_)
-             SNDPGMMSG  MSGID(&MSGID_) MSGF(&MSGFLIB_/&MSGF_) +
-                          MSGDTA(&MSGDTA_) MSGTYPE(*ESCAPE)
 
              ENDPGM
 

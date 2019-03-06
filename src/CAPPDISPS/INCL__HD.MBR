@@ -19,10 +19,10 @@
 
        // I_DspHelp - Display Help
      dI_DspHelp        pr                  extproc('I_DspHelp')
-     d   context                     20    const
-     d   text                        60    const dim(30) options(*nopass)
-     d   wdwrow                       2  0 const         options(*nopass)
-     d   wdwcol                       3  0 const         options(*nopass)
+     d  context                      20    const
+     d  text                         60    const dim(30) options(*nopass)
+     d  wdwrow                        2  0 const         options(*nopass)
+     d  wdwcol                        3  0 const         options(*nopass)
 
        // I_SelectItem - Select Item
        // Present a list of "items" in a subfile within a window. Each item is
@@ -39,13 +39,13 @@
        // To disable selection of a specific item, set it's corresponding key
        // to *allx'00'.
      dI_SelectItem     pr              n   extproc('I_SelectItem')
-     d   wdwrow                       2  0 const options(*omit)
-     d   wdwcol                       3  0 const options(*omit)
-     d   wdwtitle                    40    const
-     d   selkey                      40
-     d   item#                        4  0 const
-     d   items                         *   const
-     d   keys                          *   const options(*nopass)
+     d  wdwrow                        2  0 const options(*omit)
+     d  wdwcol                        3  0 const options(*omit)
+     d  wdwtitle                     40    const
+     d  selkey                       40
+     d  item#                         4  0 const
+     d  items                          *   const
+     d  keys                           *   const options(*nopass)
 
        // I_ShowDspMsgs - Show "DspMsgs"
        // Present a window with all (error)messages in "DspMsg" and
@@ -58,7 +58,8 @@
        // user entered "Y", else return *off.
      dI_PresentConfWdw...
      d                 pr              n   extproc('I_PresentConfWdw')
-     d   text                        40    const
+     d  text                         40    const
+     d  dftyes                         n   const options(*nopass)
 
        // I_RlsModHD - Release Module HD
        // Release all resources (such as Open Data Paths and dynamically

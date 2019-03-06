@@ -154,7 +154,8 @@
        // is used:
        // - '' (blank) : the group is not used;
        // - 'group GROUPNAME' : the group is used as a member in group GROUPNAME;
-       // - 'a page and/or an option';
+       // - 'page 999',
+       // - 'option XX, page 999',
        // - 'the menu'.
      d IsGroupUsed     pr            30    extproc('IsGroupUsed')
      d   group                             const like(TAM_GROUP)

@@ -166,7 +166,13 @@
 
        // Data structure "Menu" contains attributes which apply to the menu
        // as a whole.
-     d Menu            ds                  qualified inz
+     d Menu            ds                  qualified
+      /IF DEFINED(CAPPSSAM_CAPPSSAMMO)
+     d                                     inz
+     d                                     export('Menu')
+      /ELSE
+     d                                     import('Menu')
+      /ENDIF
      d   title                             like(TAM_MTEXT)
      d   groups                      16    dim(CNumGroups)
      d   specb                             like(TAM_SPECB)
@@ -331,7 +337,7 @@
        // CAPPSSAMD0 (pos. 1-8) is less than the number that is currently
        // stored in positions 9-16 in data area CAPPSSAMD0, else return
        // *off. Always return *off if pos. 9-16 in data area CAPPSSAMD0
-       // does not contain a number (i.e. only digits).
+       // does not contain only digits.
      d MnuMustReload   pr              n   extproc('MnuMustReload')
 
        // MnuSaveMenu - Save Menu
@@ -762,4 +768,31 @@
      d MnuUserPage     pr            10i 0 extproc('MnuUserPage')
      d   user                        10    const
      d   userpage                    10i 0 const options(*nopass)
+
+       // MnuCopyPgSlots - Copy Page Slots
+       // Copy all slots from page "pags" (source) to "pagt" (target).
+       // When done, page "pagt" will have the same slots as "pags".
+       // All options/headers in "pagt" will be deleted (released).
+       // All options/headers in "pags" will be copied to "pagt".
+       // Do nothing if "pags"/"pagt" is less than 1 or higher than
+       // "CNumPages".
+     d MnuCopyPgSlots  pr                  extproc('MnuCopyPgSlots')
+     d   pags                        10i 0 const
+     d   pagt                        10i 0 const
+
+       // MnuSwapSlotSeq - Swap Slot Sequence
+       // Swap two consecutive slot sequences on page "pag". The
+       // first slot of the first sequence is "slot1". The first
+       // slot of the second sequence is "slot2". The number of
+       // slots for both sequences is given with "num". if the two
+       // sequences overlap then the result will be a corrupt page;
+       // there is no check being done. Also, nothing happens if
+       // the number of slots goes past the last slot of the page,
+       // "pag" is less than 1 or greater than "CNumPages" or "slot1"
+       // or "slot2" is less than 1 or greater than "CNumSlots".
+     d MnuSwapSlotSeq  pr                  extproc('MnuSwapSlotSeq')
+     d   pag                         10i 0 const
+     d   slot1                       10i 0 const
+     d   slot2                       10i 0 const
+     d   num                         10i 0 const
 

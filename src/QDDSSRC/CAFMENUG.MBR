@@ -2,7 +2,9 @@
       *  (c) 2019 John Erps
 
 
-      *  Common App - Menu Groups: Work with
+      *  CAF - Menu Groups: Work with
+
+      *  Display File
 
 
       *  Indicator usage:
@@ -17,7 +19,7 @@
       *   23 - SFLCLR
       *   27 - Set cursor location (CSRLOC)
       *   29 - SFLEND
-      *   30 - Global error indicator
+      *   30 - Global error indicator (31-69 error ind)
       *   61 - Error on subfile option field
       *   72 - In-line updating is enabled (subfile fields are editable)
       *   74 - Key fields are editable (only when in-line updating is enabled)

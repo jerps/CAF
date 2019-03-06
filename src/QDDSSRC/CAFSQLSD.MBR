@@ -2,7 +2,9 @@
       *  (c) 2019 John Erps
 
 
-      *  Common App - SQL Statements: Detail
+      *  CAF - SQL Statements: Detail
+
+      *  Display File
 
 
       *  Indicator usage:
@@ -17,7 +19,7 @@
       *    23 - SFLCLR
       *    27 - Set cursor location (CSRLOC)
       *    29 - SFLEND
-      *    30 - Global error indicator
+      *    30 - Global error indicator (31-69 error ind)
       *    74 - Key fields are editable (add/copy mode)
       *    75 - Non-key fields are editable (add/update/copy mode)
       *    76 - Non-key fields are not displayed (data not found)
@@ -63,8 +65,8 @@
      A            D_LINENO       4   O  6  2
      A            D_SLINE   R        B  6  7REFFLD(TSQLS_LINE)
      A                                      CHECK(LC)
-     A  75N91                               DSPATR(UL)
-     A  75 91                               DSPATR(RI PC)
+     A  75N32                               DSPATR(UL)
+     A  75 32                               DSPATR(RI PC)
      A N75                                  DSPATR(PR)
      A  76                                  DSPATR(ND)
      A            D__SLINE  R        H      REFFLD(TSQLS_LINE)

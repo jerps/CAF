@@ -370,7 +370,6 @@
 
       /free
 
-
        *inLR = *on;
 
        Parms# = %parms;
@@ -984,7 +983,8 @@
 
          dou not (   KeyPressed(KsF01)
                   or KeyPressed(KsF10)
-                  or KeyPressed(KsF22)
+                  or     KeyPressed(KsF22)
+                     and GetCursRow() = DspMsgRow
                   or     (   KeyPressed(KsPageDown)
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
@@ -1047,16 +1047,16 @@
            CursRow = GetCursRow();
            CursCol = GetCursCol();
 
-           if KeyPressed(KsF10);
-             exsr SetNextCursLoc;
-           elseif    KeyPressed(KsF01)
-                  or KeyPressed(KsF22);
+           if KeyPressed(KsF01);
              SetCurs = *on;
-             if KeyPressed(KsF01);
-               DspHelp(' ');
-             elseif MoreMsgs;
-               ShowDspMsgs();
-             endif;
+             DspHelp(' ');
+           elseif KeyPressed(KsF10);
+             exsr SetNextCursLoc;
+           elseif     KeyPressed(KsF22)
+                  and GetCursRow() = DspMsgRow
+                  and MoreMsgs;
+             SetCurs = *on;
+             ShowDspMsgs();
            elseif     (   KeyPressed(KsPageDown)
                        or KeyPressed(KsPageUp))
                   and GetCursRow() = DspMsgRow;
@@ -1139,7 +1139,7 @@
          //leavesr;
 
          if TooManyMembers;
-           L_SetErr(RtvAMsgAM(6003:CAmsFatal:%char(NumDbMembers))
+           L_SetErr(RtvAMsgAM(6002:CAmsFatal:%char(NumDbMembers))
                    :'AMMBRN');
            leavesr;
          endif;
@@ -1220,13 +1220,17 @@
                  D_GMEMBER = '-' + %subst(gmember:2);
                  D_GMTEXT  = GetGrpText(%subst(gmember:2));
                  if D_GMTEXT = '';
-                   D_GMTEXT = Text(14);
+                   D_GMTEXT = 'G';
+                 else;
+                   D_GMTEXT = 'G: ' + D_GMTEXT;
                  endif;
                elseif gmember <> '';
                  D_GMEMBER  = gmember;
                  D_GMTEXT = RtvObjText(gmember:'*USRPRF');
                  if D_GMTEXT = '';
-                   D_GMTEXT = Text(13);
+                   D_GMTEXT = 'U';
+                 else;
+                   D_GMTEXT = 'U: ' + D_GMTEXT;
                  endif;
                endif;
              endif;
@@ -1558,13 +1562,17 @@
                D_GMEMBER = '-' + Qds_AM_GroupAll$.gmembers_n(i);
                D_GMTEXT = GetGrpText(Qds_AM_GroupAll$.gmembers_n(i));
                if D_GMTEXT = '';
-                 D_GMTEXT = Text(14);
+                 D_GMTEXT = 'G';
+               else;
+                 D_GMTEXT = 'G: ' + D_GMTEXT;
                endif;
              elseif Qds_AM_GroupAll$.gmembers_n(i) <> '';
                D_GMEMBER = Qds_AM_GroupAll$.gmembers_n(i);
                D_GMTEXT = RtvObjText(D_GMEMBER:'*USRPRF');
                if D_GMTEXT = '';
-                 D_GMTEXT = Text(13);
+                 D_GMTEXT = 'U';
+               else;
+                 D_GMTEXT = 'U: ' + D_GMTEXT;
                endif;
              endif;
              D__GMEMBR1 = D_GMEMBER;
@@ -1704,8 +1712,6 @@ Copy Group
 10:RESERVED
 - %1 Users / -Groups
 - %1 Users / -Groups (%2 in the database)
-(user profile)
-(group)
 ** FunText
 F1=Help
 F2=

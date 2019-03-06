@@ -2,7 +2,7 @@
  /*          (c) 2019 John Erps                                              +
                                                                              +
                                                                              +
-             BUILD MODULES                                                   +
+             OTHER                                                           +
  */
 
              PGM        PARM(&TGTLIB &SRCLIB)
@@ -10,13 +10,10 @@
              DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
 
              DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10) +
-                          VALUE(CAPPSSAMS)
-             DCL        VAR(&SRCBIND) TYPE(*CHAR) LEN(10) +
-                          VALUE(CAPP_SSAM)
+                          VALUE(CAPPDISPS)
 
              DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
              DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
-             DCL        VAR(&SPTEXT) TYPE(*CHAR) LEN(50)
 
              CHGVAR     VAR(&TLIB) VALUE(&TGTLIB)
              CHGVAR     VAR(&SLIB) VALUE(&SRCLIB)
@@ -27,15 +24,8 @@
 
              /*----- BUILD BEGIN -----*/
 
-             RTVMBRD    FILE(&SLIB/&SRCFILE) MBR(&SRCBIND) +
-                          TEXT(&SPTEXT)
-
-             CRTSRVPGM  SRVPGM(&TLIB/CAPPSSAM) MODULE(CAPPSSAMMO +
-                          CAPPSSAMDC CAPPSSAMDQ CAPPSSAMXX +
-                          CAPPSSAMVA CAPPSSAMAM CAPPSSAMRM) +
-                          SRCFILE(&SLIB/&SRCFILE) SRCMBR(&SRCBIND) +
-                          TEXT(&SPTEXT) ACTGRP(*CALLER)
 
              /*----- BUILD END -----*/
 
              ENDPGM
+

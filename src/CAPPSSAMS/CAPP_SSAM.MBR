@@ -34,6 +34,7 @@
              EXPORT     SYMBOL('Qds_AM_GroupAll')
 
              /* MO: Menu Operations */
+             EXPORT     SYMBOL('Menu')
              EXPORT     SYMBOL('MenuPages')
              EXPORT     SYMBOL('MnuLoadMenu')
              EXPORT     SYMBOL('MnuGetSlotChoice')
@@ -63,6 +64,8 @@
              EXPORT     SYMBOL('MnuValNormMenu')
              EXPORT     SYMBOL('MnuOptAllowed')
              EXPORT     SYMBOL('MnuUserPage')
+             EXPORT     SYMBOL('MnuCopyPgSlots')
+             EXPORT     SYMBOL('MnuSwapSlotSeq')
 
              ENDPGMEXP
 

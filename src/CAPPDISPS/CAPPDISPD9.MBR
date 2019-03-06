@@ -67,7 +67,7 @@
      A            D__CURSROW     3  0H
      A            D__CURSCOL     3  0H
      A            D_W1TEXT      41   O  2  1DSPATR(HI)
-     A                                  4  2'Enter "Y" to confirm, or F12 to -
+     A                                  4  2'Enter "Y" to confirm, "N"/F12 to -
      A                                      cancel'
      A            D_W1YN         1   B  6 21DSPATR(UL)
      A    N61                               DSPATR(HI)

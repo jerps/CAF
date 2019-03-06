@@ -210,13 +210,18 @@
 5025: The menu has been updated; press enter to save the menu.
 5031: Place the cursor on the option to be performed and press enter.
 5032: Place the cursor on the option to be edited and press enter.
+5041: Press F6 with cursor on a slot to copy slot %1, page %2; F12 to cancel.
+5042: Press F6 to copy page %1 to the current page; F12 to cancel.
+5043: Press F21 with cursor on a vertical strip to swap with %1 strip.
+5044: Press F6 with cursor on an option or header to copy.
+5045: Press F21 with cursor on a vert. strip to swap with another vert. strip.
 5050: The chosen option is not visible; press F9 first and try again.
 5051: Page number not recognized.
 5053: Can not edit slot; command is too long (%1 > %2).
 5054: Can not edit page attributes; command is too long (%1 > %2).
 5055: Can not edit menu attributes; command is too long (%1 > %2).
 5059: Can not edit slot; it is directly followed or preceded by a header.
-5061: Enter "YES" to force reload, else enter "NO".
+5061: Enter "YES" to force reload for all users, else enter "NO".
 5062: Place the cursor on a group field first.
 5063: There is no room to insert a blank group at the cursor location.
 5080: Enter a command to prompt.
@@ -225,13 +230,16 @@
 5090: The menu has been updated; press F5 to RELOAD first.
 
 5101: Press F3 again to EXIT MENU.
-5102: The menu has been UPDATED; press F3 again to EXIT MENU.
 5103: Press F2 again to SAVE MENU.
 5105: The menu has been UPDATED; press F5 again to RELOAD MENU.
 5111: Press F14 again to CLEAR PAGE (and delete all options/headers on it).
 5112: Press F14 again to DELETE OPTION.
 5113: Press F14 again to DELETE HEADER.
 5120: About to REPLACE OPTION with header: press enter again to CONFIRM.
+5131: CANCELLED copy page.
+5132: CANCELLED copy option.
+5133: CANCELLED copy header.
+5134: CANCELLED swap vertical strip.
 
 5200: OPTION "%1" has been PERFORMED.
 5201: Slot %2 on page %1 has been SET to HEADER "%3".
@@ -240,17 +248,19 @@
 5204: Page %1 has been CLEARED.
 5205: OPTION "%1" on page %2, slot %3 has been DELETED.
 5206: HEADER "%1" on page %2, slot %3 has been DELETED.
-5207: The MENU has been SAVED.
+5207: The MENU has been SAVED; authorizations have been reloaded.
 5208: The MENU has been LOADED.
 5209: The AUTHORISATIONS have been RELOADED.
-5210: The PAGES have been MOVED.
 5211: The SLOTS have been MOVED.
 5212: Non-blank page FOUND.
 5213: The MENU attributes have been UPDATED.
+5214: Opts/hdrs page %1 REPLACED with opts/hdrs page %2.
+5215: Swapped %1 and %2 vertical strip.
+5221: The PAGES have been MOVED to the LEFT.
+5222: The PAGES have been MOVED to the RIGHT.
 
 6001: Too many members specified; a maximum of %1 is allowed.
-6002: DATABASE CONTAINED TOO MANY MEMBERS (%1).
-6003: DATABASE CONTAINED TOO MANY MEMBERS (%1); CAN NOT PROCEED.
+6002: DATABASE CONTAINED TOO MANY MEMBERS (%1); CAN NOT PROCEED.
 6011: Group "%1" is specified more than once.
 6012: User-id "%1" is specified more than once.
 6013: Group name can not be blank.

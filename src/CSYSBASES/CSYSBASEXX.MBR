@@ -1329,8 +1329,8 @@
 
      pL_SortBytesDft   b
      dL_SortBytesDft   pi            10i 0
-     d   bytes1                        *   value
-     d   bytes2                        *   value
+     d  bytes1                         *   value
+     d  bytes2                         *   value
 
      d fld1            s          32767    based(fld1@)
      d fld2            s          32767    based(fld2@)
@@ -1355,8 +1355,8 @@
 
      pL_SortBytesInv   b
      dL_SortBytesInv   pi            10i 0
-     d   bytes1                        *   value
-     d   bytes2                        *   value
+     d  bytes1                         *   value
+     d  bytes2                         *   value
 
       /free
 

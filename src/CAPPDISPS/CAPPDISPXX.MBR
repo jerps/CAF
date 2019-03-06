@@ -66,10 +66,15 @@
      p PresentConfWdw  b                   export
      d PresentConfWdw  pi              n
      d   text                        40    const
+     d   dftyes                        n   const options(*nopass)
 
       /free
 
-       return I_PresentConfWdw(text);
+       if %parms > 1;
+         return I_PresentConfWdw(text:dftyes);
+       else;
+         return I_PresentConfWdw(text);
+       endif;
 
       /end-free
      p                 e

@@ -16,12 +16,13 @@
 
 
      d Main            pr                  extpgm('CSYSSQLSP0')
-
+     d   inif1                        1    const
 
      d SqlStmts        s             90    ctdata dim(15)
 
 
      d Main            pi
+     d   inif1                        1    const
 
      d i               s             10i 0
      d lineno          s             10i 0
@@ -31,20 +32,22 @@
 
        *inlR = *on;
 
-       // Add SQL Statements
-       for i = 1 to %elem(SqlStmts);
-         clear *all SQLSREC;
-         SQLSID = %subst(SqlStmts(i):1:%len(SQLSID));
-         if SQLSID = sid;
-           lineno = lineno + 1;
-         else;
-           lineno = 1;
-           sid = SQLSID;
-         endif;
-         SQLSLINENO = lineno;
-         SQLSLINE   = %subst(SqlStmts(i):%len(SQLSID)+1);
-         write SQLSREC;
-       endfor;
+       if inif1 = '1';
+         // Add SQL Statements
+         for i = 1 to %elem(SqlStmts);
+           clear *all SQLSREC;
+           SQLSID = %subst(SqlStmts(i):1:%len(SQLSID));
+           if SQLSID = sid;
+             lineno = lineno + 1;
+           else;
+             lineno = 1;
+             sid = SQLSID;
+           endif;
+           SQLSLINENO = lineno;
+           SQLSLINE   = %subst(SqlStmts(i):%len(SQLSID)+1);
+           write SQLSREC;
+         endfor;
+       endif;
 
        return;
 

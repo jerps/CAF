@@ -63,8 +63,8 @@
 
        // Add/Update subfile record 1.
      dL_AddUpdSfRec1   pr
-     d   text                              const like(D_HLPTEXT)
-     d   recno                             const like(SFLR#)
+     d  text                               const like(D_HLPTEXT)
+     d  recno                              const like(SFLR#)
 
 
        // ----- Implementation - Internal
@@ -72,10 +72,10 @@
 
      pI_DspHelp        b                   export
      dI_DspHelp        pi
-     d   context                     20    const
-     d   text                        60    const dim(30) options(*nopass)
-     d   wdwrow                       2  0 const         options(*nopass)
-     d   wdwcol                       3  0 const         options(*nopass)
+     d  context                      20    const
+     d  text                         60    const dim(30) options(*nopass)
+     d  wdwrow                        2  0 const         options(*nopass)
+     d  wdwcol                        3  0 const         options(*nopass)
 
      d wcrows          c                   13
      d wrowstop        c                   1
@@ -323,13 +323,13 @@
 
      pI_SelectItem     b                   export
      dI_SelectItem     pi              n
-     d   wdwrow                       2  0 const options(*omit)
-     d   wdwcol                       3  0 const options(*omit)
-     d   wdwtitle                    40    const
-     d   selkey                      40
-     d   item#                        4  0 const
-     d   items                         *   const
-     d   keys                          *   const options(*nopass)
+     d  wdwrow                        2  0 const options(*omit)
+     d  wdwcol                        3  0 const options(*omit)
+     d  wdwtitle                     40    const
+     d  selkey                       40
+     d  item#                         4  0 const
+     d  items                          *   const
+     d  keys                           *   const options(*nopass)
 
      d wcrows          c                   9
      d wrowstop        c                   1
@@ -837,7 +837,8 @@
      p                 b                   export
      dI_PresentConfWdw...
      d                 pi              n
-     d   text                        40    const
+     d  text                         40    const
+     d  dftyes                         n   const options(*nopass)
 
      d wrows           c                   9
      d wcols           c                   45
@@ -875,7 +876,12 @@
                       %div(%len(D_W1TEXT)-%len(%trim(text)):2)) +
                   %trim(text);
 
-       D_W1YN = 'N';
+       if     %parms > 1
+          and dftyes;
+         D_W1YN = 'Y';
+       else;
+         D_W1YN = 'N';
+       endif;
 
        yes = *off;
 
@@ -895,7 +901,6 @@
                    and D_W1YN = 'N';
            leave;
          else;
-           D_W1YN = 'N';
            *in61 = *on;
          endif;
 
@@ -931,8 +936,8 @@
 
      pL_AddUpdSfRec1   b
      dL_AddUpdSfRec1   pi
-     d   text                              const like(D_HLPTEXT)
-     d   recno                             const like(SFLR#)
+     d  text                               const like(D_HLPTEXT)
+     d  recno                              const like(SFLR#)
 
      d i               s             10i 0
 

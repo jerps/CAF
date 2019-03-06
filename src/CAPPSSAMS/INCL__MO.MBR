@@ -21,7 +21,7 @@
        // counter. If given, parameter "curbin" returns the current bin
        // (0 or 1).
      dI_SdaReadLock    pr             8s 0
-     d   curbin                       1s 0       options(*nopass)
+     d  curbin                        1s 0       options(*nopass)
 
        // Write data area CAPPSSAMD0.
        // Update and UNLOCK the data area.
@@ -33,8 +33,8 @@
        // If no parameters are given the data area is only unlocked; no
        // data is written.
      dI_SdaWrite       pr
-     d   vcounter                     8s 0 const options(*nopass)
-     d   vreload                      8s 0 const options(*nopass)
+     d  vcounter                      8s 0 const options(*nopass)
+     d  vreload                       8s 0 const options(*nopass)
 
        // I_SdaCurBin - Get Current Bin
        // Return the current bin number, 0 or 1, of data area CAPPSSAMD0.

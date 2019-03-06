@@ -14,8 +14,8 @@
 
       *   MENUSGPAGE - Page (0-999)
       *                The group applies to the menu if this field contains 0,
-      *                else the group applies to page MENUSGPAGE (MENUSGLOT=0),
-      *                or an option.
+      *                else the group applies to page MENUSGPAGE (MENUSGSLOT=0),
+      *                or an option (MENUSGSLOT>0).
 
       *   MENUSGSLOT - Slot (0-45)
       *                Ignore this field if MENUSGPAGE is 0.

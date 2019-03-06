@@ -14,6 +14,7 @@
       /include CAPPSSAMS,INCL__MODH
 
 
+     fCAPPSSAMF1if   e           k disk    usropn
      fCAPPSSAMF3if   e           k disk    usropn
      fCAPPSSAMF4if   e           k disk    usropn
      fCAPPSSAMF5if   e           k disk    usropn rename(MENUSGREC:MENUSGREC5)
@@ -504,6 +505,7 @@
      d   group                             const like(TAM_GROUP)
 
      d cb              s              1s 0
+     d t               s             20    varying
 
       /free
 
@@ -519,13 +521,28 @@
          open CAPPSSAMF5;
        endif;
        cb = I_SdaCurBin();
-       chain (cb:group:0) CAPPSSAMF5;
-       if %found;
+       setll (cb:group:0) CAPPSSAMF5;
+       if %equal;
          return 'the menu';
        endif;
-       chain (cb:group) CAPPSSAMF5;
-       if %found;
-         return 'a page and/or an option';
+       reade (cb:group) CAPPSSAMF5;
+       if not %eof;
+         if MENUSGSLOT > 0;
+           t = 'option ';
+           if not %open(CAPPSSAMF1);
+             open CAPPSSAMF1;
+           endif;
+           chain (cb:MENUSGPAGE:MENUSGSLOT) CAPPSSAMF1;
+           if %found;
+             t = t + %trim(MENUSCHC);
+           else;
+             t = t + '??';
+           endif;
+           t = t + ', page ' + %char(MENUSGPAGE);
+         else;
+           t = 'page ' + %char(MENUSGPAGE);
+         endif;
+         return t;
        endif;
 
        return '';

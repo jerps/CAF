@@ -605,7 +605,7 @@
        // Return *on if connection "conn" has been allocated and is
        // connected, else return *off.
      dL_ConnIsActive   pr              n
-     d   conn                         5i 0 const
+     d  conn                          5i 0 const
 
        // Check if connection "conn" has been allocated and is connected.
        // If not, try to allocate and connect the connection, and try to
@@ -614,21 +614,21 @@
        // Return -1 in case of an error, else return 0 if no new statement
        // was allocated or the new statement's (cursor) id.
      dL_CheckConn      pr             5i 0
-     d   conn                         5i 0 const
-     d   allocstmt                     n   const options(*nopass)
+     d  conn                          5i 0 const
+     d  allocstmt                      n   const options(*nopass)
 
        // Close connection "conn" and all it's allocated statements.
        // Free all resources associated with the connection and it's
        // statements. Return *on if successful, else return *off.
        // Return *on if "conn" is already closed.
      dL_CloseConn      pr              n
-     d   conn                         5i 0 const
+     d  conn                          5i 0 const
 
        // Free all resources for statement "st". Return *on if
        // successful, else return *off.
        // Return *on if "st" is already freed.
      dL_FreeStmt       pr              n
-     d   st                           5i 0 const
+     d  st                            5i 0 const
 
        // Check if the environment has been allocated. If not, try to
        // allocate the environment. Return *on if the environment has
@@ -639,9 +639,9 @@
        // Return *on if successful. If not successful, do not change
        // "CliErr" and return *off.
      dL_CliErr         pr              n
-     d   henv                              like(SQLHENV) const
-     d   hdbc                              like(SQLHDBC) const
-     d   hstmt                             like(SQLHSTMT) const
+     d  henv                               like(SQLHENV) const
+     d  hdbc                               like(SQLHDBC) const
+     d  hstmt                              like(SQLHSTMT) const
 
 
        // ----- Implementation
@@ -4754,7 +4754,7 @@
 
      pL_ConnIsActive   b
      dL_ConnIsActive   pi              n
-     d   conn                         5i 0 const
+     d  conn                          5i 0 const
 
      d rtn             s                   like(SQLRETURN)
 
@@ -4772,8 +4772,8 @@
 
      pL_CheckConn      b
      dL_CheckConn      pi             5i 0
-     d   conn                         5i 0 const
-     d   allocstmt                     n   const options(*nopass)
+     d  conn                          5i 0 const
+     d  allocstmt                      n   const options(*nopass)
 
      d st              s              5i 0
      d rtn             s                   like(SQLRETURN)
@@ -4882,7 +4882,7 @@
 
      pL_CloseConn      b
      dL_CloseConn      pi              n
-     d   conn                         5i 0 const
+     d  conn                          5i 0 const
 
      d st              s              5i 0
 
@@ -4913,7 +4913,7 @@
 
      pL_FreeStmt       b
      dL_FreeStmt       pi              n
-     d   st                           5i 0 const
+     d  st                            5i 0 const
 
       /free
 
@@ -4984,14 +4984,16 @@
 
      pL_CliErr         b
      dL_CliErr         pi              n
-     d   henv                              like(SQLHENV) const
-     d   hdbc                              like(SQLHDBC) const
-     d   hstmt                             like(SQLHSTMT) const
+     d  henv                               like(SQLHENV) const
+     d  hdbc                               like(SQLHDBC) const
+     d  hstmt                              like(SQLHSTMT) const
 
      d sqlstate        s              6
      d sqlcode         s                   like(SQLINTEGER)
      d mbuf            s            513
      d ml              s                   like(SQLSMALLINT)
+
+      /free
 
        if SqlError(  henv : hdbc : hstmt
             : sqlstate

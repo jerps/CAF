@@ -49,41 +49,41 @@
        // "appdata", and no return type.
      dL_XML_DP_AppData...
      d                 pr                  extproc(L_XML_DP_AppData@)
-     d   appdata                       *   const
+     d  appdata                        *   const
 
        // Prototype for "XML_Iter" to call a delegate procedure for each
        // node that is visited.
      dL_XML_DP_VisitNode...
      d                 pr              n   extproc(L_XML_DP_VisitNode@)
-     d   node                          *   const
-     d   cnl                         10i 0 const
-     d   ddata                    32767          options(*varsize:*nopass)
+     d  node                           *   const
+     d  cnl                          10i 0 const
+     d  ddata                     32767          options(*varsize:*nopass)
 
        // Prototype for "L_XML_DP_AsText" to call a delegate procedure which
        // produces the attribute names and values.
      dL_XML_DP_ProdAttrs...
      d                 pr         16383c   varying
      d                                     extproc(L_XML_DP_ProdAttrs@)
-     d   appdata                       *   const
-     d   num                         10i 0 const
-     d   name                          n   const
+     d  appdata                        *   const
+     d  num                          10i 0 const
+     d  name                           n   const
 
        // Prototype for "L_XML_DP_AsText" to call a delegate procedure which
        // produces the content.
      dL_XML_DP_ProdContent...
      d                 pr         16383c   varying
      d                                     extproc(L_XML_DP_ProdContent@)
-     d   appdata                       *   const
+     d  appdata                        *   const
 
        // Local implementation of "XML_Iter".
        // If "vnode" is *off then "node" itself is not visited.
        // Returns *off in case of an error.
      dL_XML_Iter       pr              n
-     d   node                          *   const
-     d   dp_visit                      *   const procptr
-     d   option                      10    const
-     d   vnode                         n   const
-     d   ddata                    32767                  options(*varsize
+     d  node                           *   const
+     d  dp_visit                       *   const procptr
+     d  option                       10    const
+     d  vnode                          n   const
+     d  ddata                     32767                  options(*varsize
      d                                                          :*nopass:*omit)
      d   snl                         10i 0 const         options(*nopass:*omit)
      d   mnl                         10i 0 const         options(*nopass:*omit)
@@ -91,35 +91,35 @@
        // Delegate procedure for "XML_C" to produce the content.
      dL_XML_DP_C_ProdContent...
      d                 pr         16383c   varying
-     d   appdata                       *   const
+     d  appdata                        *   const
 
        // Delegate procedure for "XML_C" to produce the attributes.
      dL_XML_DP_C_ProdAttrs...
      d                 pr         16383c   varying
-     d   appdata                       *   const
-     d   num                         10i 0 const
-     d   name                          n   const
+     d  appdata                        *   const
+     d  num                          10i 0 const
+     d  name                           n   const
 
        // Delegate procedure for "XML_C" to deallocate the contents
        // of "appdata".
      dL_XML_DP_C_Release...
      d                 pr
-     d   appdata                       *   const
+     d  appdata                        *   const
 
        // Delegate procedure for procedure "XML_Release".
        // This procedure de-allocates the contents of "node" and then adds
        // pointer "node" to "L_DeallocPtrs" so that it is de-allocated later.
      dL_XML_DP_Release...
      d                 pr              n
-     d   node                          *   const
-     d   cnl                         10i 0 const
+     d  node                           *   const
+     d  cnl                          10i 0 const
 
        // Delegate procedure for procedure "XML_AsText".
      dL_XML_DP_AsText...
      d                 pr              n
-     d   node                          *   const
-     d   cnl                         10i 0 const
-     d   ddata                    32767          options(*varsize)
+     d  node                           *   const
+     d  cnl                          10i 0 const
+     d  ddata                     32767          options(*varsize)
 
        // Deallocate all pointers in array "L_DeallocPtrsA" and clear the
        // array (i.e. release it's memory and set "L_DeallocPtrsA#" to 0).
@@ -1184,11 +1184,11 @@
 
      pL_XML_Iter       b
      dL_XML_Iter       pi              n
-     d   node                          *   const
-     d   dp_visit                      *   const procptr
-     d   option                      10    const
-     d   vnode                         n   const
-     d   ddata                    32767                  options(*varsize
+     d  node                           *   const
+     d  dp_visit                       *   const procptr
+     d  option                       10    const
+     d  vnode                          n   const
+     d  ddata                     32767                  options(*varsize
      d                                                          :*nopass:*omit)
      d   snl                         10i 0 const         options(*nopass:*omit)
      d   mnl                         10i 0 const         options(*nopass:*omit)
@@ -1306,7 +1306,7 @@
      p                 b
      dL_XML_DP_C_ProdContent...
      d                 pi         16383c   varying
-     d   appdata                       *   const
+     d  appdata                        *   const
 
      d dsappdata       ds                  based(appdata)
      d   content@                      *
@@ -1324,9 +1324,9 @@
      p                 b
      dL_XML_DP_C_ProdAttrs...
      d                 pi         16383c   varying
-     d   appdata                       *   const
-     d   num                         10i 0 const
-     d   name                          n   const
+     d  appdata                        *   const
+     d  num                          10i 0 const
+     d  name                           n   const
 
      d dsappdata       ds                  based(appdata)
      d   content@                      *
@@ -1355,7 +1355,7 @@
      p                 b
      dL_XML_DP_C_Release...
      d                 pi
-     d   appdata                       *   const
+     d  appdata                        *   const
 
      d data            ds                  based(appdata)
      d   content@                      *
@@ -1374,8 +1374,8 @@
      p                 b
      dL_XML_DP_Release...
      d                 pi              n
-     d   node                          *   const
-     d   cnl                         10i 0 const
+     d  node                           *   const
+     d  cnl                          10i 0 const
 
      d dsnode          ds                  likeds(XML$ELEM) based(dsnode@)
      d dsdata          ds                  likeds(XML$DATA) based(dsdata@)
@@ -1415,9 +1415,9 @@
 
      pL_XML_DP_AsText  b
      dL_XML_DP_AsText  pi              n
-     d   node                          *   const
-     d   cnl                         10i 0 const
-     d   ddata                    32767          options(*varsize)
+     d  node                           *   const
+     d  cnl                          10i 0 const
+     d  ddata                     32767          options(*varsize)
 
      d dsroot          ds                  likeds(XML$ROOT) based(dsroot@)
      d dsnode          ds                  likeds(XML$ELEM) based(dsnode@)

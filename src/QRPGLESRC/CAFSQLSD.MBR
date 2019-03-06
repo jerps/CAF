@@ -374,7 +374,6 @@
 
       /free
 
-
        *inLR = *on;
 
        Parms# = %parms;
@@ -973,7 +972,8 @@
 
          dou not (   KeyPressed(KsF01)
                   or KeyPressed(KsF10)
-                  or KeyPressed(KsF22)
+                  or      KeyPressed(KsF22)
+                     and GetCursRow() = DspMsgRow
                   or     (   KeyPressed(KsPageDown)
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
@@ -1036,16 +1036,16 @@
            CursRow = GetCursRow();
            CursCol = GetCursCol();
 
-           if KeyPressed(KsF10);
-             exsr SetNextCursLoc;
-           elseif    KeyPressed(KsF01)
-                  or KeyPressed(KsF22);
+           if KeyPressed(KsF01);
              SetCurs = *on;
-             if KeyPressed(KsF01);
-               DspHelp(' ');
-             elseif MoreMsgs;
-               ShowDspMsgs();
-             endif;
+             DspHelp(' ');
+           elseif KeyPressed(KsF10);
+             exsr SetNextCursLoc;
+           elseif     KeyPressed(KsF22)
+                  and GetCursRow() = DspMsgRow
+                  and MoreMsgs;
+             SetCurs = *on;
+             ShowDspMsgs();
            elseif     (   KeyPressed(KsPageDown)
                        or KeyPressed(KsPageUp))
                   and GetCursRow() = DspMsgRow;
@@ -1168,7 +1168,7 @@
              chain 1 DFSCREEN1S;
              *in75 = *on;
              *in76 = *off;
-             *in91 = *on; // error ind.
+             *in32 = *on; // error ind.
              update DFSCREEN1S;
              AddDCVMsg(RtvAMsgAB(5001:CAmsFatal));
              D__CURREC = 1;
@@ -1361,7 +1361,7 @@
              clear *all DFSCREEN1S;
              *in75 = *on;
              *in76 = *off;
-             *in91 = *off; // error ind.
+             *in32 = *off; // error ind.
              SFLR1# = SFLR1#T + 1;
              evalr D_LINENO = %char(SFLR1#) + ':';
              write DFSCREEN1S;
@@ -1441,7 +1441,7 @@
                clear *all DFSCREEN1S;
                *in75 = ModeUpdate or ModeCopy;
                *in76 = *off;
-               *in91 = *off; // error ind.
+               *in32 = *off; // error ind.
                D_SLINE  = SQLSLINE;
                D__SLINE = SQLSLINE;
                SFLR1# = SFLR1#T + 1;
@@ -1464,7 +1464,7 @@
                  clear *all DFSCREEN1S;
                  *in75 = *on;
                  *in76 = *off;
-                 *in91 = *off; // error ind.
+                 *in32 = *off; // error ind.
                  SFLR1# = SFLR1#T + 1;
                  evalr D_LINENO = %char(SFLR1#) + ':';
                  write DFSCREEN1S;
@@ -1520,7 +1520,7 @@
              clear *all DFSCREEN1S;
              *in75 = *on;
              *in76 = *off;
-             *in91 = *off; // error ind.
+             *in32 = *off; // error ind.
              SFLR1# = SFLR1#T + 1;
              evalr D_LINENO = %char(SFLR1#) + ':';
              write DFSCREEN1S;
@@ -1590,7 +1590,7 @@
            endif;
            *in75 = *on;
            *in76 = *off;
-           *in91 = *off;
+           *in32 = *off;
            update DFSCREEN1S;
            if flag;
              SflRec = SflRec + 1;
@@ -1608,7 +1608,7 @@
                 endif;
                *in75 = *on;
                *in76 = *off;
-               *in91 = *off;
+               *in32 = *off;
                SFLR1# = SFLR1#T + 1;
                evalr D_LINENO = %char(SFLR1#) + ':';
                write DFSCREEN1S;

@@ -2,7 +2,9 @@
       *  (c) 2019 John Erps
 
 
-      *  Common App - Menu Groups: Detail
+      *  CAF - Menu Groups: Detail
+
+      *  Display File
 
 
       *  Indicator usage:
@@ -11,19 +13,18 @@
       *   field in error. See array "FEMap" in the program, which specifies
       *   a mapping between field/attribute names and error indicators.
 
-      *   80 - If *on, the group is "special" and it's attributes can not
-      *        be edited.
-
       *   10 - DSPMOD(*WIDE)
       *   21 - SFLDSPCTL
       *   22 - SFLDSP
       *   23 - SFLCLR
       *   27 - Set cursor location (CSRLOC)
       *   29 - SFLEND
-      *   30 - Global error indicator
+      *   30 - Global error indicator (31-69 error ind)
+      *   80 - Attributes are not editable
       *   74 - Key fields are editable (add/copy mode)
       *   75 - Non-key fields are editable (add/update/copy mode)
       *   76 - Non-key fields are not displayed (data not found)
+      *   80 - Attributes are not editable
       *   89 - Disable (non-dislay / protect) subfile record
 
 

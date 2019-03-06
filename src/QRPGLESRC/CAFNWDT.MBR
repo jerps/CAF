@@ -278,8 +278,6 @@
      d SetCurs         s               n
        // Press key again to confirm if *off.
      d ConfirmExit     s               n
-     d ConfirmRefresh  s               n
-     d ConfirmResize   s               n
        // Header displayed on screen.
      d HdrText         s            100
        // Subfile options or function keys to be displayed on screen.
@@ -370,7 +368,6 @@
      d   @@SelNWDT                    1          options(*nopass)
 
       /free
-
 
        *inLR = *on;
 
@@ -488,12 +485,6 @@
          if not KeyPressed(KsF03);
            ConfirmExit = *off;
          endif;
-         if not KeyPressed(KsF05);
-           ConfirmRefresh = *off;
-         endif;
-         if not KeyPressed(KsF09);
-           ConfirmResize = *off;
-         endif;
 
          PrevScreen = Screen;
 
@@ -533,15 +524,8 @@
            exsr SelectItem;
            SetCurs = *on; // retain cursor location.
          elseif KeyPressed(KsF05);
-           // F05 pressed; read first page (if confirmed).
-           if    ConfirmRefresh
-              or not ModeEdit;
-             ConfirmRefresh = *off;
-             exsr ReadFirstPage;
-           else;
-             ConfirmRefresh = *on;
-             DspMsg = RtvAMsgAB(1071);
-           endif;
+           // F05 pressed; read first page.
+           exsr ReadFirstPage;
          elseif    KeyPressed(KsF06)
                and ModeEdit
                and not SbNoAdd;
@@ -550,16 +534,9 @@
            SetCurs = *off; // Do not retain cursor location.
          elseif     KeyPressed(KsF09)
                 and not SbNoResize;
-           // F09 pressed; switch screen size & refresh (if confirmed).
-           if    ConfirmResize
-              or not ModeEdit;
-             ConfirmResize = *off;
-             DspWide = not DspWide;
-             exsr ReadFirstPage;
-           else;
-             ConfirmResize = *on;
-             DspMsg = RtvAMsgAB(1072);
-           endif;
+           // F09 pressed; switch screen size & refresh.
+           DspWide = not DspWide;
+           exsr ReadFirstPage;
          elseif KeyPressed(KsF12);
            // F12 pressed; cancel program.
            Rtncd = 2;
@@ -1001,7 +978,8 @@
 
          dou not (   KeyPressed(KsF01)
                   or KeyPressed(KsF10)
-                  or KeyPressed(KsF22)
+                  or     KeyPressed(KsF22)
+                     and GetCursRow() = DspMsgRow
                   or     (   KeyPressed(KsPageDown)
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
@@ -1074,16 +1052,16 @@
            CursRow = GetCursRow();
            CursCol = GetCursCol();
 
-           if KeyPressed(KsF10);
-             exsr SetNextCursLoc;
-           elseif    KeyPressed(KsF01)
-                  or KeyPressed(KsF22);
+           if KeyPressed(KsF01);
              SetCurs = *on;
-             if KeyPressed(KsF01);
-               DspHelp(' ');
-             elseif MoreMsgs;
-               ShowDspMsgs();
-             endif;
+             DspHelp(' ');
+           elseif KeyPressed(KsF10);
+             exsr SetNextCursLoc;
+           elseif     KeyPressed(KsF22)
+                  and GetCursRow() = DspMsgRow
+                  and MoreMsgs;
+             SetCurs = *on;
+             ShowDspMsgs();
            elseif     (   KeyPressed(KsPageDown)
                        or KeyPressed(KsPageUp))
                   and GetCursRow() = DspMsgRow;

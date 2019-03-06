@@ -16,12 +16,14 @@
 
 
      d Main            pr                  extpgm('CAPPDISPP0')
+     d   inif1                        1    const
 
 
-     d HelpText        s             40    ctdata dim(12)
+     d HelpText        s             60    ctdata dim(12)
 
 
      d Main            pi
+     d   inif1                        1    const
 
      d i               s             10i 0
 
@@ -29,13 +31,15 @@
 
        *inlR = *on;
 
-       // Add help text.
-       for i = 1 to %elem(HelpText);
-         clear *all HLPTREC;
-         HLPTSEQ# = i;
-         HLPTEXT  = HelpText(i);
-         write HLPTREC;
-       endfor;
+       if inif1 = '1';
+         // Add help text.
+         for i = 1 to %elem(HelpText);
+           clear *all HLPTREC;
+           HLPTSEQ# = i;
+           HLPTEXT  = HelpText(i);
+           write HLPTREC;
+         endfor;
+       endif;
 
        return;
 

@@ -270,10 +270,12 @@
        // previous value ("Psv*").
      d SfcPageTitle    s               n
      d SfcSimUser      s               n
+     d SfcNewPage      s               n
 
        // If set to *on, set the cursor on the screen field.
      d PcfPageTitle    s               n
      d PcfSimUser      s               n
+     d PcfNewPage      s               n
 
        // The user for which the menu is currently presented.
        // In *DISPLAY mode:
@@ -307,6 +309,10 @@
        // strip borders (see constants "Vsb*").
      d SlotAtCursor    s             10i 0
 
+       // The vertical strip at the current cursor location; 1=left,
+       // 2=middle, 3=right.
+     d VStripAtCursor  s             10i 0
+
        // In *DISPLAY mode (and in *UPDATE mode with "SimDisplay" *off)
        // the options and headers on a page are not displayed on the fixed
        // screen location which corresponds to the slot containing the
@@ -337,13 +343,23 @@
        // switching back from simulate display mode to normal mode.
      d SimPgNorm       s             10i 0
 
-       // If greater than 0 then an option/header or a page is about
-       // to be copied. If "CopySlot" is greater than 0 than an option
-       // header is to be copied, else a page.
+       // If "CopyPage" is greater than 0 and "CopySlot" is 0 then the
+       // page identified with "CopyPage" is to be copied. If "CopySlot"
+       // is also greater than 0 then it identifies an option ("CopyHdr"
+       // is *off) or header ("CopyHdr" is *on) is to be copied.
+       // "CopyText" contains option/header text to be displayed while
+       // copying.
      d CopyPage        s             10i 0
      d CopySlot        s             10i 0
      d CopyHdr         s               n
      d CopyText        s             35
+
+       // If greater than 0 then it identifies the vertical strip
+       // that is to be swapped (1=left, 2=middle, 3=right).
+     d SwapVStrip      s             10i 0
+
+       // Ignore (function) key if *on.
+     d IgnoreKey       s               n
 
        // An error message / attribute / page / slot.
      d ErrMsg          s            200
@@ -371,13 +387,27 @@
        // headers are never immediately preceded or followed by an option
        // (a blank line is automatically inserted if necessary).
        // This procedure also fills array "DspSlots".
-     dL_FillMenuFlds   pr
+     dL_FillDspFlds    pr
+
+       // Return the vertical strip of the current cursor location.
+       // Return 0 if the menu is empty, or if the cursor is outside the
+       // vertical strip borders (see constants "Vsb*").
+       // Return 1 for the left strip, 2 for the middle strip or 3 for
+       // the right strip.
+       // Note: the slots always have fixed locations on the screen.
+     dL_VStripAtCursor...
+     d                 pr            10i 0
 
        // Return the slot index of the current cursor location.
        // Return 0 if the menu is empty, or if the cursor is outside the
        // vertical strip borders (see constants "Vsb*").
        // Note: the slots always have fixed locations on the screen.
      dL_SlotAtCursor   pr            10i 0
+
+       // Return the text of the position of a vertical strip ("LEFT,
+       // "MIDDLE", or "RIGHT").
+     dL_VStripPosTxt   pr            10
+     d  pos                          10i 0
 
        // L_AddHelpText - Add Help Text
        // Add a line of help text to array "HelpText".
@@ -395,7 +425,6 @@
      d   @@Rtnmsg2                  100          options(*nopass)
 
       /free
-
 
        *inLR = *on;
 
@@ -495,7 +524,7 @@
          // Fill the "Screen 1" display fields for the menu, for the
          // current page, i.e. user page "CurUserPage" and "real" page
          // "CurMenuPage" (index of array "MenuPages").
-         L_FillMenuFlds();
+         L_FillDspFlds();
 
          D_CHOICE = '';
 
@@ -509,22 +538,21 @@
          // Execute screen / subfile.
          exsr ExScreen;
 
+         // RETAIN CURSOR LOCATION FOR "Screen" > 1
+         if Screen > 1;
+           SetCurs = *on;
+         endif;
+
          if NoSlotSelection;
            NoSlotSelection = *off;
            SelectedPage    = 0;
            SelectedSlot    = 0;
          endif;
 
-         if     not KeyPressed(KsF06)
-            and not KeyPressed(KsPageDown)
-            and not KeyPressed(KsPageUp);
-           CopyPage = 0;
-           CopySlot = 0;
-         endif;
-
          // Check which screen values have been changed by the user.
          SfcPageTitle = D_PTITLE  <> PsvPageTitle;
          SfcSimUser   = D_SIMUSER <> PsvSimUser;
+         SfcNewPage   = D_NEWPAGE <> '';
 
          clear Err;       // Clear error data.
          ClrDspMsgs();    // Clear (error)messages.
@@ -543,29 +571,53 @@
            ConfirmDelete = *off;
          endif;
 
-         if Screen = 1;
-           SlotAtCursor = L_SlotAtCursor();
-         else;
-           SlotAtCursor = 0;
+         IgnoreKey = *off;
+
+         if      Screen = 1
+            and (       CopyPage > 0
+                    and not KeyPressed(KsF06)
+                    and not KeyPressed(KsPageDown)
+                    and not KeyPressed(KsPageUp)
+                 or     SwapVStrip > 0
+                    and not KeyPressed(KsF21));
+           if KeyPressed(KsF12);
+             IgnoreKey = *on;
+           endif;
+           if CopyPage > 0;
+             if CopySlot > 0;
+               if CopyHdr;
+                 AddToDspMsgList(RtvAMsgAM(5133));
+               else;
+                 AddToDspMsgList(RtvAMsgAM(5132));
+               endif;
+             else;
+               AddToDspMsgList(RtvAMsgAM(5131));
+             endif;
+             CopyPage = 0;
+             CopySlot = 0;
+           endif;
+           if SwapVStrip > 0;
+             AddToDspMsgList(RtvAMsgAM(5134));
+             SwapVStrip = 0;
+           endif;
+           SetCurs = *off;
          endif;
 
-         // RETAIN CURSOR LOCATION FOR "Screen" > 1
-         if Screen > 1;
-           SetCurs = *on;
+         if Screen = 1;
+           SlotAtCursor = L_SlotAtCursor();
+           VStripAtCursor = L_VStripAtCursor();
+         else;
+           SlotAtCursor = 0;
+           VStripAtCursor = 0;
          endif;
 
          PrevScreen = Screen;
 
-         dou 0=0;
-
-         if Err.e;
-           leave;
-         endif;
-
-         if     (   KeyPressed(KsPageDown)
-                 or KeyPressed(KsPageUp))
-            and Screen <> 4;
-           // Pagedown/up pressed, but not in screen "edit page attr".
+         if IgnoreKey;
+         elseif     (   KeyPressed(KsPageDown)
+                     or KeyPressed(KsPageUp))
+                and Screen = 1;
+           // Pagedown/up pressed in menu.
            if CurUserPage <= 0;
              L_SetErr(RtvAMsgAM(5002:CAmsFatal));
            elseif KeyPressed(KsPageDown);
@@ -595,12 +647,7 @@
              Screen = 0;
            else;
              ConfirmExit = *on;
-             if     ModeUpdate
-                and MnuIsUpdated();
-               DspMsg = RtvAMsgAM(5102);
-             else;
-               DspMsg = RtvAMsgAM(5101);
-             endif;
+             DspMsg = RtvAMsgAM(5101);
            endif;
          elseif KeyPressed(KsF04);
            // F04 pressed; select item.
@@ -620,11 +667,10 @@
          elseif     KeyPressed(KsF06)
                 and Screen = 1
                 and CurUserPage > 0
-                and ModeUpdate and not SimDisplay
-                and not MnuIsBlankPage(CurMenuPage);
+                and ModeUpdate and not SimDisplay;
            // F06 pressed in menu in update mode; copy opt/hdr/page.
            SetCurs = *on;
-           exsr CopyOptHdrPage;
+           exsr StartStopCopyOptHdrPage;
          elseif     KeyPressed(KsF06)
                 and (   Screen = 3
                      or Screen = 4
@@ -644,18 +690,11 @@
                 and not SbNoResize;
            // F09 pressed; switch screen size & refresh.
            DspWide = not DspWide;
-           SetCurs = *off;
          elseif     KeyPressed(KsF11)
                 and Screen = 1
                 and ModeUpdate;
            // F11 pressed in menu in update mode; switch sim. display.
            exsr SwitchSimDisplay;
-         elseif     KeyPressed(KsF12)
-                and Screen = 1
-                and CopyPage > 0;
-           // F12 pressed while copying; cancel copy.
-           CopyPage = 0;
-           CopySlot = 0;
          elseif     KeyPressed(KsF12)
                 and Screen > 1;
            // F12 pressed; return to previous screen.
@@ -684,12 +723,6 @@
                 and ModeUpdate;
            // F13 pressed in menu in update mode; reload authorisations.
            exsr ReloadAuth;
-         elseif     KeyPressed(KsF13)
-                and (   Screen = 3
-                     or Screen = 4
-                     or Screen = 5);
-           // F13 pressed in screen "edit attrs"; work with menu groups.
-           exsr WorkWithMenuGroups;
          elseif     KeyPressed(KsF14)
                 and Screen = 1
                 and CurUserPage > 0
@@ -725,9 +758,8 @@
            // F14 pressed in screen "edit attrs"; delete group.
            exsr DeleteGroup;
          elseif     KeyPressed(KsF15)
-                and Screen = 1
                 and ModeUpdate and not SimDisplay;
-           // F15 pressed in menu in update mode; work with groups.
+           // F15 pressed in update mode; work with groups.
            exsr WorkWithMenuGroups;
          elseif     KeyPressed(KsF16)
                 and Screen = 1
@@ -762,6 +794,13 @@
                 and ModeUpdate and not SimDisplay;
            // F19/F20 pressed in menu in update mode; prev/next nb page.
            exsr GotoPrvNxtNonBlankPage;
+         elseif     KeyPressed(KsF21)
+                and Screen = 1
+                and CurUserPage > 0
+                and ModeUpdate and not SimDisplay;
+           // F21 pressed in menu in update mode; swap vertical strip.
+           SetCurs = *on;
+           exsr StartStopSwapVStrip;
          elseif     KeyPressed(KsEnter)
                 and Screen = 1;
            // Enter pressed in menu.
@@ -769,10 +808,11 @@
                and ModeUpdate and not SimDisplay;
              // Handle changed screen field: page title.
              exsr HsfPageTitle;
-           elseif D_NEWPAGE <> '';
-             // Handle changed screen field: page no.
-             exsr NewPage;
-           elseif SfcSimUser and ModeUpdate and SimDisplay;
+           elseif SfcNewPage;
+             // Handle changed screen field: new page.
+             exsr HsfNewPage;
+           elseif     SfcSimUser
+                  and ModeUpdate and SimDisplay;
              // Handle changed screen field: simulated user.
              exsr HsfSimUser;
            elseif     ModeUpdate and not SimDisplay
@@ -780,8 +820,8 @@
              // Edit slot at cursor location.
              exsr EditSlot;
            else;
-             // Perform option.
-             exsr PerformOption;
+             // Perform/edit option.
+             exsr PerformEditOption;
            endif;
          elseif     KeyPressed(KsEnter)
                 and Screen = 2
@@ -804,8 +844,6 @@
            // Function key not supported.
            L_SetErr(RtvAMsgAB(1010:CAmsFatal));
          endif;
-
-         enddo;
 
          // Reset screen values if not handled ("Sfc*" still *on).
          if SfcPageTitle;
@@ -922,9 +960,12 @@
          NoSlotSelection = *off;
          OrigUserPage    = 0;
          SimPgNorm       = 0;
+         CopyPage        = 0;
+         CopySlot        = 0;
 
          PcfPageTitle = *off;
          PcfSimUser   = *off;
+         PcfNewPage   = *off;
 
          // Load the menu . . .
          if ModeUpdate;
@@ -975,21 +1016,29 @@
          endif;
 
          if     Screen = 1
-            and CopyPage > 0;
+            and (   CopyPage > 0
+                 or SwapVStrip > 0);
            *in81 = *on;
-           if CopySlot > 0;
-             if CopyHdr;
-               D_COPYTXT = SubstText(%trim(Text(28)):%trim(CopyText)
-                               :%char(CopyPage))
-                         + CDacNormal;
+           if CopyPage > 0;
+             if CopySlot > 0;
+               if CopyHdr;
+                 D_ACTTXT = SubstText(%trim(Text(28)):%trim(CopyText)
+                                :%char(CopyPage))
+                          + CDacNormal;
+               else;
+                 D_ACTTXT = SubstText(%trim(Text(27)):%trim(CopyText)
+                                :%char(CopyPage))
+                          + CDacNormal;
+               endif;
              else;
-               D_COPYTXT = SubstText(%trim(Text(27)):%trim(CopyText)
-                               :%char(CopyPage))
-                         + CDacNormal;
+               D_ACTTXT = SubstText(%trim(Text(26)):%char(CopyPage))
+                        + CDacNormal;
              endif;
-           else;
-             D_COPYTXT = SubstText(%trim(Text(26)):%char(CopyPage))
-                       + CDacNormal;
+           endif;
+           if SwapVStrip > 0;
+             D_ACTTXT = SubstText(%trim(Text(34))
+                            :%trim(L_VStripPosTxt(SwapVStrip)))
+                      + CDacNormal;
            endif;
          else;
            *in81 = *off;
@@ -1009,10 +1058,13 @@
            *in92 = *off;
            *in93 = *off;
            *in94 = *off;
+           *in95 = *off;
          else;
            *in91 = PcfPageTitle;
+           *in92 = PcfNewPage;
            *in93 = PcfSimUser;
-           if *in91 or *in92 or *in93;
+           *in95 = Screen = 3;
+           if *in91 or *in92 or *in93 or *in95;
              SetCurs = *off;
            elseif not SetCurs;
              // Set cursor on choice field by default.
@@ -1044,6 +1096,18 @@
              Msg = RtvAMsgAM(5004);
            elseif CurUserPage = 0;
              Msg = RtvAMsgAM(5002);
+           elseif Screen = 1;
+             if CopyPage > 0;
+               if CopySlot > 0;
+                 Msg = RtvAMsgAM(5041:CAmsInfo:
+                           %char(CopyPage):%char(CopySlot));
+               else;
+                 Msg = RtvAMsgAM(5042:CAmsInfo:%char(CopyPage));
+               endif;
+             elseif SwapVStrip > 0;
+               Msg = RtvAMsgAM(5043:CAmsInfo
+                         :%trim(L_VStripPosTxt(SwapVStrip)));
+             endif;
            elseif Screen = 2;
              Msg = RtvAMsgAM(5021:CAmsInfo:
                        %char(SelectedPage):%char(SelectedSlot));
@@ -1071,8 +1135,7 @@
          when ModeDisplay;
            HdrText = Text(3);
          when ModeUpdate;
-           if     Screen = 4
-              and CurMenuPage = SelectedPage;
+           if Screen = 4;
              HdrText = Text(5);
            elseif Screen = 5;
              HdrText = Text(6);
@@ -1144,8 +1207,7 @@
          // F6
          if     Screen = 1
             and CurUserPage > 0
-            and ModeUpdate and not SimDisplay
-            and not MnuIsBlankPage(CurMenuPage);
+            and ModeUpdate and not SimDisplay;
            OptsNum = AddToAppOpts(FunText(6):DspOpts:DspWide
                                  :FunText(24));
            if not DspWide;
@@ -1196,11 +1258,12 @@
          endif;
          // F12
          if     Screen = 1
-            and CopyPage > 0;
-           OptsNum = AddToAppOpts(FunText(12):DspOpts:DspWide
+            and (   CopyPage > 0
+                 or SwapVStrip > 0);
+           OptsNum = AddToAppOpts(FunText(36):DspOpts:DspWide
                                  :FunText(24));
            if not DspWide;
-             L_AddHelpText(FunText(12));
+             L_AddHelpText(FunText(36));
            endif;
          endif;
          // F13
@@ -1240,8 +1303,7 @@
            endif;
          endif;
          // F15
-         if     Screen = 1
-            and ModeUpdate and not SimDisplay;
+         if ModeUpdate and not SimDisplay;
            OptsNum = AddToAppOpts(FunText(15):DspOpts:DspWide
                                  :FunText(24));
            if not DspWide;
@@ -1280,6 +1342,16 @@
              L_AddHelpText(FunText(20));
            endif;
          endif;
+         // F21
+         if     Screen = 1
+            and CurUserPage > 0
+            and ModeUpdate and not SimDisplay;
+           OptsNum = AddToAppOpts(FunText(21):DspOpts:DspWide
+                                 :FunText(24));
+           if not DspWide;
+             L_AddHelpText(FunText(21));
+           endif;
+         endif;
          //D__FTTEXT  = DspOpts;
          if OptsNum > 1;
            AddToAppOpts(FunText(24):DspOpts:DspWide);
@@ -1299,7 +1371,8 @@
 
          dou not (   KeyPressed(KsF01)
                   or KeyPressed(KsF10)
-                  or KeyPressed(KsF22)
+                  or     KeyPressed(KsF22)
+                     and GetCursRow() = DspMsgRow
                   or     KeyPressed(KsF24)
                      and OptsNum > 1
                      and DspWide
@@ -1383,20 +1456,20 @@
              CursCol = GetWCursCol();
            endif;
 
-           if KeyPressed(KsF10);
-             exsr SetNextCursLoc;
-           elseif    KeyPressed(KsF01)
-                  or KeyPressed(KsF22);
+           if KeyPressed(KsF01);
              SetCurs = *on;
-             if KeyPressed(KsF01);
-               if DspWide;
-                 DspHelp(' ');
-               else;
-                 DspHelp(' ':HelpText);
-               endif;
-             elseif MoreMsgs;
-               ShowDspMsgs();
+             if DspWide;
+               DspHelp(' ');
+             else;
+               DspHelp(' ':HelpText);
              endif;
+           elseif KeyPressed(KsF10);
+             exsr SetNextCursLoc;
+           elseif     KeyPressed(KsF22)
+                  and GetCursRow() = DspMsgRow
+                  and MoreMsgs;
+             SetCurs = *on;
+             ShowDspMsgs();
            elseif     KeyPressed(KsF24)
                   and OptsNum > 1
                   and DspWide;
@@ -1439,6 +1512,7 @@
 
          PcfPageTitle = *off;
          PcfSimUser   = *off;
+         PcfNewPage   = *off;
 
        endsr;
 
@@ -1566,18 +1640,18 @@
        endsr;
 
 
-       // Handle new page.
-       begsr NewPage;
+       // Handle changed screen field: new page.
+       begsr HsfNewPage;
 
          if CurUserPage <= 0;
            L_SetErr(RtvAMsgAM(5002:CAmsFatal));
-           *in92 = *on;
+           PcfSimUser = *on;
            leavesr;
          endif;
          n = %check('0123456789':%trim(D_NEWPAGE));
          if n > 0;
            L_SetErr(RtvAMsgAM(5051:CAmsFatal));
-           *in92 = *on;
+           PcfNewPage = *on;
            leavesr;
          endif;
          CurUserPage = CvtTxtToInt(D_NEWPAGE);
@@ -1605,10 +1679,10 @@
        endsr;
 
 
-       // Perform the option having the currently entered choice
-       // (D_CHOICE), or - if D_CHOICE is blank - the option on
-       // the current cursor location.
-       begsr PerformOption;
+       // Perform or edit the option having the currently entered
+       // choice (D_CHOICE) or - if D_CHOICE is blank - the option
+       // on the current cursor location.
+       begsr PerformEditOption;
 
          if CurUserPage <= 0;
            L_SetErr(RtvAMsgAM(5002:CAmsFatal));
@@ -1622,7 +1696,7 @@
 
          if D_CHOICE = '';
 
-           // Perform/edit option on cursor location.
+           // Perform option on cursor location.
 
            if    SlotAtCursor < 1
               or SlotAtCursor > %elem(DspSlots)
@@ -1640,7 +1714,7 @@
 
          else;
 
-           // Perform option with choice.
+           // Perform/edit option with choice.
 
            evalr D_CHOICE = %trim(D_CHOICE);
 
@@ -1658,15 +1732,22 @@
 
          endif;
 
-         if MnuMustReload();
+         if     not ModeUpdate
+            and MnuMustReload();
            L_SetErr(RtvAMsgAM(5090:CAmsFatal));
            leavesr;
          endif;
 
          if     s > CNumVSlots*2
             and not DspWide;
-           // Option is not visible; don't perform invisible options.
+           // Option is not visible; don't perform/edit invisible options.
            L_SetErr(RtvAMsgAM(5050:CAmsFatal));
+           leavesr;
+         endif;
+
+         if ModeUpdate and not SimDisplay;
+           SlotAtCursor = s;
+           exsr EditSlot;
            leavesr;
          endif;
 
@@ -1782,7 +1863,7 @@
          SelectedPage    = ErrPage;
          SelectedSlot    = ErrSlot;
          NoSlotSelection = *on;
-         L_SetErr(ErrMsg:ErrAttr);
+         L_SetErr(ErrMsg);
 
        endsr;
 
@@ -1807,10 +1888,11 @@
                  and MnuMovePagesRight(ErrMsg:CurMenuPage);
              if KeyPressed(KsF07);
                CurUserPage = CurUserPage - 1;
+               DspMsg = RtvAMsgAM(5221);
              else;
                CurUserPage = CurUserPage + 1;
+               DspMsg = RtvAMsgAM(5222);
              endif;
-             DspMsg = RtvAMsgAM(5210);
            else;
              L_SetErr(ErrMsg);
            endif;
@@ -2022,10 +2104,9 @@
          Screen = 2;
          D__WDWTIT1 = SubstText(Text(11)
                           :%char(SelectedPage):%char(SelectedSlot));
-         if CursRow >= VsbTop + WszDFWINDOW1V;
+         D__WDWROW1 = VsbTop + %rem(SlotAtCursor-1:CNumVSlots) + 1;
+         if D__WDWROW1 > VsbTop + WszDFWINDOW1V;
            D__WDWROW1 = VsbTop;
-         else;
-           D__WDWROW1 = CursRow + 1;
          endif;
          D__WDWCOL1 = VsbLeftLeft;
 
@@ -2108,72 +2189,10 @@
            endif;
 
            // Go to screen 3: edit option attributes.
-
            Screen = 3;
-
            D_TITLETXT = D_OTEXT;
+           D__WDWTIT2 = SubstText(Text(15):%trim(D_OCHOICE));
 
-           D__WDWTIT2 = SubstText(Text(15):%trim(D_OTEXT));
-
-         endif;
-
-       endsr;
-
-
-       // Copy option, header or page.
-       begsr CopyOptHdrPage;
-
-         if CurUserPage <= 0;
-           L_SetErr(RtvAMsgAM(5002:CAmsFatal));
-           CopyPage = 0;
-           CopySlot = 0;
-           leavesr;
-         endif;
-
-         if     CopyPage > 0
-            and CopyPage = CurMenuPage
-            and (   CopySlot = 0
-                 or CopySlot = SlotAtCursor);
-           CopyPage = 0;
-           CopySlot = 0;
-           leavesr;
-         endif;
-
-         if CopyPage > 0;
-           if CopySlot > 0;
-             if SlotAtCursor = 0;
-               CopyPage = 0;
-               CopySlot = 0;
-             else;
-               exsr EditSlot;
-             endif;
-           else;
-           endif;
-         else;
-           if MnuIsBlankPage(CurMenuPage);
-             L_SetErr(RtvAMsgAM(3004:CAmsFatal:%char(CurMenuPage)));
-             leavesr;
-           endif;
-           CopyPage = CurMenuPage;
-           CopySlot = SlotAtCursor;
-           if CopySlot > 0;
-             if    MnuSlotHasOpt(CopyPage:CopySlot)
-                or MnuSlotHasHdr(CopyPage:CopySlot);
-               CopyText = %trim(MnuGetOptChoice(CopyPage:CopySlot));
-               CopyHdr = CopyText = '';
-               if CopyHdr;
-                 CopyText = %trim(MnuGetOptText(CopyPage:CopySlot));
-               else;
-                 CopyText = %trim(CopyText) + ' '
-                          + %trim(MnuGetOptText(CopyPage:CopySlot));
-               endif;
-             else;
-               L_SetErr(RtvAMsgAM(2121:CAmsFatal));
-               CopyPage = 0;
-               CopySlot = 0;
-               leavesr;
-             endif;
-           endif;
          endif;
 
        endsr;
@@ -2188,7 +2207,12 @@
          D_CONFPO = 'N';
          D_USECH  = 'N';
 
-         MenuPage@ = MenuPages(CurMenuPage);
+         if CopyPage > 0;
+           MenuPage@ = MenuPages(CopyPage);
+           CopyPage = 0;
+         else;
+           MenuPage@ = MenuPages(CurMenuPage);
+         endif;
 
          if MenuPage@ <> *null;
            if MenuPage.command <> *null;
@@ -2322,7 +2346,7 @@
          endif;
 
          if Screen = 3;
-           // Create/update option.
+           // Create/update option attr.
 
            if MnuSetOptAttr(
                   ErrMsg:ErrAttr:SelectedPage:SelectedSlot
@@ -2334,7 +2358,8 @@
              MenuOption@ = MenuPage.slots(SelectedSlot);
              DspMsg = RtvAMsgAM(5202:CAmsInfo
                           :%char(SelectedPage):%char(SelectedSlot)
-                          :%trim(MenuOption.text));
+                          :%trim(MenuOption.choice) + ' ' +
+                           %trim(MenuOption.text));
              CurUserPage = OrigUserPage;
              Screen = 1;
              SelectedPage = 0;
@@ -2351,7 +2376,7 @@
            endif;
 
          elseif Screen = 4;
-           // Create/update page.
+           // Create/update page attr.
 
            if MnuSetPageAttr(
                   ErrMsg:ErrAttr:CurMenuPage
@@ -2372,7 +2397,7 @@
            endif;
 
          elseif Screen = 5;
-           // Update menu.
+           // Update menu attr.
 
            if MnuSetMenuAttr(
                   ErrMsg:ErrAttr
@@ -2672,6 +2697,109 @@
        endsr;
 
 
+       // Start/stop copying option, header or page.
+       begsr StartStopCopyOptHdrPage;
+
+         if     CurUserPage <= 0
+            or     CopyPage > 0
+               and CopyPage = CurMenuPage
+               and (   CopySlot = 0
+                    or CopySlot = SlotAtCursor);
+           if CurUserPage <= 0;
+             L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           endif;
+           if CopyPage > 0;
+             if CopySlot > 0;
+               if CopyHdr;
+                 AddToDspMsgList(RtvAMsgAM(5133));
+               else;
+                 AddToDspMsgList(RtvAMsgAM(5132));
+               endif;
+             else;
+               AddToDspMsgList(RtvAMsgAM(5131));
+             endif;
+             CopyPage = 0;
+             CopySlot = 0;
+             SetCurs = *off;
+           endif;
+           leavesr;
+         endif;
+
+         if CopyPage > 0;
+           if CopySlot > 0;
+             if SlotAtCursor > 0;
+               SetCurs = *off;
+               exsr EditSlot;
+             endif;
+           else;
+             SetCurs = *off;
+             flag = PresentConfWdw(SubstText(Text(29)
+                        :%char(CurMenuPage):%char(CopyPage)));
+             if flag;
+               MnuCopyPgSlots(CopyPage:CurMenuPage);
+               DspMsg = RtvAMsgAM(5214:CAmsInfo
+                            :%char(CurMenuPage):%char(CopyPage));
+             endif;
+             exsr EditPageAttr;
+           endif;
+         elseif     SlotAtCursor > 0
+                and (   MnuSlotHasOpt(CurMenuPage:SlotAtCursor)
+                     or MnuSlotHasHdr(CurMenuPage:SlotAtCursor));
+           CopyPage = CurMenuPage;
+           CopySlot = SlotAtCursor;
+           CopyText = %trim(MnuGetOptChoice(CopyPage:CopySlot));
+           CopyHdr = CopyText = '';
+           if CopyHdr;
+             CopyText = %trim(MnuGetOptText(CopyPage:CopySlot));
+           else;
+             CopyText = %trim(CopyText) + ' '
+                      + %trim(MnuGetOptText(CopyPage:CopySlot));
+           endif;
+         elseif SlotAtCursor = 0;
+           CopyPage = CurMenuPage;
+         else;
+           DspMsg = RtvAMsgAM(5044);
+         endif;
+
+       endsr;
+
+
+       // Start/stop swapping vertical strip.
+       begsr StartStopSwapVStrip;
+
+         if     CurUserPage <= 0
+            or     SwapVStrip > 0
+               and (   SwapVStrip = VStripAtCursor
+                    or VStripAtCursor = 0);
+           if CurUserPage <= 0;
+             L_SetErr(RtvAMsgAM(5002:CAmsFatal));
+           endif;
+           if SwapVStrip > 0;
+             AddToDspMsgList(RtvAMsgAM(5134));
+           endif;
+           SwapVStrip = 0;
+           SetCurs = *off;
+           leavesr;
+         endif;
+
+         if SwapVStrip > 0;
+           SetCurs = *off;
+           MnuSwapSlotSeq(CurMenuPage
+               :(SwapVStrip-1)*CNumVSlots+1:(VStripAtCursor-1)*CNumVSlots+1
+               :CNumVSlots);
+           DspMsg = RtvAMsgAM(5215:CAmsInfo
+                        :%trim(L_VStripPosTxt(SwapVStrip))
+                        :%trim(L_VStripPosTxt(VStripAtCursor)));
+           SwapVStrip = 0;
+         elseif VStripAtCursor > 0;
+           SwapVStrip = VStripAtCursor;
+         else;
+           DspMsg = RtvAMsgAM(5045);
+         endif;
+
+       endsr;
+
+
       /include QINCSRC,DPGM_SUBR
 
 
@@ -2682,8 +2810,8 @@
       /include QINCSRC,DPGM_LPI
 
 
-     pL_FillMenuFlds   b
-     dL_FillMenuFlds   pi
+     pL_FillDspFlds    b
+     dL_FillDspFlds    pi
 
      d dsp             s               n
      d pt              s                   like(MenuPage.title)
@@ -2693,7 +2821,7 @@
      d ld              s             10i 0
      d lh              s             10i 0
      d s               s             10i 0
-     d nbp             s               n
+     d bp              s               n
      d so              s               n
      d f               s               n
      d hdr             s               n
@@ -2702,6 +2830,29 @@
       /free
 
        dsp = not ModeUpdate or SimDisplay;
+
+       if dsp;
+         pt = '- NO OPTIONS -';
+       else;
+         pt = '- BLANK -';
+       endif;
+
+       if     CurUserPage > 0
+          and not MnuIsBlankPage(CurMenuPage);
+         bp = *off;
+         MenuPage@ = MenuPages(CurMenuPage);
+       else;
+         bp = *on;
+       endif;
+
+       if     not bp
+          and (   dsp
+               or MenuPage.title <> '');
+         pt = MenuPage.title;
+       endif;
+
+       D_PTITLE = '';
+       %subst(D_PTITLE:%div(%len(D_PTITLE)-%len(%trim(pt)):2)+1) = %trim(pt);
 
        // Initialize strips.
        if dsp;
@@ -2800,26 +2951,6 @@
 
        DspSlots(*) = 0;
 
-       if dsp;
-         pt = '- NO OPTIONS -';
-       else;
-         pt = '- BLANK -';
-       endif;
-
-       if     CurUserPage > 0
-          and not MnuIsBlankPage(CurMenuPage);
-         nbp = *on;
-         MenuPage@ = MenuPages(CurMenuPage);
-       else;
-         nbp = *off;
-       endif;
-
-       if     nbp
-          and (   dsp
-               or MenuPage.title <> '');
-         pt = MenuPage.title;
-       endif;
-
        // Fill left strip.
        l  = 0;
        lh = 0;
@@ -2831,21 +2962,14 @@
                 and l <= CNumVSlots;
                DspSlots(l) = s;
              endif;
-           else;
+           elseif dsp;
              iter;
            endif;
          elseif     dsp
                 and lh > 0
                 and not hopts;
            l = lh;
-           if     (   CurMenuPage = SelectedPage
-                   or CurMenuPage = CopyPage)
-              and (   DspSlots(l) = SelectedSlot
-                   or DspSlots(l) = CopySlot);
-             opt = CDacRevImg+'   '+blankmot+CDacNormal;
-           else;
-             opt = '';
-           endif;
+           opt = '';
            DspSlots(l) = 0;
          else;
            l = 0;
@@ -2896,21 +3020,14 @@
                 and l <= CNumVSlots;
                DspSlots(CNumVSlots+l) = s;
              endif;
-           else;
+           elseif dsp;
              iter;
            endif;
          elseif     dsp
                 and lh > 0
                 and not hopts;
            l = lh;
-           if     (   CurMenuPage = SelectedPage
-                   or CurMenuPage = CopyPage)
-              and (   DspSlots(l) = SelectedSlot
-                   or DspSlots(l) = CopySlot);
-             opt = CDacRevImg+'   '+blankmot+CDacNormal;
-           else;
-             opt = '';
-           endif;
+           opt = '';
            DspSlots(l) = 0;
          else;
            l = 0;
@@ -2961,21 +3078,14 @@
                 and l <= CNumVSlots;
                DspSlots(CNumVSlots*2+l) = s;
              endif;
-           else;
+           elseif dsp;
              iter;
            endif;
          elseif     dsp
                 and lh > 0
                 and not hopts;
            l = lh;
-           if     (   CurMenuPage = SelectedPage
-                   or CurMenuPage = CopyPage)
-              and (   DspSlots(l) = SelectedSlot
-                   or DspSlots(l) = CopySlot);
-             opt = CDacRevImg+'   '+blankmot+CDacNormal;
-           else;
-             opt = '';
-           endif;
+           opt = '';
            DspSlots(l) = 0;
          else;
            l = 0;
@@ -3015,10 +3125,6 @@
          l = l + ld;
        endfor;
 
-       // Title
-       D_PTITLE = '';
-       %subst(D_PTITLE:%div(%len(D_PTITLE)-%len(%trim(pt)):2)+1) = %trim(pt);
-
        return;
 
        begsr setopt;
@@ -3029,13 +3135,7 @@
                   or CurMenuPage = CopyPage)
              and (   s = SelectedSlot
                   or s = CopySlot);
-         if dsp;
-           if f;
-             opt = CDacRevImg+'   '+blankmot+CDacNormal;
-           else;
-             opt = '';
-           endif;
-         else;
+         if not dsp;
            if f;
              %subst(blankmot:1:1) = '.';
              opt = CDacRevImg+'   '+blankmot+CDacNormal;
@@ -3044,10 +3144,10 @@
              opt = '    .';
            endif;
          endif;
-         if nbp;
-           MenuOption@ = MenuPage.slots(s);
-         else;
+         if bp;
            MenuOption@ = *null;
+         else;
+           MenuOption@ = MenuPage.slots(s);
          endif;
          if MenuOption@ <> *null;
            if MenuOption.choice = '';
@@ -3095,9 +3195,10 @@
       /end-free
      p                 e
 
-
-     pL_SlotAtCursor   b
-     dL_SlotAtCursor   pi            10i 0
+     pL_VStripAtCursor...
+     p                 b
+     dL_VStripAtCursor...
+     d                 pi            10i 0
 
       /free
 
@@ -3109,16 +3210,51 @@
        select;
        when     GetCursCol() >= VsbLeftLeft
             and GetCursCol() <= VsbLeftRight;
-         return GetCursRow() - VsbTop + 1;
+         return 1;
        when     GetCursCol() >= VsbMiddleLeft
             and GetCursCol() <= VsbMiddleRight;
-         return GetCursRow() - VsbTop + 1 + CNumVSlots;
+         return 2;
        when     GetCursCol() >= VsbRightLeft
             and GetCursCol() <= VsbRightRight;
-         return GetCursRow() - VsbTop + 1 + CNumVSlots*2;
+         return 3;
        endsl;
 
        return 0;
+
+      /end-free
+     p                 e
+
+
+     pL_SlotAtCursor   b
+     dL_SlotAtCursor   pi            10i 0
+
+     d s               s             10i 0
+
+      /free
+
+       s = L_VStripAtCursor();
+       if s = 0;
+         return 0;
+       endif;
+
+       return GetCursRow() - VsbTop + 1 + (s - 1) * CNumVSlots;
+
+      /end-free
+     p                 e
+
+
+     pL_VStripPosTxt   b
+     dL_VStripPosTxt   pi            10
+     d  pos                          10i 0
+
+      /free
+
+       if    pos < 1
+          or pos > 3;
+         return '';
+       endif;
+
+       return %subst(Text(33):(pos-1)*10+1:10);
 
       /end-free
      p                 e
@@ -3181,15 +3317,17 @@ D_GROUP9    59
 D_FRELOAD   61
 ** CursLocs (snrrccc, screensize/screen#/row/col, s=W/N/blank, n=blank=all)
  122010
-N104075
-W104127
+N 24001
+W 25001
+N104077
+W104129
 ** Text
 App Menu
  2:RESERVED
 
->>> UPDATE <<<
->>> EDIT THIS PAGE <<<
->>> EDIT MENU <<<
+* UPDATE *
+* EDIT PAGE ATTRS *
+* EDIT MENU ATTRS *
 Loading the menu . . .
 Saving the menu . . .
 Loading authorisations . . .
@@ -3198,9 +3336,9 @@ Edit slot %2, page %1
 Confirm change option to header in slot %2, page %1
 Create new option at page %1, slot %2
 Update option at page %1, slot %2
-Edit attributes, option "%1"
-Edit attributes, page %1
-Edit%1MENU%2attributes
+Edit attributes: option "%1"
+Edit attributes: page %1
+Edit attributes:%1MENU%2
 18:RESERVED
 19:RESERVED
 20:RESERVED
@@ -3210,8 +3348,14 @@ Option text . . . . .:
 Page title  . . . . .:
 Menu title  . . . . .:
 COPY PAGE %1
-COPY OPTION %1, PAGE %2
-COPY HEADER %1, PAGE %2
+COPY OPTION %1 PAGE %2
+COPY HEADER %1 PAGE %2
+REPLACE slots pg %1 with slots pg %2?
+30:RESERVED
+31:RESERVED
+32:RESERVED
+LEFT      MIDDLE    RIGHT
+SWAP %1 VERTICAL STRIP
 ** FunText
 F1=Help
 F2=Save Menu
@@ -3224,16 +3368,16 @@ F8=OptDown/PgRight
 F9=
 F10=
 F11=Start simulate
-F12=Cancel copy
+F12=
 F13=Reload auth.
 F14=Clear page
-F15=Work w/ groups
+F15=Work with groups
 F16=Edit page/menu
 F17=
 F18=
 F19=Prev nb page
 F20=Next nb page
-F21=
+F21=Swap vert. strip
 F22=
 F23=
 F24=More keys
@@ -3248,3 +3392,4 @@ F14=Delete opt/hdr
 F14=Delete group
 F16=Edit MENU attr
 F6=Ins blank group
+F12=Cancel copy
