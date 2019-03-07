@@ -1244,7 +1244,7 @@
             and ModeUpdate;
            if SimDisplay;
              OptsNum = AddToAppOpts(FunText(31):DspOpts:DspWide
-                                 :FunText(24));
+                                   :FunText(24));
              if not DspWide;
                L_AddHelpText(FunText(31));
              endif;
@@ -1352,7 +1352,6 @@
              L_AddHelpText(FunText(21));
            endif;
          endif;
-         //D__FTTEXT  = DspOpts;
          if OptsNum > 1;
            AddToAppOpts(FunText(24):DspOpts:DspWide);
            if not DspWide;
@@ -1380,7 +1379,11 @@
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
 
-           D__FTTEXTW = GetAppOptsPart(Opts#:DspOpts:DspWide);
+           D__FTTEXTW = '';
+           if OptsNum > 0;
+             D__FTTEXTW = GetAppOptsPart(Opts#:DspOpts:DspWide);
+           endif;
+           //D__FTTEXT = D__FTTEXTW;
 
            D__FTMSG1  = Msg;
            D__FTMSG1W = Msg;

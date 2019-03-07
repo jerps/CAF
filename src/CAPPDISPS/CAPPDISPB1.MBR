@@ -61,7 +61,7 @@
                           TGTLIB(&TLIB)
 
              /* INITIAL DATA LOAD */
-             CALL       PGM(CAPPDISPP0) PARM(INIF1)
+             CALL       PGM(CAPPDISPP0) PARM(&INIF1)
 
              /*----- BUILD END -----*/
 

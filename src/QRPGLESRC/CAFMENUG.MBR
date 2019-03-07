@@ -285,7 +285,8 @@
        // Header displayed on screen.
      d HdrText         s            100
        // Subfile options or function keys to be displayed on screen.
-     d DspOpts         s           1056
+     d DspOpts1        s           1056
+     d DspOpts2        s           1056
        // Current subfile page length (number of rows).
      d PgLen           s             10i 0
        // Screen row of the first record of the current subfile page.
@@ -296,6 +297,13 @@
      d Msg#            s             10i 0
        // Subfile record#
      d SflRec          s             10i 0
+
+       // Number of "options" parts (see "AddToAppOpts").
+     d OptsNum1        s             10i 0
+     d OptsNum2        s             10i 0
+       // Current "options" part.
+     d Opts#1          s             10i 0
+     d Opts#2          s             10i 0
 
        // Standard program parameter fields.
      d Pmode           s             10
@@ -936,33 +944,50 @@
          write DFHEADER;
 
          // Subfile options.
-         DspOpts = '';
+         DspOpts1 = '';
+         OptsNum1 = 0;
          if ModeSelect;
-           AddToAppOpts(SfoText(1):DspOpts:DspWide);
+           OptsNum1 = AddToAppOpts(SfoText(1):DspOpts1:DspWide);
          endif;
          if ModeEdit;
-           AddToAppOpts(SfoText(2):DspOpts:DspWide);
+           OptsNum1 = AddToAppOpts(SfoText(2):DspOpts1:DspWide);
            if not SbNoAdd;
-             AddToAppOpts(SfoText(3):DspOpts:DspWide);
+             OptsNum1 = AddToAppOpts(SfoText(3):DspOpts1:DspWide);
            endif;
          endif;
          if     ModeEdit
             and not SbNoDel;
-           AddToAppOpts(SfoText(4):DspOpts:DspWide);
+           OptsNum1 = AddToAppOpts(SfoText(4):DspOpts1:DspWide);
          endif;
-         AddToAppOpts(SfoText(5):DspOpts:DspWide);
-         D__SFOPTS  = DspOpts;
-         D__SFOPTSW = DspOpts;
+         OptsNum1 = AddToAppOpts(SfoText(5):DspOpts1:DspWide);
+         if Opts#1 < 1;
+           Opts#1 = 1;
+         elseif Opts#1 > OptsNum1;
+           Opts#1 = OptsNum1;
+         endif;
 
          // Footer.
-         DspOpts = '';
-         AddToAppOpts(FunText( 1):DspOpts:DspWide);
+         DspOpts2 = '';
+         OptsNum2 = 0;
+         OptsNum2 = AddToAppOpts(FunText( 1):DspOpts2:DspWide
+                                :FunText(24));
          if     ModeEdit
             and not SbNoAdd;
-           AddToAppOpts(FunText( 6):DspOpts:DspWide);
+           OptsNum2 = AddToAppOpts(FunText( 6):DspOpts2:DspWide
+                                  :FunText(24));
          endif;
-         D__FTTEXT  = DspOpts;
-         D__FTTEXTW = DspOpts;
+         if OptsNum1 > 1;
+           OptsNum2 = AddToAppOpts(FunText(23):DspOpts2:DspWide
+                                  :FunText(24));
+         endif;
+         if OptsNum2 > 1;
+           AddToAppOpts(FunText(24):DspOpts2:DspWide);
+         endif;
+         if Opts#2 < 1;
+           Opts#2 = 1;
+         elseif Opts#2 > OptsNum2;
+           Opts#2 = OptsNum2;
+         endif;
 
          if D__CURREC < 1;
            D__CURREC = 1;
@@ -975,9 +1000,24 @@
                   or KeyPressed(KsF10)
                   or     KeyPressed(KsF22)
                      and GetCursRow() = DspMsgRow
+                  or     KeyPressed(KsF23)
+                     and OptsNum1 > 1
+                  or     KeyPressed(KsF24)
+                     and OptsNum2 > 1
                   or     (   KeyPressed(KsPageDown)
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
+
+           D__SFOPTSW = '';
+           if OptsNum1 > 0;
+             D__SFOPTSW = GetAppOptsPart(Opts#1:DspOpts1:DspWide);
+           endif;
+           D__SFOPTS = D__SFOPTSW;
+           D__FTTEXTW = '';
+           if OptsNum2 > 0;
+             D__FTTEXTW = GetAppOptsPart(Opts#2:DspOpts2:DspWide);
+           endif;
+           D__FTTEXT = D__FTTEXTW;
 
            D__FTMSG1  = Msg;
            D__FTMSG1W = Msg;
@@ -1057,6 +1097,22 @@
                   and MoreMsgs;
              SetCurs = *on;
              ShowDspMsgs();
+           elseif     KeyPressed(KsF23)
+                  and OptsNum1 > 1;
+             SetCurs = *on;
+             if Opts#1 < OptsNum1;
+               Opts#1 = Opts#1 + 1;
+             else;
+               Opts#1 = 1;
+             endif;
+           elseif     KeyPressed(KsF24)
+                  and OptsNum2 > 1;
+             SetCurs = *on;
+             if Opts#2 < OptsNum2;
+               Opts#2 = Opts#2 + 1;
+             else;
+               Opts#2 = 1;
+             endif;
            elseif     (   KeyPressed(KsPageDown)
                        or KeyPressed(KsPageUp))
                   and GetCursRow() = DspMsgRow;
@@ -1849,8 +1905,8 @@ F19=
 F20=
 F21=
 F22=
-F23=
-F24=
+F23=More options
+F24=More keys
 ** SfoText
 1=Select
 2=Update

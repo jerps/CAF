@@ -324,6 +324,11 @@
        // Subfile record#
      d SflRec          s             10i 0
 
+       // Number of "options" parts (see "AddToAppOpts").
+     d OptsNum         s             10i 0
+       // Current "options" part.
+     d Opts#           s             10i 0
+
        // Standard program parameter fields.
      d Pmode           s             10
      d Pspcbhvr        s             10
@@ -963,14 +968,23 @@
          // Display footer.
          D__SCRIND = %char(Screen) + '/' + %char(NumScreens);
          DspOpts = '';
-         AddToAppOpts(FunText( 1):DspOpts:DspWide);
+         OptsNum = 0;
+         OptsNum = AddToAppOpts(FunText( 1):DspOpts:DspWide
+                               :FunText(24));
          if not IdleState;
            if ModeDelete;
-             AddToAppOpts(FunText(14):DspOpts:DspWide);
+             OptsNum = AddToAppOpts(FunText(14):DspOpts:DspWide
+                                   :FunText(24));
            endif;
          endif;
-         D__FTTEXT  = DspOpts;
-         D__FTTEXTW = DspOpts;
+         if OptsNum > 1;
+           AddToAppOpts(FunText(24):DspOpts:DspWide);
+         endif;
+         if Opts# < 1;
+           Opts# = 1;
+         elseif Opts# > OptsNum;
+           Opts# = OptsNum;
+         endif;
 
          if Screen = 1;
            if D__CURREC < 1;
@@ -985,9 +999,17 @@
                   or KeyPressed(KsF10)
                   or     KeyPressed(KsF22)
                      and GetCursRow() = DspMsgRow
+                  or     KeyPressed(KsF24)
+                     and OptsNum > 1
                   or     (   KeyPressed(KsPageDown)
                           or KeyPressed(KsPageUp))
                      and GetCursRow() = DspMsgRow);
+
+           D__FTTEXTW = '';
+           if OptsNum > 0;
+             D__FTTEXTW = GetAppOptsPart(Opts#:DspOpts:DspWide);
+           endif;
+           D__FTTEXT = D__FTTEXTW;
 
            D__FTMSG1  = Msg;
            D__FTMSG1W = Msg;
@@ -1057,6 +1079,14 @@
                   and MoreMsgs;
              SetCurs = *on;
              ShowDspMsgs();
+           elseif     KeyPressed(KsF24)
+                  and OptsNum > 1;
+             SetCurs = *on;
+             if Opts# < OptsNum;
+               Opts# = Opts# + 1;
+             else;
+               Opts# = 1;
+             endif;
            elseif     (   KeyPressed(KsPageDown)
                        or KeyPressed(KsPageUp))
                   and GetCursRow() = DspMsgRow;
@@ -1736,5 +1766,5 @@ F20=
 F21=
 F22=
 F23=
-F24=
+F24=More keys
 

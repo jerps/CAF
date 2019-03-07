@@ -43,7 +43,7 @@
                           TGTLIB(&TLIB)
 
              /* INITIAL DATA LOAD */
-             CALL       PGM(CSYSSQLSP0) PARM(INIF1)
+             CALL       PGM(CSYSSQLSP0) PARM(&INIF1)
 
              /*----- BUILD END -----*/
 

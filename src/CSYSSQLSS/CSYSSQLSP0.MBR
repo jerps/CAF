@@ -18,7 +18,7 @@
      d Main            pr                  extpgm('CSYSSQLSP0')
      d   inif1                        1    const
 
-     d SqlStmts        s             90    ctdata dim(15)
+     d SqlStmts        s             90    ctdata dim(100)
 
 
      d Main            pi
@@ -37,15 +37,17 @@
          for i = 1 to %elem(SqlStmts);
            clear *all SQLSREC;
            SQLSID = %subst(SqlStmts(i):1:%len(SQLSID));
-           if SQLSID = sid;
-             lineno = lineno + 1;
-           else;
-             lineno = 1;
-             sid = SQLSID;
+           if SQLSID <> '';
+             if SQLSID = sid;
+               lineno = lineno + 1;
+             else;
+               lineno = 1;
+               sid = SQLSID;
+             endif;
+             SQLSLINENO = lineno;
+             SQLSLINE   = %subst(SqlStmts(i):%len(SQLSID)+1);
+             write SQLSREC;
            endif;
-           SQLSLINENO = lineno;
-           SQLSLINE   = %subst(SqlStmts(i):%len(SQLSID)+1);
-           write SQLSREC;
          endfor;
        endif;
 
@@ -61,6 +63,8 @@ CSYS-000              SELECT SQLSID
 CSYS-000                FROM CSYSSQLSF1
 CSYS-000            GROUP BY SQLSID
 CSYS-000            ORDER BY SQLSID
+
+
 CSYS-001            // Select All SQL Statement ID's With First Line And Line Count
 CSYS-001
 CSYS-001              SELECT A.SQLSID, A.SQLSLINE, COUNT(*)
@@ -68,5 +72,5 @@ CSYS-001                FROM CSYSSQLSF1 A, CSYSSQLSF1 B
 CSYS-001               WHERE A.SQLSLINENO = 1
 CSYS-001                 AND A.SQLSID = B.SQLSID
 CSYS-001                 AND A.SQLSID >= ?
-CSYS-001            GROUP BY A.SQLSID, A.SQLSLINE
+CSYS-001            GROUP BY A.SQLSID, A.SQLSLINENO, A.SQLSLINE
 CSYS-001            ORDER BY A.SQLSID
