@@ -1,8 +1,8 @@
 
-      /IF DEFINED(CAPPSSAM_INCL_DECL)
+      /IF DEFINED(CAPPSSAM_INCL_DEFS)
       /EOF
       /ENDIF
-      /DEFINE CAPPSSAM_INCL_DECL
+      /DEFINE CAPPSSAM_INCL_DEFS
 
 
        // (c) 2019 John Erps
@@ -10,13 +10,13 @@
 
        // INCLUDE: *SRVPGM CAPPSSAM
 
-       // Declarations
+       // Definitions
 
 
-       // ----- Prerequisite Service Program Declarations
+       // ----- Prerequisite Service Program Definitions
 
-      /include CAPPBASES,INCL_DECL
-      /include CSYSBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Constants
@@ -41,12 +41,18 @@
      dCMsbConfPO       c                   'C'
        // - Use command handler program CAPPSSAMCH.
      dCMsbUseCH        c                   'H'
+       // - Perform command sequence 1-5.
+     dCMsbPCS1         c                   '1'
+     dCMsbPCS2         c                   '2'
+     dCMsbPCS3         c                   '3'
+     dCMsbPCS4         c                   '4'
+     dCMsbPCS5         c                   '5'
 
        // All special behavior codes that are supported for
        // an option, a page or the menu.
-     dCMssbOption      c                   'CH'
-     dCMssbPage        c                   'CH'
-     dCMssbMenu        c                   'CH'
+     dCMssbOption      c                   'CH12345'
+     dCMssbPage        c                   'CH12345'
+     dCMssbMenu        c                   'CH12345'
 
        // Number of pages that can be defined for the menu.
      dCNumPages        c                   999

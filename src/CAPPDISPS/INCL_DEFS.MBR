@@ -1,28 +1,27 @@
 
-      /IF DEFINED(CSYSSQLS_INCL_DECL)
+      /IF DEFINED(CAPPDISP_INCL_DEFS)
       /EOF
       /ENDIF
-      /DEFINE CSYSSQLS_INCL_DECL
+      /DEFINE CAPPDISP_INCL_DEFS
 
 
        // (c) 2019 John Erps
 
 
-       // INCLUDE: *SRVPGM CSYSSQLS
+       // INCLUDE: *SRVPGM CAPPDISP
 
-       // Declarations
+       // Definitions
 
 
-       // ----- Prerequisite Service Program Declarations
+       // ----- Prerequisite Service Program Definitions
 
-      /include CSYSBASES,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
+      /include CAPPBASES,INCL_DEFS
+      /include CSYSSQLSS,INCL_DEFS
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Constants
-
-       // Maximum # allocated connections and (total) cursors.
-     dCSqlsMaxConn     c                   1
-     dCSqlsMaxCurs     c                   99
 
 
        // ----- Public Record Formats
@@ -39,11 +38,6 @@
        // is conditioned with a condition-name that begins with "ERF_", which
        // is followed by the physical file name. This ensures that the same
        // external record format is only defined once.
-
-      /IF NOT DEFINED(ERF_CSYSSQLSFR)
-      /DEFINE ERF_CSYSSQLSFR
-     dErfCSYSSQLSFR  e ds                  extname(CSYSSQLSFR)
-      /ENDIF
 
 
        // ----- Data Structures

@@ -865,8 +865,8 @@
      p                 e
 
 
-     p IsWorkDay       b                   export
-     d IsWorkDay       pi              n
+     p IsWorkday       b                   export
+     d IsWorkday       pi              n
      d   date                          d   const options(*nopass:*omit)
      d   wkdate                       7  0 const options(*nopass:*omit)
 
@@ -897,8 +897,8 @@
      p                 e
 
 
-     p AddWorkDays     b                   export
-     d AddWorkDays     pi              d
+     p AddWorkdays     b                   export
+     d AddWorkdays     pi              d
      d   date                          d   const
      d   days                        10i 0 const
      d   s1                          10i 0 const options(*nopass)
@@ -927,7 +927,7 @@
          return date;
        endif;
 
-       // Skip non-work days?
+       // Skip non-workdays?
        snwd = %parms < 3;
 
        // Add (or subtract) days?
@@ -977,7 +977,7 @@
          endif;
 
          if     (   not snwd
-                 or IsWorkDay(dg:dw))
+                 or IsWorkday(dg:dw))
             and (   %parms < 3
                  or dwd <> s1)
             and (   %parms < 4
@@ -1064,7 +1064,7 @@
      d   y                           10i 0
          // Arrays "w" and "g" both contain the nwd types of the records in
          // CSYSBASEF2 for year "y". Each element represents one specific day
-         // in a full year and is either blank (the day is a work day) or it
+         // in a full year and is either blank (the day is a workday) or it
          // contains the nwd type for that day. Array "w" contains the nwd
          // types of all records that specify a week date (ww-d, NWDDNUM > 0).
          // It has 378 (54*7) elements for 54 weeks (0-53) and 7 days. Array

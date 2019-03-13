@@ -43,7 +43,7 @@
        // affected by calling procedures in this module.
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Constants

@@ -19,7 +19,7 @@
 
        // Each public procedure in this module implements a "command" and
        // has a name which starts with "DC_.._", where .. is the subsystem
-       // code that is defined in INCL_DECL ("CSsId..").
+       // code that is defined in INCL_DEFS ("CSsId..").
 
        // A "command" is complete set of operations which changes the
        // database in the subsystem in some way by adding, updating and/or
@@ -37,12 +37,12 @@
        // or "*DELETE".
 
        // The second parameter is typically named "data" and is a data structure
-       // containing the database (key) values. It is declared within one of the
+       // containing the database (key) values. It is defined within one of the
        // include (INCL_*) sources. If the data structure is not shared between
        // procedures (which is most common) it is usually defined together with
        // the procedure's prototype (i.e. in the same source), and has the same
-       // name as the procedure. All shared data structures should be declared
-       // in include source "INCL_DECL".
+       // name as the procedure. All shared data structures should be defined
+       // in include source "INCL_DEFS".
 
        // The subfield names in data structure "data" should be ALL CAPS.
 
@@ -169,7 +169,7 @@
        // of it's id is an "F".
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
        // ----- Prototypes

@@ -15,17 +15,7 @@
 
        // Provides a simplified API to the SQL CLI.
 
-       // IMPLEMENTATION NOTES:
-       // - This implementation currently does NOT use SERVER MODE.
-       //   This can be enabled by uncommenting some lines in procedure
-       //   CSYSSQLSCI/L_CheckEnv. If enabled, SQL statements are executed
-       //   within a separate pre-start job. For each new connection, a
-       //   separate pre-start job is used. To set the correct library list
-       //   and other attributes for a new pre-start job an exit program
-       //   needs to be registered for exit point QIBM_QSQ_CLI_CONNECT,
-       //   format CLIC0100 (ADDEXITPGM). This exit program must have one
-       //   input parameter, length 10, which will contain the current
-       //   user-id of the job which creates the new connection.
+       // NOTES:
        // - This service program is activated in it's own activation group,
        //   named CSYSSQLS. This is necessary because the CLI implementation
        //   itself has no concept of activation groups and all resources
@@ -39,8 +29,8 @@
        //   when the program ends then all connections and open cursors
        //   within the job would be closed, and some of them are maybe still
        //   needed by other programs still active in the same job. So a
-       //   program should only release those resources that are used by
-       //   that program only.
+       //   program should only call "RlsSpCSYSSQLS" if the CLI resources
+       //   are not used anymore by any program in the job.
        // - Use RCLACTGRP ACTGRP(CSYSSQLS) to delete the activation group.
        //   This will release all non-CLI resources such as memory that is
        //   allocated by the service program. However, resources allocated by
@@ -50,9 +40,19 @@
        // - To list all open CLI handlers for the current job use
        //   CALL QSYS/QSQDMPHA. Specify PARM('xxxxxx'), where 'xxxxxx'
        //   is a job number, to list all open handlers for that job.
+       // - This implementation currently does NOT use SERVER MODE.
+       //   This can be enabled by uncommenting some lines in procedure
+       //   CSYSSQLSCI/L_CheckEnv. If enabled, SQL statements are executed
+       //   within a separate pre-start job. For each new connection, a
+       //   separate pre-start job is used. To set the correct library list
+       //   and other attributes for a new pre-start job an exit program
+       //   needs to be registered for exit point QIBM_QSQ_CLI_CONNECT,
+       //   format CLIC0100 (ADDEXITPGM). This exit program must have one
+       //   input parameter, length 10, which will contain the current
+       //   user-id of the job which creates the new connection.
 
 
-      /include CSYSSQLSS,INCL_DECL
+      /include CSYSSQLSS,INCL_DEFS
 
 
        // ----- Constants
@@ -131,6 +131,8 @@
        // return a positive number which identifies the new cursor. If
        // successful and the statement is not a SELECT then return 0.
        // Return -1 if not successful.
+       //
+       // If "conn" is omitted then connection 1 is used.
        //
        // The new cursor id is needed again in subsequent calls to bind
        // the result set columns with "SqlsBindCols" and to fetch the rows

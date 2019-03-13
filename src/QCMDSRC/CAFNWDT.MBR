@@ -1,4 +1,4 @@
-             CMD        PROMPT('CAF - Non-Work Day Types')
+             CMD        PROMPT('CAF - Non-Workday Types')
 
              PARM       KWD(MODE) TYPE(*CHAR) LEN(10) RSTD(*YES) +
                           DFT(*DISPLAY) VALUES(*DISPLAY *EDIT +

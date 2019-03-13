@@ -36,10 +36,10 @@
        // the message text.
 
        // Constants "CAmsFatal", "CAmsWarning" and "CAmsInfo" are defined
-       // in CAPPBASES/INCL_DECL.
+       // in CAPPBASES/INCL_DEFS.
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
        // ----- Prototypes

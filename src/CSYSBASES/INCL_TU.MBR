@@ -13,7 +13,7 @@
        // Module TU: Text Utilities
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Prototypes

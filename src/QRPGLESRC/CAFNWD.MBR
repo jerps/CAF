@@ -2,7 +2,7 @@
        // (c) 2019 John Erps
 
 
-       // CAF - Non-Work Days
+       // CAF - Non-Workdays
 
 
        // Pass 0-10 parameters:
@@ -2255,7 +2255,7 @@ NWDTYPE     36
 N 22001
 W 25001
 ** Text
-Non-Work Days
+Non-Workdays
 Edit
 Display
 Select

@@ -10,10 +10,10 @@
 
        // INCLUDE: *SRVPGM CSYSBASE
 
-       // Module Declarations
+       // Module Definitions
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Private Record Formats

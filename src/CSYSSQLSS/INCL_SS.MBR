@@ -17,7 +17,7 @@
        // The SQL statements are stored in file CSYSSQLSF1.
 
 
-      /include CSYSSQLSS,INCL_DECL
+      /include CSYSSQLSS,INCL_DEFS
 
 
        // SqlsRtvStmt - Retrieve Statement

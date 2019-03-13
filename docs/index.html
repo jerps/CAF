@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<!--
+-----
+
+CAF / Docs v0.92.0
+
+(c) 2019 John Erps
+
+-----
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+-->
+
+<html lang="en">
+<head>
+  <!--#include virtual="/include/gtag.html" -->
+  <title>CAF / Docs</title>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="description" content="CAF / Docs"/>
+  <meta name="author" content="John Erps"/>
+  <meta name="keywords" content="john erps ibm i iseries system i as/400 rpg rpgle rpgiv ile cl programming caf common application framework docs"/>
+  <link rel="shortcut icon" href="/images/favicon.ico"/>
+  <link rel="stylesheet" href="css/normalize.min.css"/>
+  <link rel="stylesheet" href="css/main.css?v=2"/>
+  <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Mono|Ubuntu+Mono" rel="stylesheet"/>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+<body>
+  <div id="pname">
+    CAF
+  </div>
+  <div id="docs">
+    /&nbsp;Docs
+  </div>
+  <div id="emversion">
+  <span id="email"></span><span>&nbsp;&nbsp;<b>v0.92.0</b></span>
+  </div>
+  <div id="container">
+    <div id="navigation">
+      <div class="navlink1"><a id="_caf_overview" href="#caf_overview">CAF Overview</a></div>
+      <div class="navlink2"><a id="_objects_naming" href="#objects_naming">Objects & Naming</a></div>
+      <div class="navlink2"><a id="_source_files" href="#source_files">Source Files</a></div>
+      <div class="navlink1"><a id="_service_programs" href="#service_programs">Service Programs</a></div>
+      <div class="navlink2"><a id="_srvpgm_organisation" href="#srvpgm_organisation">*SRVPGM Organisation</a></div>
+      <div class="navlink2"><a id="_common_system" href="#common_system">Common System</a></div>
+      <div class="navlink3"><a id="_csysbase" href="#csysbase">CSYSBASE (Base)</a></div>
+      <div class="navlink3"><a id="_csyssqls" href="#csyssqls">CSYSSQLS (SQL Statements)</a></div>
+      <div class="navlink2"><a id="_common_application" href="#common_application">Common Application</a></div>
+      <div class="navlink1"><a id="_applications" href="#applications">Applications</a></div>
+      <div class="navlink2"><a id="_cafmenu" href="#cafmenu">CAFMENU (Display or Update the Menu)</a></div>
+      <div class="navlink2"><a id="_cafmenug" href="#cafmenug">CAFMENUG (Work with Menu Groups)</a></div>
+      <div class="navlink2"><a id="_cafnwd" href="#cafnwd">CAFNWD (Work with Non-Workdays)</a></div>
+      <div class="navlink2"><a id="_cafnwdt" href="#cafnwdt">CAFNWDT (Work with Non-Workday Types)</a></div>
+      <div class="navlink2"><a id="_cafsqls" href="#cafsqls">CAFSQLS (Work with SQL Statements)</a></div>
+      <br><br>
+      <hr>
+      <div style="height:100vh;"></div>
+    </div>
+    <div id="content">
+      <noscript><p>.&nbsp;.&nbsp;.&nbsp;&nbsp;Need&nbsp;JavaScript&nbsp;&nbsp;.&nbsp;.&nbsp;.</p></noscript>
+      <script src="content/caf_overview.js?v=2"></script><br><br>
+      <script src="content/objects_naming.js?v=2"></script><br><br>
+      <script src="content/source_files.js?v=2"></script><br><br>
+      <script src="content/service_programs.js?v=2"></script><br><br>
+      <script src="content/srvpgm_organisation.js?v=2"></script><br><br>
+      <script src="content/common_system.js?v=2"></script><br><br>
+      <script src="content/csysbase.js?v=2"></script><br><br>
+      <script src="content/csyssqls.js?v=2"></script><br><br>
+      <script src="content/common_application.js?v=2"></script><br><br>
+      <script src="content/applications.js?v=2"></script><br><br>
+      <script src="content/cafmenu.js?v=2"></script><br><br>
+      <script src="content/cafmenug.js?v=2"></script><br><br>
+      <script src="content/cafnwd.js?v=2"></script><br><br>
+      <script src="content/cafnwdt.js?v=2"></script><br><br>
+      <script src="content/cafsqls.js?v=2"></script><br><br>
+      <br><br>
+      <hr>
+      <div id="-" style="height:100vh;"></div>
+    </div>
+  </div>
+  <div id="cpyr">
+    <a style="color: #999; user-select: none; outline: none;" href="https://johnerps.com" target="_blank" tabindex="-1">&#x00A9 2019 John Erps</a>
+  </div>
+<script>
+  var scrolled = false;
+  var animatedScroll = false;
+  var lastAnimatedScroll = false;  
+  $(document).ready(function() {
+    var e = document.getElementById("email");
+    e.textContent = "erps.com";
+    e.textContent = "@john" + e.textContent;
+    e.textContent = "caf" + e.textContent;
+    $(window).bind("popstate", function(e) {
+      if (window.location.hash.length > 1)
+        gototag(window.location.hash.substring(1), true, true);
+    });
+    if (window.location.hash.length > 1)
+      gototag(window.location.hash.substring(1), true, true);
+    else {
+      window.location.hash = "0";
+      gototag(null, true, true);
+    }
+    $("a").on("click", function(e) {
+      var h, i;
+      if (this.href) {
+        i = this.href.lastIndexOf("#");
+        if (i > 0) {
+          h = this.href.substring(i);
+          if (h.length > 1) {
+            e.preventDefault();
+            h = h.substring(1);
+            if (scrolled)
+              history.pushState(null, null, "index.html"+stqp()+window.location.hash);
+            history.pushState(null, null, "index.html"+"#"+h);
+            gototag(h, this.id.substring(0,1) !== "_", false);
+          }
+        }
+      }
+    });
+    $("#pname").on("click", function(e) {
+      if (window.location.hash.length > 1) {
+        if (scrolled)
+          history.pushState(null, null, "index.html"+stqp()+window.location.hash);
+        history.pushState(null, null, "index.html"+window.location.hash);
+        gototag(window.location.hash.substring(1), true, false);
+      }
+    });
+    $("#docs").on("click", function(e) {
+      var el = $("#api");
+      if (scrolled)
+        history.pushState(null, null, "index.html"+stqp()+window.location.hash);
+      if (el.length > 0 && isElementInViewport(el)) {
+        history.pushState(null, null, "index.html#0");
+        gototag(null, true, false);
+      } else {
+        history.pushState(null, null, "index.html#api");
+        gototag('api', true, false);
+      }
+    });
+    $("#navigation, #content").on("scroll", function(){
+      lastAnimatedScroll = animatedScroll;
+      animatedScroll = $(this).is(':animated');
+      scrolled = !lastAnimatedScroll;
+    });
+  });
+  function stqp() {
+    var qp = "", cel = $("#navigation");
+    if (cel.length > 0) {
+      qp = "?scrollTopLeft=" + cel.scrollTop(); 
+    }
+    cel = $("#content");
+    if (cel.length > 0) {
+      if (qp == "")
+        qp = "?";
+      else
+        qp += "&";
+      qp += "scrollTopRight=" + cel.scrollTop();
+    }
+    return qp;
+  }
+  var sel = null;
+  function gototag(t, both, st) {
+    var cel = $("#content");
+    var el, el2;
+    var x, y, z, qp;
+    if (t == "0") {
+      t = null;
+    }
+    x= -1;
+    y = -1;
+    if (t)
+      el = $("#" + t).first();
+    else {
+      x = 0;
+      y = 0;
+    }
+    if (st) {
+      x = window.location.href.lastIndexOf("?scroll");
+      if (x >= 0) {
+        y = window.location.href.lastIndexOf("#");
+        if (y == -1 || y < x)
+          qp = window.location.href.substring(x);
+        else
+          qp = window.location.href.substring(x, y);
+        x = qp.indexOf("scrollTopLeft=");
+        if (x >= 0)
+          x = parseInt(qp.substring(x+14));
+        y = qp.indexOf("scrollTopRight=");
+        if (y >= 0)
+          y = parseInt(qp.substring(y+15));
+      }
+    }
+    if (!t) {
+      if (x == -1)
+        x = 0;
+      if (y == -1)
+        y = 0;
+    }
+    if (cel.length > 0 && (!t || el.length > 0)) {
+      if (x >= 0 && y >= 0) {
+        cel.animate({scrollTop: y});
+      } else {
+        z = 0;
+        el2 = el.next();
+        while (z < cel.height() && el2.length > 0) {
+          if (el2.attr("id") && el2.attr("id").length > 0) {
+            z = el2.position().top - el.position().top + el2.height();
+            break;
+          }
+          el2 = el2.next();
+        } 
+        if (z > cel.height())
+          z = el.position().top;
+        else
+          z = el.position().top-(cel.height()-z)/2;
+        z -= cel.height()*0.02;
+        cel.animate({scrollTop: cel.scrollTop() + z});
+      }
+    }
+    if (both) {
+      cel = $("#navigation");
+      if (t)
+        el = $("#" + "_" + t).first();
+      if (cel.length > 0 && (!t || el.length > 0)) {
+        if (x >= 0 && y >= 0)
+          cel.animate({scrollTop: x});
+        else
+          cel.animate({scrollTop: cel.scrollTop() + el.position().top-(cel.height()-el.height())/2});
+      }
+    }
+    if (sel) {
+      sel.style = "color: black; font-weight: normal;";
+      sel = null;
+    }
+    if (t) {
+      el = $("#" + "_" + t)[0];
+      if (el) {
+        el.style = "color: red; font-weight: bold;";
+        sel = el;
+      }
+    }
+    scrolled = false;
+  }
+  function isElementInViewport (el) {
+    //special bonus for those using jQuery
+    if (typeof jQuery === "function" && el instanceof jQuery) {
+        el = el[0];
+    }
+    var rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /*or $(window).height() */
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /*or $(window).width() */
+    );
+  }
+</script>
+</body>
+</html>
+
+<!--
+-----
+-->

@@ -30,7 +30,7 @@
        //   - The decimal separator for numbers is  given with NumSepDec().
 
 
-      /include CAPPBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
 
 
        // ----- Prototypes

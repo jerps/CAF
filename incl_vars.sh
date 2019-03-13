@@ -2,9 +2,9 @@
 #  Include: Setup Vars.
 
 
-DFTHLIBD="CAF v0.91.0 (c) 2019 John Erps"
+DFTHLIBD="CAF v0.92.0 (c) 2019 John Erps"
 
-DFTHLIB=CAF0910
+DFTHLIB=CAF0920
 
 
 HOST=$1

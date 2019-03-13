@@ -13,7 +13,7 @@
        // API
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
       /include CSYSBASES,INCL_WM
       /include CSYSBASES,INCL_CV
       /include CSYSBASES,INCL_DF

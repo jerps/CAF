@@ -79,7 +79,7 @@
        // Window sizes.
      d WszDFWINDOW1V   c                   6
      d WszDFWINDOW1H   c                   61
-     d WszDFWINDOW2V   c                   17
+     d WszDFWINDOW2V   c                   18
      d WszDFWINDOW2H   c                   77
      d WszDFWINDOW9V   c                   9
      d WszDFWINDOW9H   c                   48
@@ -2078,6 +2078,7 @@
          // Initialize screen 3 with the option attributes.
          clear *all DFWINDOW2;
          D_PROMPTXT = Text(23);
+         D_CMDSEQ = CMsbPCS3;
          D_CONFPO = 'N';
          D_USECH  = 'N';
          if     MenuOption@ <> *null
@@ -2094,6 +2095,21 @@
            D_GROUP9 = MenuOption.groups(9);
            if MenuOption.command <> *null;
              D_COMMAND = %str(MenuOption.command);
+           endif;
+           if %scan(CMsbPCS5:MenuOption.specb) > 0;
+             D_CMDSEQ = CMsbPCS5;
+           endif;
+           if %scan(CMsbPCS4:MenuOption.specb) > 0;
+             D_CMDSEQ = CMsbPCS4;
+           endif;
+           if %scan(CMsbPCS3:MenuOption.specb) > 0;
+             D_CMDSEQ = CMsbPCS3;
+           endif;
+           if %scan(CMsbPCS2:MenuOption.specb) > 0;
+             D_CMDSEQ = CMsbPCS2;
+           endif;
+           if %scan(CMsbPCS1:MenuOption.specb) > 0;
+             D_CMDSEQ = CMsbPCS1;
            endif;
            if %scan(CMsbConfPO:MenuOption.specb) > 0;
              D_CONFPO = 'Y';
@@ -2207,6 +2223,7 @@
          clear *all DFWINDOW2;
          D_PROMPTXT = Text(24);
 
+         D_CMDSEQ = CMsbPCS3;
          D_CONFPO = 'N';
          D_USECH  = 'N';
 
@@ -2239,6 +2256,21 @@
            if MenuPage.command <> *null;
              D_COMMAND = %str(MenuPage.command);
            endif;
+           if %scan(CMsbPCS5:MenuPage.specb) > 0;
+             D_CMDSEQ = CMsbPCS5;
+           endif;
+           if %scan(CMsbPCS4:MenuPage.specb) > 0;
+             D_CMDSEQ = CMsbPCS4;
+           endif;
+           if %scan(CMsbPCS3:MenuPage.specb) > 0;
+             D_CMDSEQ = CMsbPCS3;
+           endif;
+           if %scan(CMsbPCS2:MenuPage.specb) > 0;
+             D_CMDSEQ = CMsbPCS2;
+           endif;
+           if %scan(CMsbPCS1:MenuPage.specb) > 0;
+             D_CMDSEQ = CMsbPCS1;
+           endif;
            if %scan(CMsbConfPO:MenuPage.specb) > 0;
              D_CONFPO = 'Y';
            endif;
@@ -2266,6 +2298,7 @@
          clear *all DFWINDOW2;
          D_PROMPTXT = Text(25);
 
+         D_CMDSEQ = CMsbPCS3;
          D_CONFPO = 'N';
          D_USECH  = 'N';
 
@@ -2289,6 +2322,21 @@
          D_GROUP9 = Menu.groups(9);
          if Menu.command <> *null;
            D_COMMAND = %str(Menu.command);
+         endif;
+         if %scan(CMsbPCS5:Menu.specb) > 0;
+           D_CMDSEQ = CMsbPCS5;
+         endif;
+         if %scan(CMsbPCS4:Menu.specb) > 0;
+           D_CMDSEQ = CMsbPCS4;
+         endif;
+         if %scan(CMsbPCS3:Menu.specb) > 0;
+           D_CMDSEQ = CMsbPCS3;
+         endif;
+         if %scan(CMsbPCS2:Menu.specb) > 0;
+           D_CMDSEQ = CMsbPCS2;
+         endif;
+         if %scan(CMsbPCS1:Menu.specb) > 0;
+           D_CMDSEQ = CMsbPCS1;
          endif;
          if %scan(CMsbConfPO:Menu.specb) > 0;
            D_CONFPO = 'Y';
@@ -2329,6 +2377,14 @@
          grps(8) = D_GROUP8;
          grps(9) = D_GROUP9;
 
+         if     D_CMDSEQ <> CMsbPCS1
+            and D_CMDSEQ <> CMsbPCS2
+            and D_CMDSEQ <> CMsbPCS3
+            and D_CMDSEQ <> CMsbPCS4
+            and D_CMDSEQ <> CMsbPCS5;
+           L_SetErr(RtvAMsgAB(2021:CAmsFatal):'D_CMDSEQ');
+           leavesr;
+         endif;
          if     D_CONFPO <> 'Y'
             and D_CONFPO <> 'N';
            L_SetErr(RtvAMsgAB(5101:CAmsFatal):'D_CONFPO');
@@ -2340,7 +2396,7 @@
            leavesr;
          endif;
 
-         specb = '';
+         specb = D_CMDSEQ;
          if D_CONFPO = 'Y';
            specb = %trim(specb) + CMsbConfPO;
          endif;
@@ -3294,8 +3350,9 @@ D_CHOICE    33
 ??OTEXT     42
 D_COMMAND   45
 ???COMMAND  45
-D_CONFPO    46
-D_USECH     47
+D_CMDSEQ    46
+D_CONFPO    47
+D_USECH     48
 D_TITLETXT  50
 ??OTEXT     50
 ???TITLE    50

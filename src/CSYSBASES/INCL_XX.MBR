@@ -18,7 +18,7 @@
        // and therefore susceptible of being moved to another module.
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Prototypes

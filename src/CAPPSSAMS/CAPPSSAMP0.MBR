@@ -16,7 +16,7 @@
      fCAPPSSAMF4if a e           k disk
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
      d Main            pr                  extpgm('CAPPSSAMP0')

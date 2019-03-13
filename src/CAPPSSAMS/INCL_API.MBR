@@ -18,7 +18,7 @@
        // Implements the application menu.
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
       /include CAPPSSAMS,INCL_MO
       /include CAPPSSAMS,INCL_DC
       /include CAPPSSAMS,INCL_DQ

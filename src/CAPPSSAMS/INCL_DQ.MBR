@@ -21,17 +21,17 @@
 
        // A procedure with a name that begins with "Qds_" fills a data structure
        // with related data items, if successful. The data struct. to be filled
-       // is always given with the first parameter "data", and it is declared
+       // is always given with the first parameter "data", and it is defined
        // within one of the include (INCL_*) sources. If the data structure is
        // not shared between procedures (which is most common) it is usually
        // defined together with the procedure's prototype (i.e. in the same
        // source), and has the same name as the procedure which fills it,
-       // appended with "$". All shared data structures should be declared in
-       // include source "INCL_DECL".
+       // appended with "$". All shared data structures should be defined in
+       // include source "INCL_DEFS".
 
        // All "Qds" procedures in this module must have a name that starts
        // with "Qds_.._", where .. is the subsystem code that is defined in
-       // INCL_DECL ("CSsId..").
+       // INCL_DEFS ("CSsId..").
 
        // Each "Qds" procedure returns a 2-digit return code indicating success
        // or failure. Return code 0 indicates that the procedure executed
@@ -68,7 +68,7 @@
        //    00           : Ok.
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
        // ----- Prototypes

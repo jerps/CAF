@@ -21,7 +21,7 @@
        // that is defined in the client program.
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Constants

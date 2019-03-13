@@ -13,7 +13,7 @@
        // and therefore susceptible of being moved to another module.
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
        // ----- Prototypes

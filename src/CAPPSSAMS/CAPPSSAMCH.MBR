@@ -5,44 +5,60 @@
              COMMAND HANDLER                                                 +
                                                                              +
              This program can be used to execute the command that is         +
-             specified for a menu, a page and/or a command.                  +
+             specified for a menu, a page or an option.                      +
                                                                              +
              Parameters:                                                     +
                                                                              +
-               1. Command (500A, input)                                      +
-                  The command to be executed.                                +
+               1. Command (500:input)                                        +
+                  The command to be executed (which may be blank).           +
                                                                              +
-               2. User (10A, input)                                          +
+               2. User (10:input)                                            +
                   The user for which the command is executed. If blank       +
                   then the menu is loaded with all options for all users     +
                   (i.e. update mode).                                        +
                                                                              +
-               3. Menu context (6A, input)                                   +
-                  Indicates where in the menu the command is specified.      +
-                  If the value is 'M     ' then the command is specified     +
-                  for the menu. If the value is 'Pnnn  ', where nnn is       +
-                  a three digit number from 001 to 999, then the command     +
-                  is specified for page nnn. If the value is 'Onnnaa',       +
-                  where aa is 2 characters, then the command is specified    +
-                  for option aa, in page nnn.                                +
+               3. Context (1:input)                                          +
+                  Is either 'M', 'P' or 'O' depending on whether the         +
+                  command is specified for the Menu, Page or Option.         +
                                                                              +
-               4. Text (34A, input)                                          +
-                  If parameter 2 is 'M     ' then this parameter contains    +
-                  the menu title. If parameter 2 starts with 'P' then        +
-                  it contains the page title. Else it contains the           +
-                  option text.                                               +
+               4. Pageno (3,0:input)                                         +
+                  The page number of the option that is performed.           +
                                                                              +
-               5. Error message (150A, output)                               +
-                  If this output parameter is not blank then an error        +
-                  occurred during execution of the command handler and       +
-                  this parameter contains the error message.                 +
+               5. Slot (3,0:input)                                           +
+                  The slot of the option that is performed.                  +
+                                                                             +
+               6. Choice (2:input)                                           +
+                  The choice of the option that is performed.                +
+                                                                             +
+               7. Page title (34:input)                                      +
+                  The title specified for the page.                          +
+                                                                             +
+               8. Option text (34:input)                                     +
+                  The text specified for the option.                         +
+                                                                             +
+               9. Sequence (1:input)                                         +
+                  The command sequence which can be '1', '2', '3', '4'       +
+                  or '5'. Depends on special behavior codes "CMsbPCS1"       +
+                  thru "CMsbPCS5".                                           +
+                                                                             +
+              10. Error message (150:output)                                 +
+                  If this output parameter is not blank after calling this   +
+                  program then this means that an error occurred during      +
+                  execution of the command handler and this parameter        +
+                  contains the error message.                                +
                                                                              +
  */
-             PGM        PARM(&CMD &USER &MENUCTX &TEXT &ERRMSG)
+             PGM        PARM(&CMD &USER &CTX &PAGENO &SLOT &CHOICE +
+                          &PTITLE &OTEXT &SEQ &ERRMSG)
              DCL        VAR(&CMD) TYPE(*CHAR) LEN(500)
              DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&MENUCTX) TYPE(*CHAR) LEN(6)
-             DCL        VAR(&TEXT) TYPE(*CHAR) LEN(34)
+             DCL        VAR(&CTX) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&PAGENO) TYPE(*DEC) LEN(3 0)
+             DCL        VAR(&SLOT) TYPE(*DEC) LEN(3 0)
+             DCL        VAR(&CHOICE) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&PTITLE) TYPE(*CHAR) LEN(34)
+             DCL        VAR(&OTEXT) TYPE(*CHAR) LEN(34)
+             DCL        VAR(&SEQ) TYPE(*CHAR) LEN(1)
              DCL        VAR(&ERRMSG) TYPE(*CHAR) LEN(100)
 
              DCL        VAR(&MSG) TYPE(*CHAR) LEN(150)
@@ -53,7 +69,8 @@
 
              CHGVAR     VAR(&ERRMSG) VALUE(' ')
 
-             CALL       PGM(QCMDEXC) PARM(&CMD &CMDLEN)
+             IF         COND(&CMD *NE ' ') THEN(CALL PGM(QCMDEXC) +
+                          PARM(&CMD &CMDLEN))
 
              RETURN
 

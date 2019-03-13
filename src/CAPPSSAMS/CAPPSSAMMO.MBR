@@ -164,8 +164,13 @@
      dPgmCAPPSSAMCH    pr                  extpgm('CAPPSSAMCH')
      d   cmd                        500    const
      d   user                        10    const
-     d   menuctx                      6    const
-     d   text                        34    const
+     d   ctx                          1    const
+     d   pageno                       3  0 const
+     d   slot                         3  0 const
+     d   choice                       2    const
+     d   ptitle                      34    const
+     d   otext                       34    const
+     d   seq                          1    const
      d   errmsg                     150
 
 
@@ -573,12 +578,15 @@
      d   pag                         10i 0 const
      d   slot                        10i 0 const
 
-     d s               s             10i 0
-     d ss              s             10i 0
      d em              s            200
      d em2             s            150
-     d mc              s              6
-     d mcp             s              3  0
+     d sb              s              1
+     d mnsb            s                   like(Menu.specb)
+     d mpsb            s                   like(MenuPage.specb)
+     d mosb            s                   like(MenuOption.specb)
+     d cmd             s                   like(TAM_CMD)
+     d noexec          s               n
+     d err             s               n
 
       /free
 
@@ -612,16 +620,6 @@
        MenuPage@   = MenuPages(pag);
        MenuOption@ = MenuPage.slots(slot);
 
-       if     (    Menu.command = *null
-               or %str(Menu.command) = '')
-          and (    MenuPage.command = *null
-               or %str(MenuPage.command) = '')
-          and (    MenuOption.command = *null
-               or %str(MenuOption.command) = '');
-         errmsg = RtvAMsgAM(1901:CAmsFatal);
-         return *off;
-       endif;
-
        if        MenuUser <> ''
              and PSI.curuser <> MenuUser
           or     MenuUser <> ''
@@ -631,80 +629,114 @@
          return *off;
        endif;
 
-        if    %scan(CMsbUseCH:Menu.specb) > 0
-           or %scan(CMsbUseCH:MenuPage.specb) > 0
-           or %scan(CMsbUseCH:MenuOption.specb) > 0;
+       mnsb = Menu.specb;
+       if     %scan(CMsbPCS1:mnsb) = 0
+          and %scan(CMsbPCS2:mnsb) = 0
+          and %scan(CMsbPCS3:mnsb) = 0
+          and %scan(CMsbPCS4:mnsb) = 0
+          and %scan(CMsbPCS5:mnsb) = 0;
+         mnsb = %trim(mnsb) + CMsbPCS3;
+       endif;
+       mpsb = MenuPage.specb;
+       if     %scan(CMsbPCS1:mpsb) = 0
+          and %scan(CMsbPCS2:mpsb) = 0
+          and %scan(CMsbPCS3:mpsb) = 0
+          and %scan(CMsbPCS4:mpsb) = 0
+          and %scan(CMsbPCS5:mpsb) = 0;
+         mpsb = %trim(mpsb) + CMsbPCS3;
+       endif;
+       mosb = MenuOption.specb;
+       if     %scan(CMsbPCS1:mosb) = 0
+          and %scan(CMsbPCS2:mosb) = 0
+          and %scan(CMsbPCS3:mosb) = 0
+          and %scan(CMsbPCS4:mosb) = 0
+          and %scan(CMsbPCS5:mosb) = 0;
+         mosb = %trim(mosb) + CMsbPCS3;
+       endif;
 
-         // Perform option; use command handler.
+       noexec = *on;
 
-         if     Menu.command <> *null
-            and %str(Menu.command) <> '';
-           em2 = '';
-           PgmCAPPSSAMCH(%str(Menu.command):MenuUser
-                        :'M     ':Menu.title:em2);
-           if em2 <> '';
-             errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
-             return *off;
-           endif;
-         endif;
+       sb = CMsbPCS1;
+       exsr exec;
+       sb = CMsbPCS2;
+       exsr exec;
+       sb = CMsbPCS3;
+       exsr exec;
+       sb = CMsbPCS4;
+       exsr exec;
+       sb = CMsbPCS5;
+       exsr exec;
 
-         if     MenuPage.command <> *null
-            and %str(MenuPage.command) <> '';
-           em2 = '';
-           mc = 'P';
-           mcp = pag;
-           %subst(mc:2:3) = %editc(mcp:'X');
-           PgmCAPPSSAMCH(%str(MenuPage.command):MenuUser
-                        :mc:MenuPage.title:em2);
-           if em2 <> '';
-             errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
-             return *off;
-           endif;
-         endif;
-
-         if     MenuOption.command <> *null
-            and %str(MenuOption.command) <> '';
-           em2 = '';
-           mc = 'O';
-           mcp = pag;
-           %subst(mc:2:3) = %editc(mcp:'X');
-           %subst(mc:5:2) = MenuOption.choice;
-           PgmCAPPSSAMCH(%str(MenuOption.command):MenuUser
-                        :mc:MenuOption.text:em2);
-           if em2 <> '';
-             errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
-             return *off;
-           endif;
-         endif;
-
-       else;
-
-         // Perform option.
-
-         if     Menu.command <> *null
-            and %str(Menu.command) <> ''
-            and not ExecCmdCE(em:%str(Menu.command));
-           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
-           return *off;
-         endif;
-
-         if     MenuPage.command <> *null
-            and %str(MenuPage.command) <> ''
-            and not ExecCmdCE(em:%str(MenuPage.command));
-           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
-           return *off;
-         endif;
-
-         if     MenuOption.command <> *null
-            and %str(MenuOption.command) <> ''
-            and not ExecCmdCE(em:%str(MenuOption.command));
-           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
-           return *off;
-         endif;
-
+       if noexec;
+         errmsg = RtvAMsgAM(1901:CAmsFatal);
+         return *off;
        endif;
 
        return *on;
+
+       begsr exec;
+         em2 = '';
+         err = *off;
+         if %scan(sb:mnsb) > 0;
+           if Menu.command = *null;
+             cmd = '';
+           else;
+             cmd = %str(Menu.command);
+           endif;
+           if %scan(CMsbUseCH:mnsb) > 0;
+             noexec = *off;
+             PgmCAPPSSAMCH(cmd:MenuUser:'M':pag:slot:MenuOption.choice
+                 :MenuPage.title:MenuOption.text:sb:em2);
+           elseif cmd <> '';
+             noexec = *off;
+             err = ExecCmdCE(em:cmd);
+           endif;
+         endif;
+         if     em2 = ''
+            and not err;
+           if %scan(sb:mpsb) > 0;
+             if MenuPage.command = *null;
+               cmd = '';
+             else;
+               cmd = %str(MenuPage.command);
+             endif;
+             if %scan(CMsbUseCH:mpsb) > 0;
+               noexec = *off;
+               PgmCAPPSSAMCH(cmd:MenuUser:'P':pag:slot:MenuOption.choice
+                   :MenuPage.title:MenuOption.text:sb:em2);
+             elseif cmd <> '';
+               noexec = *off;
+               err = ExecCmdCE(em:cmd);
+             endif;
+           endif;
+         endif;
+         if     em2 = ''
+            and not err;
+           if %scan(sb:mosb) > 0;
+             if MenuOption.command = *null;
+               cmd = '';
+             else;
+               cmd = %str(MenuOption.command);
+             endif;
+             if %scan(CMsbUseCH:mosb) > 0;
+               noexec = *off;
+               PgmCAPPSSAMCH(cmd:MenuUser:'O':pag:slot:MenuOption.choice
+                   :MenuPage.title:MenuOption.text:sb:em2);
+             elseif cmd <> '';
+               noexec = *off;
+               err = ExecCmdCE(em:cmd);
+             endif;
+           endif;
+         endif;
+         if em2 <> '';
+           errmsg = RtvAMsgAM(1998:CAmsFatal:%trim(em2));
+           return *off;
+         endif;
+         if err;
+           errmsg = RtvAMsgAM(1999:CAmsFatal:%trim(em));
+           return *off;
+         endif;
+       endsr;
 
       /end-free
      p                 e
@@ -1387,6 +1419,7 @@
        MenuPage@ = mp@;
        if not L_ValNormPage(emsg:eattr);
          // "mp" is not valid; release it (but not it's "slots") and return.
+         MenuPage@ = mp@;
          MenuPage.slots(*) = *null;
          L_RlsMenuPage();
          errmsg  = emsg;
@@ -1790,6 +1823,7 @@
        MenuOption@ = opt@;
        if not L_ValNormOption(emsg:eattr:slot);
          // "opt" is not valid; release it and return.
+         MenuOption@ = opt@;
          L_RlsMenuOpt();
          errmsg  = emsg;
          errattr = eattr;
@@ -2911,6 +2945,7 @@
      d grp             s                   like(Menu.groups)
      d grps            s                   like(Menu.groups)
      d                                     dim(%elem(Menu.groups))
+     d sb              s                   like(Menu.specb)
      d n               s             10i 0
      d i               s             10i 0
 
@@ -2922,17 +2957,18 @@
        // Normalize title (trim blanks).
        mn.title = %trim(mn.title);
 
-       // Normalize special behavior (remove leading and in-between blanks).
+       // Normalize special behavior (remove leading and in-between blanks
+       // and doubles).
+       sb = '';
        n = 0;
        for i = 1 to %len(mn.specb);
-         if %subst(mn.specb:i:1) <> ' ';
+         if     %subst(mn.specb:i:1) <> ' '
+            and %scan(%subst(mn.specb:i:1):sb) = 0;
            n = n + 1;
-           %subst(mn.specb:n:1) = %subst(mn.specb:i:1);
-           if i > n;
-             %subst(mn.specb:i:1) = '';
-           endif;
+           %subst(sb:n:1) = %subst(mn.specb:i:1);
          endif;
        endfor;
+       mn.specb = sb;
 
        // Normalize command (trim blanks).
        if mn.command <> *null;
@@ -2953,24 +2989,24 @@
        // and sort).
        grps(*) = *hival;
        n = 0;
-       for i = 1 to %elem(Menu.groups);
-         if Menu.groups(i) <> '';
-           Menu.groups(i) = %trim(Menu.groups(i));
+       for i = 1 to %elem(mn.groups);
+         if mn.groups(i) <> '';
+           mn.groups(i) = %trim(mn.groups(i));
            n = n + 1;
-           if %subst(Menu.groups(i):1:1) = CCharGrpInv;
-             grps(n) = %subst(Menu.groups(i):2);
-             %subst(grps(n):%len(grp)) = %subst(Menu.groups(i):1:1);
+           if %subst(mn.groups(i):1:1) = CCharGrpInv;
+             grps(n) = %subst(mn.groups(i):2);
+             %subst(grps(n):%len(grp)) = %subst(mn.groups(i):1:1);
            else;
-             grps(n) = %trim(Menu.groups(i));
+             grps(n) = %trim(mn.groups(i));
            endif;
          endif;
        endfor;
        sorta grps;
-       for i = 1 to %elem(Menu.groups);
+       for i = 1 to %elem(mn.groups);
          if i > n;
-           Menu.groups(i) = '';
+           mn.groups(i) = '';
          else;
-           Menu.groups(i) = %trim(%subst(grps(i):%len(grp))+grps(i));
+           mn.groups(i) = %trim(%subst(grps(i):%len(grp))+grps(i));
          endif;
        endfor;
 
@@ -2994,10 +3030,10 @@
 
        n = 0;
        grps(*) = '';
-       for i = 1 to %elem(Menu.groups);
-         if Menu.groups(i) <> '';
-           if %subst(Menu.groups(i):1:1) = CCharGrpInv;
-             grp = %subst(Menu.groups(i):2);
+       for i = 1 to %elem(mn.groups);
+         if mn.groups(i) <> '';
+           if %subst(mn.groups(i):1:1) = CCharGrpInv;
+             grp = %subst(mn.groups(i):2);
              if %subst(grp:1:1) = ' ';
                // Group inversion character not directly followed by a group.
                errmsg  = RtvAMsgAM(2010:CAmsFatal);
@@ -3005,7 +3041,7 @@
                return *off;
              endif;
            else;
-             grp = Menu.groups(n);
+             grp = mn.groups(n);
            endif;
            if %lookup(grp:grps) > 0;
              // Group occurs more than once.
@@ -3040,6 +3076,7 @@
      d grp             s                   like(MenuOption.groups)
      d grps            s                   like(MenuOption.groups)
      d                                     dim(%elem(MenuOption.groups))
+     d sb              s                   like(MenuOption.specb)
      d n               s             10i 0
      d i               s             10i 0
 
@@ -3051,17 +3088,18 @@
        // Normalize title (trim blanks).
        MenuPage.title = %trim(MenuPage.title);
 
-       // Normalize special behavior (remove leading and in-between blanks).
+       // Normalize special behavior (remove leading and in-between blanks
+       // and doubles).
+       sb = '';
        n = 0;
        for i = 1 to %len(MenuPage.specb);
-         if %subst(MenuPage.specb:i:1) <> ' ';
+         if     %subst(MenuPage.specb:i:1) <> ' '
+            and %scan(%subst(MenuPage.specb:i:1):sb) = 0;
            n = n + 1;
-           %subst(MenuPage.specb:n:1) = %subst(MenuPage.specb:i:1);
-           if i > n;
-             %subst(MenuPage.specb:i:1) = '';
-           endif;
+           %subst(sb:n:1) = %subst(MenuPage.specb:i:1);
          endif;
        endfor;
+       MenuPage.specb = sb;
 
        // Normalize command (trim blanks).
        if MenuPage.command <> *null;
@@ -3170,6 +3208,7 @@
      d grp             s                   like(MenuOption.groups)
      d grps            s                   like(MenuOption.groups)
      d                                     dim(%elem(MenuOption.groups))
+     d sb              s                   like(MenuOption.specb)
      d n               s             10i 0
      d i               s             10i 0
      d ptr             s               *
@@ -3235,17 +3274,18 @@
        // Normalize choice (right adjust).
        evalr MenuOption.choice = %trim(MenuOption.choice);
 
-       // Normalize special behavior (remove leading and in-between blanks).
+       // Normalize special behavior (remove leading and in-between blanks
+       // and doubles).
+       sb = '';
        n = 0;
        for i = 1 to %len(MenuOption.specb);
-         if %subst(MenuOption.specb:i:1) <> ' ';
+         if     %subst(MenuOption.specb:i:1) <> ' '
+            and %scan(%subst(MenuOption.specb:i:1):sb) = 0;
            n = n + 1;
-           %subst(MenuOption.specb:n:1) = %subst(MenuOption.specb:i:1);
-           if i > n;
-             %subst(MenuOption.specb:i:1) = '';
-           endif;
+           %subst(sb:n:1) = %subst(MenuOption.specb:i:1);
          endif;
        endfor;
+       MenuOption.specb = '';
 
        // Normalize command (trim blanks).
        if MenuOption.command <> *null;

@@ -13,7 +13,7 @@
        // Module DT: Date/Time functions
 
 
-      /include CSYSBASES,INCL_DECL
+      /include CSYSBASES,INCL_DEFS
 
 
        // ----- Constants
@@ -24,15 +24,15 @@
        // it is in the century before that of the cutoff year.
      dCCutoffYear      c                   2039
 
-       // Non-Work Day Type "WORK DAY".
+       // Non-Workday Type "WORKDAY".
        // See the description for table CSYSBASEF2 for more info.
      dCNwdtWrkdayCode  c                   '*'
-     dCNwdtWrkdayName  c                   'WORK DAY'
+     dCNwdtWrkdayName  c                   'WORKDAY'
 
 
        // ----- Data Structures
 
-       // This data structure represents a week date with it's components.
+       // This data structure represents a weekdate with it's components.
        // It's just for convenience; to be used by client programs.
        // The contents of this data structure is never used/changed
        // by procedures in this module.
@@ -54,7 +54,7 @@
        // IsoWkdayName - ISO Weekday Name
        // Return the ISO weekday name for "daynum" (1-7).
        // Day 1 is a monday.
-       // Return '' if "daynum" is not a valid week day number.
+       // Return '' if "daynum" is not a valid weekday number.
        // If optional parameter "option" is not given then the
        // normal name is returned, without capitalization.
        // Parameter "option" can have one of the following values
@@ -263,8 +263,8 @@
        // is the number of milliseconds.
      d CrtTimestamp9   pr             9  0 extproc('CrtTimestamp9')
 
-       // IsWorkDay - Is Work Day
-       // Return *on if "date" and/or week date "wkdate" is a work day,
+       // IsWorkday - Is Workday
+       // Return *on if "date" and/or week date "wkdate" is a workday,
        // as specified in table CSYSBASEF2, else return *off.
        // This procedure uses "RtvNwdType" to retrieve to nwd type for
        // "date" and/or "wkdate".
@@ -279,27 +279,27 @@
        // |                                                                  |
        // --------------------------------------------------------------------
        //
-     d IsWorkDay       pr              n   extproc('IsWorkDay')
+     d IsWorkday       pr              n   extproc('IsWorkday')
      d   date                          d   const options(*nopass:*omit)
      d   wkdate                       7  0 const options(*nopass:*omit)
 
-       // AddWorkDays - Add Work Days
-       // Return a new date after adding "days" work days to "date". If
+       // AddWorkdays - Add Workdays
+       // Return a new date after adding "days" workdays to "date". If
        // parameter "days" is negative then the new date will be less than
        // "date".
-       // By default, days which are non-work days as specified in table
+       // By default, days which are non-workdays as specified in table
        // CSYSBASEF2 are skipped and not counted. However, with parameters
        // "s1".."s6" this behavior can be changed to skip one or more expli-
-       // citly specified week days instead of the non-work days specified
+       // citly specified weekdays instead of the non-workdays specified
        // in CSYSBASEF2.
        // One or more of the parameters "s1".."s6" can be given with a value
-       // from 1 (monday) to 7 (sunday) to specify that one or more week days
+       // from 1 (monday) to 7 (sunday) to specify that one or more weekdays
        // must be skipped. For example values 6 and 7 will skip the week-end
        // days. Parameters "s1".."s6" with a value less than 1 or greater than
        // 7 are ignored. The same value can be passed more than once, with no
        // effect.
        // If one or more of the parameters "s1".."s6" are given then the
-       // non-work days as specified in table CSYSBASE are never used, even
+       // non-workdays as specified in table CSYSBASE are never used, even
        // if the given values are invalid. E.g., if only parameter "s1" is
        // given with value 0 then no days are skipped at all and the procedure
        // functions the same as expression "date + %days(days)".
@@ -311,7 +311,7 @@
        // If the calculated gregorian date lies after week date 9998-lw-7
        // (year 9998, last week of 9998, day 7) then the gregorian date
        // corresponding to this week date is returned.
-     d AddWorkDays     pr              d   extproc('AddWorkDays')
+     d AddWorkdays     pr              d   extproc('AddWorkdays')
      d   date                          d   const
      d   days                        10i 0 const
      d   s1                          10i 0 const options(*nopass)
@@ -321,13 +321,13 @@
      d   s5                          10i 0 const options(*nopass)
      d   s6                          10i 0 const options(*nopass)
 
-       // GetNwdtName - Get Non-work day type Name
-       // Return the name of non-work day type "nwdt".
+       // GetNwdtName - Get Non-workday type Name
+       // Return the name of non-workday type "nwdt".
        // Return blanks if the type does not exist.
      d GetNwdtName     pr            50    extproc('GetNwdtName')
      d   nwdt                         1    const
 
-       // RtvNwdType - Retrieve Non-Work Day Type
+       // RtvNwdType - Retrieve Non-Workday Type
        // Return the type (NWDTYPE) of "date" and/or week date "wkdate",
        // as specified in table CSYSBASEF2.
        // Either parameter "date", or "wkdate", or both can be provided

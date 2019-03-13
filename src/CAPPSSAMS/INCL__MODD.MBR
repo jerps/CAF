@@ -10,10 +10,10 @@
 
        // INCLUDE: *SRVPGM CAPPSSAM
 
-       // Module Declarations
+       // Module Definitions
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
        // ----- Private Record Formats

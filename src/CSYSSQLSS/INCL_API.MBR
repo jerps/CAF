@@ -16,7 +16,7 @@
        // SEE INCL_RM FOR IMPORTANT INFORMATION !!!
 
 
-      /include CSYSSQLSS,INCL_DECL
+      /include CSYSSQLSS,INCL_DEFS
       /include CSYSSQLSS,INCL_SS
       /include CSYSSQLSS,INCL_CI
       /include CSYSSQLSS,INCL_RM

@@ -18,7 +18,7 @@
        // Provides display functions for applications.
 
 
-      /include CAPPDISPS,INCL_DECL
+      /include CAPPDISPS,INCL_DEFS
       /include CAPPDISPS,INCL_SI
       /include CAPPDISPS,INCL_XX
       /include CAPPDISPS,INCL_RM

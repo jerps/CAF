@@ -13,7 +13,7 @@
        // Module RM: Resource Management
 
 
-      /include CAPPBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
 
 
        // ----- Prototypes

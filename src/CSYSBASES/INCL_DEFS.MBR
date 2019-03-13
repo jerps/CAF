@@ -1,8 +1,8 @@
 
-      /IF DEFINED(CSYSBASE_INCL_DECL)
+      /IF DEFINED(CSYSBASE_INCL_DEFS)
       /EOF
       /ENDIF
-      /DEFINE CSYSBASE_INCL_DECL
+      /DEFINE CSYSBASE_INCL_DEFS
 
 
        // (c) 2019 John Erps
@@ -10,10 +10,10 @@
 
        // INCLUDE: *SRVPGM CSYSBASE
 
-       // Declarations
+       // Definitions
 
 
-       // ----- Prerequisite Service Program Declarations
+       // ----- Prerequisite Service Program Definitions
 
 
        // ----- Constants

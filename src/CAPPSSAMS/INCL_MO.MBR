@@ -159,7 +159,7 @@
        // with "Mnu".
 
 
-      /include CAPPSSAMS,INCL_DECL
+      /include CAPPSSAMS,INCL_DEFS
 
 
        // ----- Data Structures
@@ -280,13 +280,28 @@
        // the option is allowed for the current user. Procedure "MnuOptAllowed"
        // is called with option "*CURRENT" so that the most current authorisa-
        // tion data in the database is used.
-       // The option is performed by executing up to three commands. First the
-       // the command specified for the menu, if any, is executed. Then the
-       // command specified for the page, if any, is executed. And finally is
-       // the command specified for the option executed, if any.
+       // The option is performed by executing up to three commands, i.e. the
+       // command specified for the menu, the page and the option. If blanks
+       // are specified for a command nothing is executed. Except when special
+       // behavior code "CMsbUseCH" (use command handler) is specified. In this
+       // case the handler is executed with a blank command.
+       // The up to three commands (menu/page/option) are all executed in
+       // a specific order. The order is specified with special behavior codes
+       // "CMsbPCS1" thru "CMsbPCS5". First all commands for which special
+       // behavior code "CMsbPCS1" is specified (on the menu, page or option)
+       // Then all commands for which "CMsbPCS2" is specified, etc, up to
+       // "CMsbPCS5". This way, if more then one "CMsbPCS" code is specified,
+       // a command may be executed more than once. If different commands,
+       // specified for the menu, page or option, have the same "CMsbPCS"
+       // code specified then they are all executed in the order menu, page
+       // option when the commands for that code are executed. If a menu,
+       // page or option does not specify a "CMsbPCS" code then "CMsbPCS3"
+       // is assumed.
        // Special behavior "CMsbConfPO" (confirm perform option) is ignored.
        // It is the responsibility of the client program to present the user
        // with a confirmation screen (or not).
+       // Return *off with fatal message AMF1901 if no command has been
+       // executed or the command handler has not been executed.
        // Return *off with fatal message AMF1990 if the option is not allowed.
        // Return *off with fatal message AMF1999 if an error occurs while
        // the commands specified for the menu, the page and the option are
@@ -294,10 +309,8 @@
        // is specified for the option, the page or the menu then the commands
        // are executed by calling program CAPPSSAMCH. If it reports an error
        // then return *off with fatal message AMF1998.
-       // If an error occurs when executing a command the the rest of the
-       // commands are not executed. Thus if the command for the menu returns
-       // an error then the commands specified for the page and the option
-       // are not executed.
+       // If an error occurs when executing a command then the rest of the
+       // commands are not executed.
        // Return *on if successful, else return *off and set "errmsg" to the
        // error message.
      d MnuPerformOpt   pr              n   extproc('MnuPerformOpt')

@@ -17,7 +17,7 @@
        // and therefore susceptible of being moved to another module.
 
 
-      /include CAPPDISPS,INCL_DECL
+      /include CAPPDISPS,INCL_DEFS
 
 
        // ----- Prototypes

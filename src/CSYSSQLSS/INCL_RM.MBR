@@ -64,7 +64,7 @@
        // normally ended when the first program in the stack is ended.
 
 
-      /include CSYSSQLSS,INCL_DECL
+      /include CSYSSQLSS,INCL_DEFS
 
 
        // ----- Prototypes

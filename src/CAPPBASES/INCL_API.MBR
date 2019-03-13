@@ -29,14 +29,14 @@
        // XX is the subsystem id) then the retrieved message is prefixed with
        // this subsystem id.
 
-       // The subsystem id for each such service program is declared as a
-       // constant in INCL_DECL.
+       // The subsystem id for each such service program is defined as a
+       // constant in INCL_DEFS.
 
        // This serviceprogram has subsystem id "AB" (AppBase) and thus can not
        // be used as a subsystem id.
 
 
-      /include CAPPBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
       /include CAPPBASES,INCL_PT
       /include CAPPBASES,INCL_IR
       /include CAPPBASES,INCL_MS

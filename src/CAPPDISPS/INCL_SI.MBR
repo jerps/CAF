@@ -13,7 +13,7 @@
        // Module SI: Select Item
 
 
-      /include CAPPDISPS,INCL_DECL
+      /include CAPPDISPS,INCL_DEFS
 
 
        // ---- General Information

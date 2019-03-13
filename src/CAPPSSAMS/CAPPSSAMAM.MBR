@@ -129,7 +129,7 @@
 1022: Can not save menu; group %1 in page %2 does not exist.
 1023: Can not save menu; group %1 for option %2 in page %3 does not exist.
 
-1901: Can not perform option; no cmd specified for the menu, page and option.
+1901: No command or command handler executed.
 1990: The current user (%2) is not authorised to perform option "%1".
 1998: CAPPSSAMCH: %1
 1999: ERROR: %1
@@ -145,6 +145,7 @@
 2009: Group "%1" does not exist in the database.
 2010: Group inversion character is not directly followed by a group name.
 2013: An option can not be directly preceded or followed by a header.
+2021: Enter 1, 2, 3, 4 or 5 for command sequence.
 
 2111: To move options/headers down, the bottom slot must be empty.
 2112: No room to move options/headers up; already at top.

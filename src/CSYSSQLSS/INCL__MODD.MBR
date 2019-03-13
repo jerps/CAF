@@ -10,10 +10,10 @@
 
        // INCLUDE: *SRVPGM CSYSSQLS
 
-       // Module Declarations
+       // Module Definitions
 
 
-      /include CSYSSQLSS,INCL_DECL
+      /include CSYSSQLSS,INCL_DEFS
 
 
        // ----- Private Record Formats

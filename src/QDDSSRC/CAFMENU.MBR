@@ -198,7 +198,7 @@
      A                                      OVERLAY
      A                                      KEEP
      A                                      WINDOW(&D__WDWROW2 &D__WDWCOL2
-     A                                             15 73
+     A                                             16 73
      A                                             *NOMSGLIN *RSTCSR)
      A                                      WDWBORDER((*COLOR BLU))
      A                                      WDWTITLE((*TEXT &D__WDWTIT2)
@@ -260,16 +260,21 @@
      A                                      WRDWRAP
      A                                      DSPATR(UL)
      A     45                               DSPATR(PC)
-     A                                 14  1'Confirm perform opt? :'
-     A            D_CONFPO       1   B 14 24
+     A                                 14  1'Command sequence  . .:'
+     A            D_CMDSEQ       1   B 14 24
      A    N46                               DSPATR(UL)
      A     46                               DSPATR(RI PC)
-     A                                 14 28'Y/N'
-     A                                 15  1'Use command handler? :'
-     A            D_USECH        1   B 15 24
+     A                                 14 28'1-5'
+     A                                 15  1'Confirm perform opt? :'
+     A            D_CONFPO       1   B 15 24
      A    N47                               DSPATR(UL)
      A     47                               DSPATR(RI PC)
      A                                 15 28'Y/N'
+     A                                 16  1'Use command handler? :'
+     A            D_USECH        1   B 16 24
+     A    N48                               DSPATR(UL)
+     A     48                               DSPATR(RI PC)
+     A                                 16 28'Y/N'
 
       * Screen 9 (confirm save menu)
      A          R DFWINDOW9

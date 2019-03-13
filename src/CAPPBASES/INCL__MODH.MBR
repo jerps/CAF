@@ -5,7 +5,7 @@
        // Module Header specs for *SRVPGM CAPPBASE
 
        // NOTE:
-       // Include prerequisite service program declarations in INCL_DECL.
+       // Include prerequisite service program definitions in INCL_DEFS.
 
 
      h copyright('(c) 2019 John Erps')

@@ -36,7 +36,7 @@
        // the message text.
 
 
-      /include CAPPBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
 
 
        // ----- Prototypes

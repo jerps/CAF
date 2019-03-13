@@ -32,7 +32,7 @@
        // to retrieve the associated data or field/attribute names, resp.
 
 
-      /include CAPPBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
 
 
        // ----- Prototypes

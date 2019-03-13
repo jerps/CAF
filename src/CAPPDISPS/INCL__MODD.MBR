@@ -10,10 +10,10 @@
 
        // INCLUDE: *SRVPGM CAPPDISP
 
-       // Module Declarations
+       // Module Definitions
 
 
-      /include CAPPDISPS,INCL_DECL
+      /include CAPPDISPS,INCL_DEFS
 
 
        // ----- Private Record Formats

@@ -17,15 +17,15 @@
        // A "value array" is simply an array containing a list of values,
        // e.g. the allowable values for a database field.
 
-       // Each value array is publicly declared in this member and IMPORTed
+       // Each value array is publicly defined in this member and IMPORTed
        // from the service program which actually fills these arrays when
        // it is initialized.
 
        // The name of a value array always starts with "VA.._", where ..
-       // is the subsystem code that is defined in INCL_DECL ("CSsId..").
+       // is the subsystem code that is defined in INCL_DEFS ("CSsId..").
 
 
-      /include CAPPBASES,INCL_DECL
+      /include CAPPBASES,INCL_DEFS
 
 
        // ----- Value Arrays
