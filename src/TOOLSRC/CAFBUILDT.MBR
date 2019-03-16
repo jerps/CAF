@@ -1,0 +1,112 @@
+
+/*                                                                           +
+     (c) 2019 John Erps                                                      +
+     This software is licensed under the MIT license (see LICENSE)           +
+                                                                             +
+*/                                                                           +
+
+             PGM        PARM(&CAFLIB)
+             DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&ERRMSGID) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&ERRMSGDTA) TYPE(*CHAR) LEN(256)
+             DCL        VAR(&ERRMSGF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRMSGFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRORSW) TYPE(*LGL)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
+
+
+             /* TIFCAFSRCF */
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(TIFCAFSRCF)
+
+             /* RTVDFTCAFL */
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(RTVDFTCAFL)
+
+             /* SHWDFTCAFL */
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SHWDFTCAFL)
+
+
+             /* SETCAFAUT */
+             DLTF       FILE(QTEMP/SETCAFAUT0)
+             MONMSG     MSGID(CPF0000)
+             DSPOBJD    OBJ(&CAFLIB/*ALL) OBJTYPE(*ALL) +
+                          OUTPUT(*OUTFILE) OUTFILE(QTEMP/SETCAFAUT0)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT0)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT1)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT2)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT3)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT4)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT8)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(SETCAFAUT) +
+                          PARM1(SETCAFAUT0)
+             DLTF       FILE(QTEMP/SETCAFAUT0)
+             MONMSG     MSGID(CPF0000)
+
+
+             /* CAFSRCTOS */
+             DLTF       FILE(QTEMP/CAFSRCTOS0)
+             MONMSG     MSGID(CPF0000)
+             DLTF       FILE(QTEMP/CAFSRCTOS1)
+             MONMSG     MSGID(CPF0000)
+             DSPFD      FILE(&CAFLIB/*ALL) TYPE(*BASATR) +
+                          OUTPUT(*OUTFILE) OUTFILE(QTEMP/CAFSRCTOS0)
+             DSPFD      FILE(&CAFLIB/TOOLSRC) TYPE(*MBRLIST) +
+                          OUTPUT(*OUTFILE) FILEATR(*PF) +
+                          OUTFILE(QTEMP/CAFSRCTOS1)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CAFSRCTOS0)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CAFSRCTOS1)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CAFSRCTOS) +
+                          PARM1(CAFSRCTOS0)
+             DLTF       FILE(QTEMP/CAFSRCTOS0)
+             MONMSG     MSGID(CPF0000)
+             DLTF       FILE(QTEMP/CAFSRCTOS1)
+             MONMSG     MSGID(CPF0000)
+
+
+             /* CAFSRCFRS */
+             DLTF       FILE(QTEMP/CAFSRCFRS0)
+             MONMSG     MSGID(CPF0000)
+             DLTF       FILE(QTEMP/CAFSRCFRS1)
+             MONMSG     MSGID(CPF0000)
+             DSPFD      FILE(&CAFLIB/*ALL) TYPE(*BASATR) +
+                          OUTPUT(*OUTFILE) OUTFILE(QTEMP/CAFSRCFRS0)
+             DSPFD      FILE(&CAFLIB/TOOLSRC) TYPE(*MBRLIST) +
+                          OUTPUT(*OUTFILE) FILEATR(*PF) +
+                          OUTFILE(QTEMP/CAFSRCFRS1)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CAFSRCFRS0)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CAFSRCFRS1)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CAFSRCFRS) +
+                          PARM1(CAFSRCFRS0)
+             DLTF       FILE(QTEMP/CAFSRCFRS0)
+             MONMSG     MSGID(CPF0000)
+             DLTF       FILE(QTEMP/CAFSRCFRS1)
+             MONMSG     MSGID(CPF0000)
+
+
+             /* CPYCAFDTA */
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CPYCAFDTA0)
+             CO         SRCFILE(&CAFLIB/TOOLSRC) SRCMBR(CPYCAFDTA) +
+                          PARM1(CPYCAFDTA0)
+
+             RETURN
+
+
+ ERROR:      IF         COND(&ERRORSW) THEN(SNDPGMMSG MSGID(CPF9999) +
+                          MSGF(QCPFMSG) MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW) VALUE('1')
+ ERROR2:     RCVMSG     MSGTYPE(*DIAG) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             IF         COND(&ERRMSGID = ' ') THEN(GOTO CMDLBL(ERROR3))
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*DIAG)
+             GOTO       CMDLBL(ERROR2)
+ ERROR3:     RCVMSG     MSGTYPE(*EXCP) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*ESCAPE)
+
+             ENDPGM
+

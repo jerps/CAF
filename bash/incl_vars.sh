@@ -1,17 +1,26 @@
 
+#  (c) 2019 John Erps
+#  This software is licensed under the MIT license (see LICENSE)
+
+
 #  Include: Setup Vars.
 
 
-DFTHLIBD="CAF v0.92.0 (c) 2019 John Erps"
 
-DFTHLIB=CAF0920
+CAFVERN="0930"
+CAFVERT="v0.93.0"
+
+
+DFTHLIBD="CAF $CAFVERT (c) 2019 John Erps"
+
+DFTHLIB="CAF$CAFVERN"
 
 
 HOST=$1
 USER=$2
 HLIB=$3
 MODE=$4
-
+SKIPS=$5
 
 declare -a SRC0=( TOOLSRC
                   QINCSRC
@@ -40,6 +49,6 @@ case "$HLIB" in
 esac
 
 
-BUILDMBR=$SDIR/src/TOOLSRC/CAFBUILD.MBR
+BUILDMBR=$SRCDIR/TOOLSRC/CAFBUILD.MBR
 
-FTPS=$SDIR/ftp.txt
+FTPS=$SCRDIR/ftp.txt

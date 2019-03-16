@@ -1,8 +1,10 @@
 
 /*                                                                           +
      (c) 2019 John Erps                                                      +
+     This software is licensed under the MIT license (see LICENSE)           +
                                                                              +
 */                                                                           +
+
              PGM        PARM(&CAFLIB &AUTLNF &AUTLNFGR &AUTLPFLF +
                           &AUTLPFLFGR &INCLMDAUT &INCLSPFAUT &NUM1 +
                           &NUM2)
@@ -18,7 +20,16 @@
 
              DCL        VAR(&IND) TYPE(*CHAR) LEN(1)
 
-             DCLF       FILE(QTEMP/SETCAFAUTD)
+             DCLF       FILE(QTEMP/SETCAFAUT0)
+
+             DCL        VAR(&ERRMSGID) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&ERRMSGDTA) TYPE(*CHAR) LEN(256)
+             DCL        VAR(&ERRMSGF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRMSGFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRORSW) TYPE(*LGL)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
+
 
              IF         COND(&INCLMDAUT *EQ *ONLY *AND &INCLSPFAUT +
                           *EQ *ONLY) THEN(RETURN)
@@ -46,7 +57,7 @@
                           *FILE *AND (&ODOBAT *EQ PF *OR &ODOBAT +
                           *EQ LF)) THEN(DO)
              IF         COND(&INCLSPFAUT *NE *YES) THEN(CALL +
-                          PGM(SETCAFAUT9) PARM(&ODOBNM &ODLBNM &IND))
+                          PGM(TIFCAFSRCF) PARM(&ODOBNM &ODLBNM &IND))
              IF         COND(&INCLSPFAUT *EQ *YES *OR &INCLSPFAUT +
                           *EQ *NO *AND &IND *EQ '0' *OR &INCLSPFAUT +
                           *EQ *ONLY *AND &IND *EQ '1') THEN(DO)
@@ -61,6 +72,24 @@
              ENDDO
              GOTO       CMDLBL(READ)
  ENDREAD:
+             RETURN
+
+
+ ERROR:      IF         COND(&ERRORSW) THEN(SNDPGMMSG MSGID(CPF9999) +
+                          MSGF(QCPFMSG) MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW) VALUE('1')
+ ERROR2:     RCVMSG     MSGTYPE(*DIAG) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             IF         COND(&ERRMSGID = ' ') THEN(GOTO CMDLBL(ERROR3))
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*DIAG)
+             GOTO       CMDLBL(ERROR2)
+ ERROR3:     RCVMSG     MSGTYPE(*EXCP) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*ESCAPE)
 
              ENDPGM
 

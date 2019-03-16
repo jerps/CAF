@@ -1,8 +1,10 @@
 
 /*                                                                           +
      (c) 2019 John Erps                                                      +
+     This software is licensed under the MIT license (see LICENSE)           +
                                                                              +
 */                                                                           +
+
              PGM        PARM(&CAFLIB &OWNER &AUTLNF &AUTLNFGR +
                           &AUTLPFLF &AUTLPFLFGR &PUBAUTNF +
                           &PUBAUTPFLF &INCLMDAUT &INCLSPFAUT +
@@ -25,10 +27,21 @@
              DCL        VAR(&NUM1A) TYPE(*CHAR) LEN(4) VALUE('????')
              DCL        VAR(&NUM2A) TYPE(*CHAR) LEN(5) VALUE('?????')
 
-             DLTF       FILE(QTEMP/SETCAFAUTD)
+             DCL        VAR(&ERRMSGID) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&ERRMSGDTA) TYPE(*CHAR) LEN(256)
+             DCL        VAR(&ERRMSGF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRMSGFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRORSW) TYPE(*LGL)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
+
+
+             CALL       PGM(RTVDFTCAFL) PARM(&CAFLIB)
+
+             DLTF       FILE(QTEMP/SETCAFAUT0)
              MONMSG     MSGID(CPF0000)
              DSPOBJD    OBJ(&CAFLIB/*ALL) OBJTYPE(*ALL) +
-                          OUTPUT(*OUTFILE) OUTFILE(QTEMP/SETCAFAUTD)
+                          OUTPUT(*OUTFILE) OUTFILE(QTEMP/SETCAFAUT0)
 
              IF         COND(&OWNER *NE *SAME) THEN(CALL +
                           PGM(&CAFLIB/SETCAFAUT1) PARM(&CAFLIB +
@@ -49,7 +62,7 @@
                           PGM(&CAFLIB/SETCAFAUT4) PARM(&CAFLIB +
                           &MNUADM &MNUADMGR &NUM1 &NUM2))
 
-             DLTF       FILE(QTEMP/SETCAFAUTD)
+             DLTF       FILE(QTEMP/SETCAFAUT0)
              MONMSG     MSGID(CPF0000)
 
              CALL       PGM(SETCAFAUT8) PARM(' ' &NUM1 &NUM2 &NUM1A +
@@ -57,6 +70,25 @@
              SNDPGMMSG  MSG('Performed ' *CAT &NUM2A *BCAT +
                           'authorization operations on ' *CAT +
                           &NUM1A *BCAT 'objects.') MSGTYPE(*COMP)
+
+             RETURN
+
+
+ ERROR:      IF         COND(&ERRORSW) THEN(SNDPGMMSG MSGID(CPF9999) +
+                          MSGF(QCPFMSG) MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW) VALUE('1')
+ ERROR2:     RCVMSG     MSGTYPE(*DIAG) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             IF         COND(&ERRMSGID = ' ') THEN(GOTO CMDLBL(ERROR3))
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*DIAG)
+             GOTO       CMDLBL(ERROR2)
+ ERROR3:     RCVMSG     MSGTYPE(*EXCP) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*ESCAPE)
 
              ENDPGM
 

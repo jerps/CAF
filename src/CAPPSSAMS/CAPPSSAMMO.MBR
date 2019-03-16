@@ -1,5 +1,6 @@
 
        // (c) 2019 John Erps
+       // This software is licensed under the MIT license (see LICENSE)
 
 
        // Module AM for *SRVPGM CAPPSSAM
@@ -482,7 +483,8 @@
                L_RlsMenuOpt();
              endif;
            endif;
-           if allowed;
+           if    MenuUser = ''
+              or allowed;
              MenuPage.slots(MENUSLOT) = MenuOption@;
            endif;
          endif;
@@ -689,43 +691,41 @@
                  :MenuPage.title:MenuOption.text:sb:em2);
            elseif cmd <> '';
              noexec = *off;
-             err = ExecCmdCE(em:cmd);
+             err = not ExecCmdCE(em:cmd);
            endif;
          endif;
          if     em2 = ''
-            and not err;
-           if %scan(sb:mpsb) > 0;
-             if MenuPage.command = *null;
-               cmd = '';
-             else;
-               cmd = %str(MenuPage.command);
-             endif;
-             if %scan(CMsbUseCH:mpsb) > 0;
-               noexec = *off;
-               PgmCAPPSSAMCH(cmd:MenuUser:'P':pag:slot:MenuOption.choice
-                   :MenuPage.title:MenuOption.text:sb:em2);
-             elseif cmd <> '';
-               noexec = *off;
-               err = ExecCmdCE(em:cmd);
-             endif;
+            and not err
+            and %scan(sb:mpsb) > 0;
+           if MenuPage.command = *null;
+             cmd = '';
+           else;
+             cmd = %str(MenuPage.command);
+           endif;
+           if %scan(CMsbUseCH:mpsb) > 0;
+             noexec = *off;
+             PgmCAPPSSAMCH(cmd:MenuUser:'P':pag:slot:MenuOption.choice
+                 :MenuPage.title:MenuOption.text:sb:em2);
+           elseif cmd <> '';
+             noexec = *off;
+             err = not ExecCmdCE(em:cmd);
            endif;
          endif;
          if     em2 = ''
-            and not err;
-           if %scan(sb:mosb) > 0;
-             if MenuOption.command = *null;
-               cmd = '';
-             else;
-               cmd = %str(MenuOption.command);
-             endif;
-             if %scan(CMsbUseCH:mosb) > 0;
-               noexec = *off;
-               PgmCAPPSSAMCH(cmd:MenuUser:'O':pag:slot:MenuOption.choice
-                   :MenuPage.title:MenuOption.text:sb:em2);
-             elseif cmd <> '';
-               noexec = *off;
-               err = ExecCmdCE(em:cmd);
-             endif;
+            and not err
+            and %scan(sb:mosb) > 0;
+           if MenuOption.command = *null;
+             cmd = '';
+           else;
+             cmd = %str(MenuOption.command);
+           endif;
+           if %scan(CMsbUseCH:mosb) > 0;
+             noexec = *off;
+             PgmCAPPSSAMCH(cmd:MenuUser:'O':pag:slot:MenuOption.choice
+                 :MenuPage.title:MenuOption.text:sb:em2);
+           elseif cmd <> '';
+             noexec = *off;
+             err = not ExecCmdCE(em:cmd);
            endif;
          endif;
          if em2 <> '';

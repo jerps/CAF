@@ -1,4 +1,8 @@
 
+#  (c) 2019 John Erps
+#  This software is licensed under the MIT license (see LICENSE)
+
+
 #  Include: Generate REXX BUILD Script to build CAF.
 
 
@@ -8,7 +12,7 @@ fi
 
 echo " "                                                                                                            >  $BUILDMBR
 echo "/*"                                                                                                           >> $BUILDMBR
-echo "                 --  BUILD CAF v0.92.0  --"                                                                   >> $BUILDMBR
+echo "                 --  BUILD CAF $CAFVERT  --"                                                                  >> $BUILDMBR
 echo " "                                                                                                            >> $BUILDMBR
 echo " "                                                                                                            >> $BUILDMBR
 echo "          This Source Was Automatically Generated"                                                            >> $BUILDMBR
@@ -25,7 +29,7 @@ echo "signal off error"                                                         
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say ' '"                                                                                                      >> $BUILDMBR
-echo "say '<<<<<  BUILDING CAF v0.92.0  >>>>>'"                                                                     >> $BUILDMBR
+echo "say '<<<<<  BUILDING CAF $CAFVERT  >>>>>'"                                                                    >> $BUILDMBR
 
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say ' '"                                                                                                      >> $BUILDMBR
@@ -46,7 +50,7 @@ echo "call ex 'CRTBNDCL   PGM($HLIB/CORPGMOD)   SRCFILE($HLIB/TOOLSRC)'"        
 echo "call ex 'CRTBNDCL   PGM($HLIB/CORPGPGM)   SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTCLPGM   PGM($HLIB/RDICO0)     SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 echo "call ex 'CRTBNDRPG  PGM($HLIB/COPSCC)     SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
-echo "call ex 'CRTBNDCL   PGM($HLIB/CAFBUILD0)  SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
+echo "call ex 'CRTBNDCL   PGM($HLIB/CAFBUILDT)  SRCFILE($HLIB/TOOLSRC)'"                                            >> $BUILDMBR
 
 for sl in "${SRC1[@]}"
 do
@@ -55,7 +59,7 @@ done
 
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say 'COMPILING TOOLS 2 . . .'"                                                                                >> $BUILDMBR
-echo "call ex 'CALL $HLIB/CAFBUILD0 $HLIB'"                                                                         >> $BUILDMBR
+echo "call ex 'CALL $HLIB/CAFBUILDT $HLIB'"                                                                         >> $BUILDMBR
 
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say 'COMPILING APP COMMANDS . . .'"                                                                           >> $BUILDMBR
@@ -92,10 +96,6 @@ echo "call ex 'CO         SRCMBR(CAFMENUG0)     SRCFILE($HLIB/QCLLESRC)    TGTLI
 echo "call ex 'CO         SRCMBR(CAFNWD0)       SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
 echo "call ex 'CO         SRCMBR(CAFNWDT0)      SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
 echo "call ex 'CO         SRCMBR(CAFSQLS0)      SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
-
-echo "say ' '"                                                                                                      >> $BUILDMBR
-echo "say ' '"                                                                                                      >> $BUILDMBR
-echo "call ex 'RMVLIBLE LIB($HLIB)', 'q'"                                                                           >> $BUILDMBR
 
 echo "say ' '"                                                                                                      >> $BUILDMBR
 echo "say 'READY.'"                                                                                                 >> $BUILDMBR

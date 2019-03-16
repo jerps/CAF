@@ -1,10 +1,13 @@
 
 /*                                                                           +
      (c) 2019 John Erps                                                      +
+     This software is licensed under the MIT license (see LICENSE)           +
+                                                                             +
                                                                              +
      Compile CLLE Module                                                     +
                                                                              +
 */
+
              PGM        PARM(&SRCLIB &SRCFILE &SRCMBR &TGTLIB &TGTRLS)
              DCL        VAR(&SRCLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&SRCFILE) TYPE(*CHAR) LEN(10)
@@ -15,6 +18,15 @@
 
              DCL        VAR(&DBGSRC) TYPE(*CHAR) LEN(10)
 
+             DCL        VAR(&ERRMSGID) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&ERRMSGDTA) TYPE(*CHAR) LEN(256)
+             DCL        VAR(&ERRMSGF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRMSGFLIB) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ERRORSW) TYPE(*LGL)
+
+             MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
+
+
              IF         COND(&INCDBGSRC *EQ *YES) THEN(CHGVAR +
                           VAR(&DBGSRC) VALUE(*ALL))
              ELSE       CMD(CHGVAR VAR(&DBGSRC) VALUE(*NONE))
@@ -23,6 +35,25 @@
                           SRCFILE(&SRCLIB/&SRCFILE) OPTION(*EVENTF) +
                           REPLACE(*YES) TGTRLS(&TGTRLS) +
                           DBGVIEW(&DBGSRC)
+
+             RETURN
+
+
+ ERROR:      IF         COND(&ERRORSW) THEN(SNDPGMMSG MSGID(CPF9999) +
+                          MSGF(QCPFMSG) MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&ERRORSW) VALUE('1')
+ ERROR2:     RCVMSG     MSGTYPE(*DIAG) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             IF         COND(&ERRMSGID = ' ') THEN(GOTO CMDLBL(ERROR3))
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*DIAG)
+             GOTO       CMDLBL(ERROR2)
+ ERROR3:     RCVMSG     MSGTYPE(*EXCP) MSGDTA(&ERRMSGDTA) +
+                          MSGID(&ERRMSGID) MSGF(&ERRMSGF) +
+                          SNDMSGFLIB(&ERRMSGFLIB)
+             SNDPGMMSG  MSGID(&ERRMSGID) MSGF(&ERRMSGFLIB/&ERRMSGF) +
+                          MSGDTA(&ERRMSGDTA) MSGTYPE(*ESCAPE)
 
              ENDPGM
 

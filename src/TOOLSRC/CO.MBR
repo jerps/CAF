@@ -1,6 +1,8 @@
 
 /*                                                                           +
      (c) 2019 John Erps                                                      +
+     This software is licensed under the MIT license (see LICENSE)           +
+                                                                             +
                                                                              +
      Compile Object                                                          +
                                                                              +
@@ -33,8 +35,8 @@
        CO@TGTRLS  (10A) : Target Release                                     +
        CO@IDBGSRC (10A) : Include Source for Debug                           +
                                                                              +
-                                                                             +
 */
+
              CMD        PROMPT('Compile Object')
 
              PARM       KWD(SRCFILE) TYPE(SRCFILE) MIN(1) +

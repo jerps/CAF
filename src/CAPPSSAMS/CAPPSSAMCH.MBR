@@ -1,53 +1,56 @@
 
- /*          (c) 2019 John Erps                                              +
+/*                                                                           +
+     (c) 2019 John Erps                                                      +
+     This software is licensed under the MIT license (see LICENSE)           +
                                                                              +
                                                                              +
-             COMMAND HANDLER                                                 +
+     COMMAND HANDLER                                                         +
                                                                              +
-             This program can be used to execute the command that is         +
-             specified for a menu, a page or an option.                      +
+     This program can be used to execute the command that is                 +
+     specified for a menu, a page or an option.                              +
                                                                              +
-             Parameters:                                                     +
+     Parameters:                                                             +
                                                                              +
-               1. Command (500:input)                                        +
-                  The command to be executed (which may be blank).           +
+       1. Command (500:input)                                                +
+          The command to be executed (which may be blank).                   +
                                                                              +
-               2. User (10:input)                                            +
-                  The user for which the command is executed. If blank       +
-                  then the menu is loaded with all options for all users     +
-                  (i.e. update mode).                                        +
+       2. User (10:input)                                                    +
+          The user for which the command is executed. If blank               +
+          then the menu is loaded with all options for all users             +
+          (i.e. update mode).                                                +
                                                                              +
-               3. Context (1:input)                                          +
-                  Is either 'M', 'P' or 'O' depending on whether the         +
-                  command is specified for the Menu, Page or Option.         +
+       3. Context (1:input)                                                  +
+          Is either 'M', 'P' or 'O' depending on whether the                 +
+          command is specified for the Menu, Page or Option.                 +
                                                                              +
-               4. Pageno (3,0:input)                                         +
-                  The page number of the option that is performed.           +
+       4. Pageno (3,0:input)                                                 +
+          The page number of the option that is performed.                   +
                                                                              +
-               5. Slot (3,0:input)                                           +
-                  The slot of the option that is performed.                  +
+       5. Slot (3,0:input)                                                   +
+          The slot of the option that is performed.                          +
                                                                              +
-               6. Choice (2:input)                                           +
-                  The choice of the option that is performed.                +
+       6. Choice (2:input)                                                   +
+          The choice of the option that is performed.                        +
                                                                              +
-               7. Page title (34:input)                                      +
-                  The title specified for the page.                          +
+       7. Page title (34:input)                                              +
+          The title specified for the page.                                  +
                                                                              +
-               8. Option text (34:input)                                     +
-                  The text specified for the option.                         +
+       8. Option text (34:input)                                             +
+          The text specified for the option.                                 +
                                                                              +
-               9. Sequence (1:input)                                         +
-                  The command sequence which can be '1', '2', '3', '4'       +
-                  or '5'. Depends on special behavior codes "CMsbPCS1"       +
-                  thru "CMsbPCS5".                                           +
+       9. Sequence (1:input)                                                 +
+          The command sequence which can be '1', '2', '3', '4'               +
+          or '5'. Depends on special behavior codes "CMsbPCS1"               +
+          thru "CMsbPCS5".                                                   +
                                                                              +
-              10. Error message (150:output)                                 +
-                  If this output parameter is not blank after calling this   +
-                  program then this means that an error occurred during      +
-                  execution of the command handler and this parameter        +
-                  contains the error message.                                +
+      10. Error message (150:output)                                         +
+          If this output parameter is not blank after calling this           +
+          program then this means that an error occurred during              +
+          execution of the command handler and this parameter                +
+          contains the error message.                                        +
                                                                              +
- */
+*/
+
              PGM        PARM(&CMD &USER &CTX &PAGENO &SLOT &CHOICE +
                           &PTITLE &OTEXT &SEQ &ERRMSG)
              DCL        VAR(&CMD) TYPE(*CHAR) LEN(500)
