@@ -8,7 +8,7 @@ contained in one source file. The name is the same as the service program but wi
 to it. For example the sources for service program CSYSBASE are all in source file CSYSBASES.\
 </p>\
 <p>\
-Besides the source files for the service programs the following source files are used:<br>\
+Besides the source files for the service programs the following source files are also used:<br>\
 <span style="display: grid; grid-template-columns: 15ch auto; grid-template-rows: auto;">\
 <span class="g11"><span class="bullet1">&#9679;</span>&nbsp;TOOLSRC</span>\
 <span class="g12">\
@@ -25,12 +25,12 @@ Contains the DDS (DisplayFile) source member for each application.\
 </span>\
 <span class="g41"><span class="bullet1">&#9679;</span>&nbsp;QCLLESRC</span>\
 <span class="g42">\
-Contains the CLLE source member for each application to implement the command processor \
-for the command used to start the application.\
+Contains the CLLE source member to implement the command processor for the command used to \
+start each application.\
 </span>\
 <span class="g51"><span class="bullet1">&#9679;</span>&nbsp;QCMDSRC</span>\
 <span class="g52">\
-Contains the CMD source member for each application for the command used to start the application.\
+Contains the CMD source member for the command used to start each application.\
 </span>\
 <span class="g61"><span class="bullet1">&#9679;</span>&nbsp;QINCSRC</span>\
 <span class="g62">\

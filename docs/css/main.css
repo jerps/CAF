@@ -1,3 +1,27 @@
+.spop0 {
+  margin: 1rem 0 0 2rem;
+}
+.spop1 {
+  margin: 2rem 0 0 2rem;
+}
+.spop2 {
+  margin: 2.5rem 0 0 2rem;
+}
+
+.spodesc {
+  font-family: roboto mono;
+  font-weight: bold;
+  color: #AA0033;
+}
+
+.spopcode {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.8rem;
+  margin: 0.4rem 0rem 0rem 3.5rem;
+  color: #0066BB;
+  position: relative;
+  left: 10%;
+}
 
 html {
 }
@@ -161,44 +185,6 @@ p {
   font-size: 1rem;
 }
 
-.prochdr1 {
-  font-family: 'Ubuntu Mono', monospace;
-  font-size: 1.3rem;
-  display: inline;
-  margin: 1rem 0rem 0rem 0.8rem;
-}
-
-.prochdr2 {
-  font-size: 1.1rem;
-  display: inline;
-}
-
-.prochdr3 {
-  font-size: 1.1rem;
-  display: inline;
-  margin: 0rem 0rem 0rem 3rem;
-}
-
-.prochsep {
-  font-size: 1rem;
-  color: red;
-  display: inline;
-}
-
-.proclongnm {
-  font-family: 'Ubuntu Mono', monospace;
-  font-size: 1rem;
-  margin: 0.4rem 0rem 0rem 2.5rem;
-}
-
-.procsig {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.8rem;
-  margin: 1rem 0rem 0rem 3.5rem;
-  overflow: hidden;
-  color: #009966;
-}
-
 code {
   font-family: 'Ubuntu Mono', monospace;
   color: #0000B0;
@@ -209,40 +195,12 @@ a code {
   color: #D03070;
 }
 
-.pcode {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.8rem;
-  margin: 0rem 0rem 0rem 4rem;
-  color: #0066BB;
-}
-
-.console {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.8rem;
-  color: green;
-  margin: 0% 0% 0% 10%;
-  margin: 0rem 0rem 0rem 6rem;
-}
-
-.escmsg1 {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.8rem;
-  margin: 0rem 0rem 0rem 2rem;
-}
-
-.escmsg2 {
-  line-height: 2rem;
-  font-size: 0.9rem;
-  display: inline;
-  margin: 0rem 0rem 0rem 2rem;
-}
-
 .bullet1 {
   color: rgba(255, 0, 0, 0.4);
 }
 
 ::selection {
-  background-color: red;
+  background-color: #AABBFF;
   text-shadow: none;
 }
 
@@ -262,29 +220,23 @@ a:active {
 a:visited {
   color: black;
 }
-h1first {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin: 0rem 0rem 0rem 0rem;
-}
 h1 {
   display: block;
   font-size: 1.5rem;
   font-weight: bold;
-  margin: 3rem 0rem 0rem 0rem;
+  margin: 2rem 0rem 1.6rem 0rem;
 }
 h2 {
   display: block;
   font-size: 1.3rem;
   font-weight: bold;
-  margin: 0.4rem 0rem 0rem 1rem;
+  margin: 0.8rem 0rem 1rem 1rem;
 }
 h3 {
   display: block;
   font-size: 1.1rem;
   font-weight: bold;
-  margin: 0rem 0rem 0rem 1.9rem;
+  margin: 0rem 0rem 1rem 1.9rem;
 }
 .lvl2 {
   margin: 0rem 0rem 0rem 1.2rem;
@@ -364,4 +316,27 @@ h3 {
   grid-column-start: 2;
   grid-row-start: 9;
 }
-
+.g101 {
+  grid-column-start: 1;
+  grid-row-start: 10;
+}
+.g102 {
+  grid-column-start: 2;
+  grid-row-start: 10;
+}
+.g111 {
+  grid-column-start: 1;
+  grid-row-start: 11;
+}
+.g112 {
+  grid-column-start: 2;
+  grid-row-start: 11;
+}
+.g121 {
+  grid-column-start: 1;
+  grid-row-start: 12;
+}
+.g122 {
+  grid-column-start: 2;
+  grid-row-start: 12;
+}

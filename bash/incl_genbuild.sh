@@ -54,7 +54,7 @@ echo "call ex 'CRTBNDCL   PGM($HLIB/CAFBUILDT)  SRCFILE($HLIB/TOOLSRC)'"        
 
 for sl in "${SRC1[@]}"
 do
-  echo "call bsp '$sl', 'q'"                                                                                        >> $BUILDMBR
+  echo "call bsp '$sl'"                                                                                             >> $BUILDMBR
 done
 
 echo "say ' '"                                                                                                      >> $BUILDMBR
@@ -90,7 +90,7 @@ echo "call ex 'CO         SRCMBR(CAFSQLS)       SRCFILE($HLIB/QRPGLESRC)   TGTLI
 echo "call ex 'CO         SRCMBR(CAFSQLSD)      SRCFILE($HLIB/QRPGLESRC)   TGTLIB($HLIB)'"                          >> $BUILDMBR
 
 echo "say ' '"                                                                                                      >> $BUILDMBR
-echo "say 'COMPILING APP COMMAND PROCESSORS . . .'"                                                                              >> $BUILDMBR
+echo "say 'COMPILING APP COMMAND PROCESSORS . . .'"                                                                 >> $BUILDMBR
 echo "call ex 'CO         SRCMBR(CAFMENU0)      SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
 echo "call ex 'CO         SRCMBR(CAFMENUG0)     SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR
 echo "call ex 'CO         SRCMBR(CAFNWD0)       SRCFILE($HLIB/QCLLESRC)    TGTLIB($HLIB)'"                          >> $BUILDMBR

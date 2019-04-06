@@ -1,0 +1,979 @@
+
+       // (c) 2019 John Erps
+       // This software is licensed under the MIT license (see LICENSE)
+
+
+      /IF DEFINED(CSYSSQLS_INCL_CI)
+      /EOF
+      /ENDIF
+      /DEFINE CSYSSQLS_INCL_CI
+
+
+       // INCLUDE: *SRVPGM CSYSSQLS
+
+       // Module CI: Call Interface
+
+
+       // Provides a simplified API to the SQL CLI.
+
+       // NOTES:
+       // - This service program is activated in it's own activation group,
+       //   named CSYSSQLS. This is necessary because the CLI implementation
+       //   itself has no concept of activation groups and all resources
+       //   such as open cursors are scoped to the job. Connections are
+       //   usually shared between programs in the same job, but e.g. open
+       //   cursors are usually not shared as they are stateful. Because
+       //   (CLI) resources that are allocated by the service program are
+       //   shared between the programs in the same job (i.e. they are
+       //   "visible"), care must be taken wrt releasing these resources.
+       //   E.g. if a program calls "RlsSpCSYSSQLS" to release all resources
+       //   when the program ends then all connections and open cursors
+       //   within the job would be closed, and some of them are maybe still
+       //   needed by other programs still active in the same job. So a
+       //   program should only call "RlsSpCSYSSQLS" if the CLI resources
+       //   are not used anymore by any program in the job.
+       // - Use RCLACTGRP ACTGRP(CSYSSQLS) to delete the activation group.
+       //   This will release all non-CLI resources such as memory that is
+       //   allocated by the service program. However, resources allocated by
+       //   the OS400 CLI implementation itself, such as open handlers, are
+       //   NOT released. These CLI resources are only released explicitly
+       //   (e.g. with "SqlsCloseCurs"), or when the job ends.
+       // - To list all open CLI handlers for the current job use
+       //   CALL QSYS/QSQDMPHA. Specify PARM('xxxxxx'), where 'xxxxxx'
+       //   is a job number, to list all open handlers for that job.
+       // - This implementation currently does NOT use SERVER MODE.
+       //   This can be enabled by uncommenting some lines in procedure
+       //   CSYSSQLSCI/L_CheckEnv. If enabled, SQL statements are executed
+       //   within a separate pre-start job. For each new connection, a
+       //   separate pre-start job is used. To set the correct library list
+       //   and other attributes for a new pre-start job an exit program
+       //   needs to be registered for exit point QIBM_QSQ_CLI_CONNECT,
+       //   format CLIC0100 (ADDEXITPGM). This exit program must have one
+       //   input parameter, length 10, which will contain the current
+       //   user-id of the job which creates the new connection.
+
+
+      /include CSYSSQLSS,INCL_DEFS
+
+
+       // ----- Constants
+
+       // SQL data types
+     d SQL_CHAR        c                   1
+     d SQL_NUMERIC     c                   2
+     d SQL_DECIMAL     c                   3
+     d SQL_INTEGER     c                   4
+     d SQL_SMALLINT    c                   5
+     d SQL_FLOAT       c                   6
+     d SQL_REAL        c                   7
+     d SQL_DOUBLE      c                   8
+     d SQL_DATETIME    c                   9
+     d SQL_VARCHAR     c                   12
+     d SQL_BLOB        c                   13
+     d SQL_CLOB        c                   14
+     d SQL_DBCLOB      c                   15
+     d SQL_DATALINK    c                   16
+     d SQL_WCHAR       c                   17
+     d SQL_WUARCHAR    c                   18
+     d SQL_BIGINT      c                   19
+     d SQL_BLOB_LOCATOR...
+     d                 c                   20
+     d SQL_CLOB_LOCATOR...
+     d                 c                   21
+     d SQL_DBCLOB_LOCATOR...
+     d                 c                   22
+     d SQL_UTF8_CHAR...
+     d                 c                   23
+     d SQL_GRAPHIC     c                   95
+     d SQL_VARGRAPHIC  c                   96
+     d SQL_BINARY      c                   97
+     d SQL_VARBINARY   c                   98
+     d SQL_DATE        c                   91
+     d SQL_TYPE_DATE   c                   91
+     d SQL_TIME        c                   92
+     d SQL_TYPE_TIME   c                   92
+     d SQL_TIMESTAMP   c                   93
+     d SQL_TYPE_TIMESTAMP...
+     d                 c                   93
+     d SQL_ALL_TYPES   c                   0
+     d SQL_DEFAULT     c                   99
+     d SQL_ARD_TYPE    c                   -99
+
+
+       // ----- Prototypes
+
+       // SqlsStatus - Statuscode
+       // Return the global statuscode.
+       // In general, if a procedure executes successfully it returns
+       // *on or a non-negative number, and the global statuscode is
+       // set to zero or higher. If the procedure encounters a problem
+       // it returns *off or -1 and the global statuscode is set to a
+       // value less than zero.
+
+       //   <  0 : ERROR.
+       //   -101 : Unknown cursor id.
+       //   -102 : Columnno out of range.
+       //   -190 : Maximum number of cursors reached.
+       //   -200 : Error allocating environment handle.
+       //   -201 : Error setting environment attribute.
+       //   -300 : Error connecting to database; connection already in use.
+       //   -401 : Error binding parameter marker.
+       //   -999 : Generic error indication.
+       //
+       //   >= 0 : OK.
+       //    000 : Ok.
+       //    100 : No data found.
+       //
+     d SqlsStatus      pr             3  0 extproc('SqlsStatus')
+
+       // SqlsDBExec - Directly Bind & Execute
+       // Directly bind and execute SQL statement "stmt" using database
+       // connection "conn". If successful then return a positive number
+       // which is the statement handle. Return -1 if not successful.
+       //
+       // If "conn" is omitted then connection 1 is used.
+       //
+       // The returned handle is needed again in subsequent calls to bind
+       // the result set columns with "SqlsBindCols" and to fetch the rows
+       // with "SqlsFetch". When this cursor is not needed anymore it should
+       // be closed with "SqlsCloseCurs" or "SqlsCloseConn".
+       //
+       // The SQL statement may have a maximum of 62 parameter markers ("?").
+       // Each marker must be bound to a buffer containing the parameter data
+       // by providing five values. For marker 1, the following 5 parameters
+       // are used to bind it to a buffer:
+       //   p01data:  Pointer to a buffer containing the parameter data.
+       //             If this parameter is *null, the parameter marker is
+       //             bound to NULL.
+       //   p01stype: SQL data type (the type in the database), one of:
+       //             SQL_CHAR,    SQL_VARCHAR,
+       //             SQL_GRAPHIC, SQL_VARGRAPHIC,
+       //             SQL_DECIMAL (packed), SQL_NUMERIC (zoned),
+       //             SQL_INTEGER, SQL_SMALLINT, SQL_BIGINT,
+       //             SQL_FLOAT, SQL_DOUBLE, SQL_REAL,
+       //             SQL_DATE (SQL_TYPE_DATE), SQL_TIME (SQL_TYPE_TIME),
+       //             SQL_TIMESTAMP (SQL_TYPE_TIMESTAMP), SQL_DATETIME,
+       //             SQL_BLOB, SQL_CLOB, SQL_DBCLOB,
+       //             SQL_BLOB_LOCATOR, SQL_CLOB_LOCATOR, SQL_DBCLOB_LOCATOR.
+       //             This parameter is optional. If not passed or if it's
+       //             *OMITted, the SQL data type is assumed to be SQL_CHAR.
+       //   p01atype: Application data type (the type in memory): one of the
+       //             values allowed for the SQL data type, and SQL_DEFAULT.
+       //             Specifying SQL_DEFAULT causes the data to be transferred
+       //             from its default application data type to the specified
+       //             SQL data type.
+       //             This parameter is optional. If not passed or if it's
+       //             *OMITted, the application data type is assumed to be the
+       //             same as the SQL data type.
+       //   p01len:   Length of the buffer.
+       //             If "p01stype" is:
+       //               SQL_DECIMAL (packed): max. decimal precision.
+       //               SQL_NUMERIC (zoned): max. decimal precision.
+       //               SQL_CHAR (single-byte): maximum length in bytes,
+       //                   including the null terminator if applicable.
+       //               SQL_VARCHAR (single-byte): maximum length in bytes
+       //                   (not including length bytes).
+       //               SQL_GRAPHIC (double-byte): maximum length in double-
+       //                   byte characters.
+       //               SQL_VARGRAPHIC (double-byte): maximum length in double-
+       //                   byte characters (not including length bytes).
+       //             If "p01stype" is non of the above and "p01atype" is not a
+       //             LOB type such as SQL_BLOB or SQL_CLOB then this parameter
+       //             is ignored.
+       //             If "p01atype" is a LOB type such as SQL_BLOB or SQL_CLOB
+       //             then this parameter must contain the length in bytes of
+       //             the data in the buffer.
+       //             If this parameter is less than 1 it is assumed to be 1.
+       //             This parameter is optional. If not passed or if it's
+       //             *OMITted, the length is assumed to be 5.
+       //   p01scale: Scale, if "p01stype" is:
+       //               SQL_DECIMAL (packed): scale.
+       //               SQL_NUMERIC (zoned): scale.
+       //               SQL_TIMESTAMP: the number of digits to the right
+       //                   of the decimal point in the character repre-
+       //                   sentation of a timestamp (e.g. the scale of
+       //                   yyyy-mm-dd hh:mm:ss.fff is 3).
+       //             For any other type this parameter is ignored.
+       //             This parameter is optional. If not passed or if it's
+       //             *OMITted, the scale is assumed to be 0.
+       //
+     d SqlsDBExec      pr             5i 0 extproc('SqlsDBExec')
+     d   conn                         5i 0 const options(*omit)
+     d   stmt                          *   const options(*string)
+     d   p01data                       *   const options(*nopass)
+     d   p01stype                     5i 0 const options(*nopass:*omit)
+     d   p01atype                     5i 0 const options(*nopass:*omit)
+     d   p01len                      10i 0 const options(*nopass:*omit)
+     d   p01scale                     5i 0 const options(*nopass:*omit)
+     d   p02data                       *   const options(*nopass)
+     d   p02stype                     5i 0 const options(*nopass:*omit)
+     d   p02atype                     5i 0 const options(*nopass:*omit)
+     d   p02len                      10i 0 const options(*nopass:*omit)
+     d   p02scale                     5i 0 const options(*nopass:*omit)
+     d   p03data                       *   const options(*nopass)
+     d   p03stype                     5i 0 const options(*nopass:*omit)
+     d   p03atype                     5i 0 const options(*nopass:*omit)
+     d   p03len                      10i 0 const options(*nopass:*omit)
+     d   p03scale                     5i 0 const options(*nopass:*omit)
+     d   p04data                       *   const options(*nopass)
+     d   p04stype                     5i 0 const options(*nopass:*omit)
+     d   p04atype                     5i 0 const options(*nopass:*omit)
+     d   p04len                      10i 0 const options(*nopass:*omit)
+     d   p04scale                     5i 0 const options(*nopass:*omit)
+     d   p05data                       *   const options(*nopass)
+     d   p05stype                     5i 0 const options(*nopass:*omit)
+     d   p05atype                     5i 0 const options(*nopass:*omit)
+     d   p05len                      10i 0 const options(*nopass:*omit)
+     d   p05scale                     5i 0 const options(*nopass:*omit)
+     d   p06data                       *   const options(*nopass)
+     d   p06stype                     5i 0 const options(*nopass:*omit)
+     d   p06atype                     5i 0 const options(*nopass:*omit)
+     d   p06len                      10i 0 const options(*nopass:*omit)
+     d   p06scale                     5i 0 const options(*nopass:*omit)
+     d   p07data                       *   const options(*nopass)
+     d   p07stype                     5i 0 const options(*nopass:*omit)
+     d   p07atype                     5i 0 const options(*nopass:*omit)
+     d   p07len                      10i 0 const options(*nopass:*omit)
+     d   p07scale                     5i 0 const options(*nopass:*omit)
+     d   p08data                       *   const options(*nopass)
+     d   p08stype                     5i 0 const options(*nopass:*omit)
+     d   p08atype                     5i 0 const options(*nopass:*omit)
+     d   p08len                      10i 0 const options(*nopass:*omit)
+     d   p08scale                     5i 0 const options(*nopass:*omit)
+     d   p09data                       *   const options(*nopass)
+     d   p09stype                     5i 0 const options(*nopass:*omit)
+     d   p09atype                     5i 0 const options(*nopass:*omit)
+     d   p09len                      10i 0 const options(*nopass:*omit)
+     d   p09scale                     5i 0 const options(*nopass:*omit)
+     d   p10data                       *   const options(*nopass)
+     d   p10stype                     5i 0 const options(*nopass:*omit)
+     d   p10atype                     5i 0 const options(*nopass:*omit)
+     d   p10len                      10i 0 const options(*nopass:*omit)
+     d   p10scale                     5i 0 const options(*nopass:*omit)
+     d   p11data                       *   const options(*nopass)
+     d   p11stype                     5i 0 const options(*nopass:*omit)
+     d   p11atype                     5i 0 const options(*nopass:*omit)
+     d   p11len                      10i 0 const options(*nopass:*omit)
+     d   p11scale                     5i 0 const options(*nopass:*omit)
+     d   p12data                       *   const options(*nopass)
+     d   p12stype                     5i 0 const options(*nopass:*omit)
+     d   p12atype                     5i 0 const options(*nopass:*omit)
+     d   p12len                      10i 0 const options(*nopass:*omit)
+     d   p12scale                     5i 0 const options(*nopass:*omit)
+     d   p13data                       *   const options(*nopass)
+     d   p13stype                     5i 0 const options(*nopass:*omit)
+     d   p13atype                     5i 0 const options(*nopass:*omit)
+     d   p13len                      10i 0 const options(*nopass:*omit)
+     d   p13scale                     5i 0 const options(*nopass:*omit)
+     d   p14data                       *   const options(*nopass)
+     d   p14stype                     5i 0 const options(*nopass:*omit)
+     d   p14atype                     5i 0 const options(*nopass:*omit)
+     d   p14len                      10i 0 const options(*nopass:*omit)
+     d   p14scale                     5i 0 const options(*nopass:*omit)
+     d   p15data                       *   const options(*nopass)
+     d   p15stype                     5i 0 const options(*nopass:*omit)
+     d   p15atype                     5i 0 const options(*nopass:*omit)
+     d   p15len                      10i 0 const options(*nopass:*omit)
+     d   p15scale                     5i 0 const options(*nopass:*omit)
+     d   p16data                       *   const options(*nopass)
+     d   p16stype                     5i 0 const options(*nopass:*omit)
+     d   p16atype                     5i 0 const options(*nopass:*omit)
+     d   p16len                      10i 0 const options(*nopass:*omit)
+     d   p16scale                     5i 0 const options(*nopass:*omit)
+     d   p17data                       *   const options(*nopass)
+     d   p17stype                     5i 0 const options(*nopass:*omit)
+     d   p17atype                     5i 0 const options(*nopass:*omit)
+     d   p17len                      10i 0 const options(*nopass:*omit)
+     d   p17scale                     5i 0 const options(*nopass:*omit)
+     d   p18data                       *   const options(*nopass)
+     d   p18stype                     5i 0 const options(*nopass:*omit)
+     d   p18atype                     5i 0 const options(*nopass:*omit)
+     d   p18len                      10i 0 const options(*nopass:*omit)
+     d   p18scale                     5i 0 const options(*nopass:*omit)
+     d   p19data                       *   const options(*nopass)
+     d   p19stype                     5i 0 const options(*nopass:*omit)
+     d   p19atype                     5i 0 const options(*nopass:*omit)
+     d   p19len                      10i 0 const options(*nopass:*omit)
+     d   p19scale                     5i 0 const options(*nopass:*omit)
+     d   p20data                       *   const options(*nopass)
+     d   p20stype                     5i 0 const options(*nopass:*omit)
+     d   p20atype                     5i 0 const options(*nopass:*omit)
+     d   p20len                      10i 0 const options(*nopass:*omit)
+     d   p20scale                     5i 0 const options(*nopass:*omit)
+     d   p21data                       *   const options(*nopass)
+     d   p21stype                     5i 0 const options(*nopass:*omit)
+     d   p21atype                     5i 0 const options(*nopass:*omit)
+     d   p21len                      10i 0 const options(*nopass:*omit)
+     d   p21scale                     5i 0 const options(*nopass:*omit)
+     d   p22data                       *   const options(*nopass)
+     d   p22stype                     5i 0 const options(*nopass:*omit)
+     d   p22atype                     5i 0 const options(*nopass:*omit)
+     d   p22len                      10i 0 const options(*nopass:*omit)
+     d   p22scale                     5i 0 const options(*nopass:*omit)
+     d   p23data                       *   const options(*nopass)
+     d   p23stype                     5i 0 const options(*nopass:*omit)
+     d   p23atype                     5i 0 const options(*nopass:*omit)
+     d   p23len                      10i 0 const options(*nopass:*omit)
+     d   p23scale                     5i 0 const options(*nopass:*omit)
+     d   p24data                       *   const options(*nopass)
+     d   p24stype                     5i 0 const options(*nopass:*omit)
+     d   p24atype                     5i 0 const options(*nopass:*omit)
+     d   p24len                      10i 0 const options(*nopass:*omit)
+     d   p24scale                     5i 0 const options(*nopass:*omit)
+     d   p25data                       *   const options(*nopass)
+     d   p25stype                     5i 0 const options(*nopass:*omit)
+     d   p25atype                     5i 0 const options(*nopass:*omit)
+     d   p25len                      10i 0 const options(*nopass:*omit)
+     d   p25scale                     5i 0 const options(*nopass:*omit)
+     d   p26data                       *   const options(*nopass)
+     d   p26stype                     5i 0 const options(*nopass:*omit)
+     d   p26atype                     5i 0 const options(*nopass:*omit)
+     d   p26len                      10i 0 const options(*nopass:*omit)
+     d   p26scale                     5i 0 const options(*nopass:*omit)
+     d   p27data                       *   const options(*nopass)
+     d   p27stype                     5i 0 const options(*nopass:*omit)
+     d   p27atype                     5i 0 const options(*nopass:*omit)
+     d   p27len                      10i 0 const options(*nopass:*omit)
+     d   p27scale                     5i 0 const options(*nopass:*omit)
+     d   p28data                       *   const options(*nopass)
+     d   p28stype                     5i 0 const options(*nopass:*omit)
+     d   p28atype                     5i 0 const options(*nopass:*omit)
+     d   p28len                      10i 0 const options(*nopass:*omit)
+     d   p28scale                     5i 0 const options(*nopass:*omit)
+     d   p29data                       *   const options(*nopass)
+     d   p29stype                     5i 0 const options(*nopass:*omit)
+     d   p29atype                     5i 0 const options(*nopass:*omit)
+     d   p29len                      10i 0 const options(*nopass:*omit)
+     d   p29scale                     5i 0 const options(*nopass:*omit)
+     d   p30data                       *   const options(*nopass)
+     d   p30stype                     5i 0 const options(*nopass:*omit)
+     d   p30atype                     5i 0 const options(*nopass:*omit)
+     d   p30len                      10i 0 const options(*nopass:*omit)
+     d   p30scale                     5i 0 const options(*nopass:*omit)
+     d   p31data                       *   const options(*nopass)
+     d   p31stype                     5i 0 const options(*nopass:*omit)
+     d   p31atype                     5i 0 const options(*nopass:*omit)
+     d   p31len                      10i 0 const options(*nopass:*omit)
+     d   p31scale                     5i 0 const options(*nopass:*omit)
+     d   p32data                       *   const options(*nopass)
+     d   p32stype                     5i 0 const options(*nopass:*omit)
+     d   p32atype                     5i 0 const options(*nopass:*omit)
+     d   p32len                      10i 0 const options(*nopass:*omit)
+     d   p32scale                     5i 0 const options(*nopass:*omit)
+     d   p33data                       *   const options(*nopass)
+     d   p33stype                     5i 0 const options(*nopass:*omit)
+     d   p33atype                     5i 0 const options(*nopass:*omit)
+     d   p33len                      10i 0 const options(*nopass:*omit)
+     d   p33scale                     5i 0 const options(*nopass:*omit)
+     d   p34data                       *   const options(*nopass)
+     d   p34stype                     5i 0 const options(*nopass:*omit)
+     d   p34atype                     5i 0 const options(*nopass:*omit)
+     d   p34len                      10i 0 const options(*nopass:*omit)
+     d   p34scale                     5i 0 const options(*nopass:*omit)
+     d   p35data                       *   const options(*nopass)
+     d   p35stype                     5i 0 const options(*nopass:*omit)
+     d   p35atype                     5i 0 const options(*nopass:*omit)
+     d   p35len                      10i 0 const options(*nopass:*omit)
+     d   p35scale                     5i 0 const options(*nopass:*omit)
+     d   p36data                       *   const options(*nopass)
+     d   p36stype                     5i 0 const options(*nopass:*omit)
+     d   p36atype                     5i 0 const options(*nopass:*omit)
+     d   p36len                      10i 0 const options(*nopass:*omit)
+     d   p36scale                     5i 0 const options(*nopass:*omit)
+     d   p37data                       *   const options(*nopass)
+     d   p37stype                     5i 0 const options(*nopass:*omit)
+     d   p37atype                     5i 0 const options(*nopass:*omit)
+     d   p37len                      10i 0 const options(*nopass:*omit)
+     d   p37scale                     5i 0 const options(*nopass:*omit)
+     d   p38data                       *   const options(*nopass)
+     d   p38stype                     5i 0 const options(*nopass:*omit)
+     d   p38atype                     5i 0 const options(*nopass:*omit)
+     d   p38len                      10i 0 const options(*nopass:*omit)
+     d   p38scale                     5i 0 const options(*nopass:*omit)
+     d   p39data                       *   const options(*nopass)
+     d   p39stype                     5i 0 const options(*nopass:*omit)
+     d   p39atype                     5i 0 const options(*nopass:*omit)
+     d   p39len                      10i 0 const options(*nopass:*omit)
+     d   p39scale                     5i 0 const options(*nopass:*omit)
+     d   p40data                       *   const options(*nopass)
+     d   p40stype                     5i 0 const options(*nopass:*omit)
+     d   p40atype                     5i 0 const options(*nopass:*omit)
+     d   p40len                      10i 0 const options(*nopass:*omit)
+     d   p40scale                     5i 0 const options(*nopass:*omit)
+     d   p41data                       *   const options(*nopass)
+     d   p41stype                     5i 0 const options(*nopass:*omit)
+     d   p41atype                     5i 0 const options(*nopass:*omit)
+     d   p41len                      10i 0 const options(*nopass:*omit)
+     d   p41scale                     5i 0 const options(*nopass:*omit)
+     d   p42data                       *   const options(*nopass)
+     d   p42stype                     5i 0 const options(*nopass:*omit)
+     d   p42atype                     5i 0 const options(*nopass:*omit)
+     d   p42len                      10i 0 const options(*nopass:*omit)
+     d   p42scale                     5i 0 const options(*nopass:*omit)
+     d   p43data                       *   const options(*nopass)
+     d   p43stype                     5i 0 const options(*nopass:*omit)
+     d   p43atype                     5i 0 const options(*nopass:*omit)
+     d   p43len                      10i 0 const options(*nopass:*omit)
+     d   p43scale                     5i 0 const options(*nopass:*omit)
+     d   p44data                       *   const options(*nopass)
+     d   p44stype                     5i 0 const options(*nopass:*omit)
+     d   p44atype                     5i 0 const options(*nopass:*omit)
+     d   p44len                      10i 0 const options(*nopass:*omit)
+     d   p44scale                     5i 0 const options(*nopass:*omit)
+     d   p45data                       *   const options(*nopass)
+     d   p45stype                     5i 0 const options(*nopass:*omit)
+     d   p45atype                     5i 0 const options(*nopass:*omit)
+     d   p45len                      10i 0 const options(*nopass:*omit)
+     d   p45scale                     5i 0 const options(*nopass:*omit)
+     d   p46data                       *   const options(*nopass)
+     d   p46stype                     5i 0 const options(*nopass:*omit)
+     d   p46atype                     5i 0 const options(*nopass:*omit)
+     d   p46len                      10i 0 const options(*nopass:*omit)
+     d   p46scale                     5i 0 const options(*nopass:*omit)
+     d   p47data                       *   const options(*nopass)
+     d   p47stype                     5i 0 const options(*nopass:*omit)
+     d   p47atype                     5i 0 const options(*nopass:*omit)
+     d   p47len                      10i 0 const options(*nopass:*omit)
+     d   p47scale                     5i 0 const options(*nopass:*omit)
+     d   p48data                       *   const options(*nopass)
+     d   p48stype                     5i 0 const options(*nopass:*omit)
+     d   p48atype                     5i 0 const options(*nopass:*omit)
+     d   p48len                      10i 0 const options(*nopass:*omit)
+     d   p48scale                     5i 0 const options(*nopass:*omit)
+     d   p49data                       *   const options(*nopass)
+     d   p49stype                     5i 0 const options(*nopass:*omit)
+     d   p49atype                     5i 0 const options(*nopass:*omit)
+     d   p49len                      10i 0 const options(*nopass:*omit)
+     d   p49scale                     5i 0 const options(*nopass:*omit)
+     d   p50data                       *   const options(*nopass)
+     d   p50stype                     5i 0 const options(*nopass:*omit)
+     d   p50atype                     5i 0 const options(*nopass:*omit)
+     d   p50len                      10i 0 const options(*nopass:*omit)
+     d   p50scale                     5i 0 const options(*nopass:*omit)
+     d   p51data                       *   const options(*nopass)
+     d   p51stype                     5i 0 const options(*nopass:*omit)
+     d   p51atype                     5i 0 const options(*nopass:*omit)
+     d   p51len                      10i 0 const options(*nopass:*omit)
+     d   p51scale                     5i 0 const options(*nopass:*omit)
+     d   p52data                       *   const options(*nopass)
+     d   p52stype                     5i 0 const options(*nopass:*omit)
+     d   p52atype                     5i 0 const options(*nopass:*omit)
+     d   p52len                      10i 0 const options(*nopass:*omit)
+     d   p52scale                     5i 0 const options(*nopass:*omit)
+     d   p53data                       *   const options(*nopass)
+     d   p53stype                     5i 0 const options(*nopass:*omit)
+     d   p53atype                     5i 0 const options(*nopass:*omit)
+     d   p53len                      10i 0 const options(*nopass:*omit)
+     d   p53scale                     5i 0 const options(*nopass:*omit)
+     d   p54data                       *   const options(*nopass)
+     d   p54stype                     5i 0 const options(*nopass:*omit)
+     d   p54atype                     5i 0 const options(*nopass:*omit)
+     d   p54len                      10i 0 const options(*nopass:*omit)
+     d   p54scale                     5i 0 const options(*nopass:*omit)
+     d   p55data                       *   const options(*nopass)
+     d   p55stype                     5i 0 const options(*nopass:*omit)
+     d   p55atype                     5i 0 const options(*nopass:*omit)
+     d   p55len                      10i 0 const options(*nopass:*omit)
+     d   p55scale                     5i 0 const options(*nopass:*omit)
+     d   p56data                       *   const options(*nopass)
+     d   p56stype                     5i 0 const options(*nopass:*omit)
+     d   p56atype                     5i 0 const options(*nopass:*omit)
+     d   p56len                      10i 0 const options(*nopass:*omit)
+     d   p56scale                     5i 0 const options(*nopass:*omit)
+     d   p57data                       *   const options(*nopass)
+     d   p57stype                     5i 0 const options(*nopass:*omit)
+     d   p57atype                     5i 0 const options(*nopass:*omit)
+     d   p57len                      10i 0 const options(*nopass:*omit)
+     d   p57scale                     5i 0 const options(*nopass:*omit)
+     d   p58data                       *   const options(*nopass)
+     d   p58stype                     5i 0 const options(*nopass:*omit)
+     d   p58atype                     5i 0 const options(*nopass:*omit)
+     d   p58len                      10i 0 const options(*nopass:*omit)
+     d   p58scale                     5i 0 const options(*nopass:*omit)
+     d   p59data                       *   const options(*nopass)
+     d   p59stype                     5i 0 const options(*nopass:*omit)
+     d   p59atype                     5i 0 const options(*nopass:*omit)
+     d   p59len                      10i 0 const options(*nopass:*omit)
+     d   p59scale                     5i 0 const options(*nopass:*omit)
+     d   p60data                       *   const options(*nopass)
+     d   p60stype                     5i 0 const options(*nopass:*omit)
+     d   p60atype                     5i 0 const options(*nopass:*omit)
+     d   p60len                      10i 0 const options(*nopass:*omit)
+     d   p60scale                     5i 0 const options(*nopass:*omit)
+     d   p61data                       *   const options(*nopass)
+     d   p61stype                     5i 0 const options(*nopass:*omit)
+     d   p61atype                     5i 0 const options(*nopass:*omit)
+     d   p61len                      10i 0 const options(*nopass:*omit)
+     d   p61scale                     5i 0 const options(*nopass:*omit)
+     d   p62data                       *   const options(*nopass)
+     d   p62stype                     5i 0 const options(*nopass:*omit)
+     d   p62atype                     5i 0 const options(*nopass:*omit)
+     d   p62len                      10i 0 const options(*nopass:*omit)
+     d   p62scale                     5i 0 const options(*nopass:*omit)
+
+       // SqlsBindCols - Bind Columns
+       // Bind (or unbind) max. 62 columns of the result set associated with
+       // "handle". Return *on if the operation was successful, else return
+       // *off. Return *off if the cursor does not exist (SqlsStatus=-101).
+       //
+       // To retrieve data from a result set with "SqlsFetch", one or more
+       // columns must be bound first. A maximum of 62 columns can be bound
+       // at once by calling this procedure. However, more than 62 columns
+       // can be bound by calling this procedure multiple times.
+       //
+       // A column is bound to a buffer where it's data is stored by
+       // providing five values:
+       //   c1col :  The column number to be bound or unbound, which are
+       //            numbered from left to right, starting at 1. If the
+       //            column number is less than 1 or greater than 999,
+       //            *off is returned (SqlsStatus=-102).
+       //   c1data:  Pointer to a buffer where the column data is going to
+       //            be stored. If this parameter is *null, all other
+       //            parameters (except the column number) for the same
+       //            column are ignored and the column is unbound.
+       //   c1atype: Application data type (the type in memory), one of:
+       //              SQL_DEFAULT,
+       //              SQL_CHAR,    SQL_VARCHAR,
+       //              SQL_GRAPHIC, SQL_VARGRAPHIC,
+       //              SQL_DECIMAL (packed), SQL_NUMERIC (zoned),
+       //              SQL_INTEGER, SQL_SMALLINT, SQL_BIGINT,
+       //              SQL_FLOAT, SQL_DOUBLE, SQL_REAL,
+       //              SQL_DATE (SQL_TYPE_DATE), SQL_TIME (SQL_TYPE_TIME),
+       //              SQL_TIMESTAMP (SQL_TYPE_TIMESTAMP), SQL_DATETIME,
+       //              SQL_BLOB, SQL_CLOB, SQL_DBCLOB,
+       //              SQL_BLOB_LOCATOR, SQL_CLOB_LOCATOR, SQL_DBCLOB_LOCATOR.
+       //            Specifying SQL_DEFAULT causes the data to be transferred
+       //            to its default data type.
+       //            This parameter is optional. If not passed or if it's
+       //            *OMITted, the application data type is assumed to be
+       //            SQL_CHAR.
+       //   c1len:   Length of the buffer.
+       //            If "c1atype" is:
+       //              SQL_DECIMAL (packed): max. decimal precision.
+       //              SQL_NUMERIC (zoned): max. decimal precision.
+       //              SQL_CHAR (single-byte): maximum length in bytes,
+       //                  including the null terminator if applicable.
+       //              SQL_VARCHAR (single-byte): maximum length in bytes
+       //                  (not including length bytes).
+       //              SQL_GRAPHIC (double-byte): maximum length in double-
+       //                  byte characters.
+       //              SQL_VARGRAPHIC (double-byte): maximum length in double-
+       //                  byte characters (not including length bytes).
+       //            If this parameter is less than 0 it is assumed to be 0.
+       //            If this parameter is less than 1 and "c1atype" is either
+       //            SQL_CHAR or SQL_DEFAULT then it is assumed to be 1.
+       //            This parameter is optional. If not passed or if it's
+       //            *OMITted, the length is assumed to be 5.
+       //   c1scale: Scale, if "c1atype" is:
+       //              SQL_DECIMAL (packed): scale.
+       //              SQL_NUMERIC (zoned): scale.
+       //              SQL_TIMESTAMP: the number of digits to the right
+       //                  of the decimal point in the character repre-
+       //                  sentation of a timestamp (e.g. the scale of
+       //                  yyyy-mm-dd hh:mm:ss.fff is 3).
+       //            For any other type this parameter is ignored.
+       //            This parameter is optional. If not passed or if it's
+       //            *OMITted, the scale is assumed to be 0.
+       //
+     d SqlsBindCols    pr              n   extproc('SqlsBindCols')
+     d   handle                       5i 0 const
+     d   c01col                       5i 0 const
+     d   c01data                       *   const
+     d   c01atype                     5i 0 const options(*nopass:*omit)
+     d   c01len                      10i 0 const options(*nopass:*omit)
+     d   c01scale                     5i 0 const options(*nopass:*omit)
+     d   c02col                       5i 0 const options(*nopass)
+     d   c02data                       *   const options(*nopass)
+     d   c02atype                     5i 0 const options(*nopass:*omit)
+     d   c02len                      10i 0 const options(*nopass:*omit)
+     d   c02scale                     5i 0 const options(*nopass:*omit)
+     d   c03col                       5i 0 const options(*nopass)
+     d   c03data                       *   const options(*nopass)
+     d   c03atype                     5i 0 const options(*nopass:*omit)
+     d   c03len                      10i 0 const options(*nopass:*omit)
+     d   c03scale                     5i 0 const options(*nopass:*omit)
+     d   c04col                       5i 0 const options(*nopass)
+     d   c04data                       *   const options(*nopass)
+     d   c04atype                     5i 0 const options(*nopass:*omit)
+     d   c04len                      10i 0 const options(*nopass:*omit)
+     d   c04scale                     5i 0 const options(*nopass:*omit)
+     d   c05col                       5i 0 const options(*nopass)
+     d   c05data                       *   const options(*nopass)
+     d   c05atype                     5i 0 const options(*nopass:*omit)
+     d   c05len                      10i 0 const options(*nopass:*omit)
+     d   c05scale                     5i 0 const options(*nopass:*omit)
+     d   c06col                       5i 0 const options(*nopass)
+     d   c06data                       *   const options(*nopass)
+     d   c06atype                     5i 0 const options(*nopass:*omit)
+     d   c06len                      10i 0 const options(*nopass:*omit)
+     d   c06scale                     5i 0 const options(*nopass:*omit)
+     d   c07col                       5i 0 const options(*nopass)
+     d   c07data                       *   const options(*nopass)
+     d   c07atype                     5i 0 const options(*nopass:*omit)
+     d   c07len                      10i 0 const options(*nopass:*omit)
+     d   c07scale                     5i 0 const options(*nopass:*omit)
+     d   c08col                       5i 0 const options(*nopass)
+     d   c08data                       *   const options(*nopass)
+     d   c08atype                     5i 0 const options(*nopass:*omit)
+     d   c08len                      10i 0 const options(*nopass:*omit)
+     d   c08scale                     5i 0 const options(*nopass:*omit)
+     d   c09col                       5i 0 const options(*nopass)
+     d   c09data                       *   const options(*nopass)
+     d   c09atype                     5i 0 const options(*nopass:*omit)
+     d   c09len                      10i 0 const options(*nopass:*omit)
+     d   c09scale                     5i 0 const options(*nopass:*omit)
+     d   c10col                       5i 0 const options(*nopass)
+     d   c10data                       *   const options(*nopass)
+     d   c10atype                     5i 0 const options(*nopass:*omit)
+     d   c10len                      10i 0 const options(*nopass:*omit)
+     d   c10scale                     5i 0 const options(*nopass:*omit)
+     d   c11col                       5i 0 const options(*nopass)
+     d   c11data                       *   const options(*nopass)
+     d   c11atype                     5i 0 const options(*nopass:*omit)
+     d   c11len                      10i 0 const options(*nopass:*omit)
+     d   c11scale                     5i 0 const options(*nopass:*omit)
+     d   c12col                       5i 0 const options(*nopass)
+     d   c12data                       *   const options(*nopass)
+     d   c12atype                     5i 0 const options(*nopass:*omit)
+     d   c12len                      10i 0 const options(*nopass:*omit)
+     d   c12scale                     5i 0 const options(*nopass:*omit)
+     d   c13col                       5i 0 const options(*nopass)
+     d   c13data                       *   const options(*nopass)
+     d   c13atype                     5i 0 const options(*nopass:*omit)
+     d   c13len                      10i 0 const options(*nopass:*omit)
+     d   c13scale                     5i 0 const options(*nopass:*omit)
+     d   c14col                       5i 0 const options(*nopass)
+     d   c14data                       *   const options(*nopass)
+     d   c14atype                     5i 0 const options(*nopass:*omit)
+     d   c14len                      10i 0 const options(*nopass:*omit)
+     d   c14scale                     5i 0 const options(*nopass:*omit)
+     d   c15col                       5i 0 const options(*nopass)
+     d   c15data                       *   const options(*nopass)
+     d   c15atype                     5i 0 const options(*nopass:*omit)
+     d   c15len                      10i 0 const options(*nopass:*omit)
+     d   c15scale                     5i 0 const options(*nopass:*omit)
+     d   c16col                       5i 0 const options(*nopass)
+     d   c16data                       *   const options(*nopass)
+     d   c16atype                     5i 0 const options(*nopass:*omit)
+     d   c16len                      10i 0 const options(*nopass:*omit)
+     d   c16scale                     5i 0 const options(*nopass:*omit)
+     d   c17col                       5i 0 const options(*nopass)
+     d   c17data                       *   const options(*nopass)
+     d   c17atype                     5i 0 const options(*nopass:*omit)
+     d   c17len                      10i 0 const options(*nopass:*omit)
+     d   c17scale                     5i 0 const options(*nopass:*omit)
+     d   c18col                       5i 0 const options(*nopass)
+     d   c18data                       *   const options(*nopass)
+     d   c18atype                     5i 0 const options(*nopass:*omit)
+     d   c18len                      10i 0 const options(*nopass:*omit)
+     d   c18scale                     5i 0 const options(*nopass:*omit)
+     d   c19col                       5i 0 const options(*nopass)
+     d   c19data                       *   const options(*nopass)
+     d   c19atype                     5i 0 const options(*nopass:*omit)
+     d   c19len                      10i 0 const options(*nopass:*omit)
+     d   c19scale                     5i 0 const options(*nopass:*omit)
+     d   c20col                       5i 0 const options(*nopass)
+     d   c20data                       *   const options(*nopass)
+     d   c20atype                     5i 0 const options(*nopass:*omit)
+     d   c20len                      10i 0 const options(*nopass:*omit)
+     d   c20scale                     5i 0 const options(*nopass:*omit)
+     d   c21col                       5i 0 const options(*nopass)
+     d   c21data                       *   const options(*nopass)
+     d   c21atype                     5i 0 const options(*nopass:*omit)
+     d   c21len                      10i 0 const options(*nopass:*omit)
+     d   c21scale                     5i 0 const options(*nopass:*omit)
+     d   c22col                       5i 0 const options(*nopass)
+     d   c22data                       *   const options(*nopass)
+     d   c22atype                     5i 0 const options(*nopass:*omit)
+     d   c22len                      10i 0 const options(*nopass:*omit)
+     d   c22scale                     5i 0 const options(*nopass:*omit)
+     d   c23col                       5i 0 const options(*nopass)
+     d   c23data                       *   const options(*nopass)
+     d   c23atype                     5i 0 const options(*nopass:*omit)
+     d   c23len                      10i 0 const options(*nopass:*omit)
+     d   c23scale                     5i 0 const options(*nopass:*omit)
+     d   c24col                       5i 0 const options(*nopass)
+     d   c24data                       *   const options(*nopass)
+     d   c24atype                     5i 0 const options(*nopass:*omit)
+     d   c24len                      10i 0 const options(*nopass:*omit)
+     d   c24scale                     5i 0 const options(*nopass:*omit)
+     d   c25col                       5i 0 const options(*nopass)
+     d   c25data                       *   const options(*nopass)
+     d   c25atype                     5i 0 const options(*nopass:*omit)
+     d   c25len                      10i 0 const options(*nopass:*omit)
+     d   c25scale                     5i 0 const options(*nopass:*omit)
+     d   c26col                       5i 0 const options(*nopass)
+     d   c26data                       *   const options(*nopass)
+     d   c26atype                     5i 0 const options(*nopass:*omit)
+     d   c26len                      10i 0 const options(*nopass:*omit)
+     d   c26scale                     5i 0 const options(*nopass:*omit)
+     d   c27col                       5i 0 const options(*nopass)
+     d   c27data                       *   const options(*nopass)
+     d   c27atype                     5i 0 const options(*nopass:*omit)
+     d   c27len                      10i 0 const options(*nopass:*omit)
+     d   c27scale                     5i 0 const options(*nopass:*omit)
+     d   c28col                       5i 0 const options(*nopass)
+     d   c28data                       *   const options(*nopass)
+     d   c28atype                     5i 0 const options(*nopass:*omit)
+     d   c28len                      10i 0 const options(*nopass:*omit)
+     d   c28scale                     5i 0 const options(*nopass:*omit)
+     d   c29col                       5i 0 const options(*nopass)
+     d   c29data                       *   const options(*nopass)
+     d   c29atype                     5i 0 const options(*nopass:*omit)
+     d   c29len                      10i 0 const options(*nopass:*omit)
+     d   c29scale                     5i 0 const options(*nopass:*omit)
+     d   c30col                       5i 0 const options(*nopass)
+     d   c30data                       *   const options(*nopass)
+     d   c30atype                     5i 0 const options(*nopass:*omit)
+     d   c30len                      10i 0 const options(*nopass:*omit)
+     d   c30scale                     5i 0 const options(*nopass:*omit)
+     d   c31col                       5i 0 const options(*nopass)
+     d   c31data                       *   const options(*nopass)
+     d   c31atype                     5i 0 const options(*nopass:*omit)
+     d   c31len                      10i 0 const options(*nopass:*omit)
+     d   c31scale                     5i 0 const options(*nopass:*omit)
+     d   c32col                       5i 0 const options(*nopass)
+     d   c32data                       *   const options(*nopass)
+     d   c32atype                     5i 0 const options(*nopass:*omit)
+     d   c32len                      10i 0 const options(*nopass:*omit)
+     d   c32scale                     5i 0 const options(*nopass:*omit)
+     d   c33col                       5i 0 const options(*nopass)
+     d   c33data                       *   const options(*nopass)
+     d   c33atype                     5i 0 const options(*nopass:*omit)
+     d   c33len                      10i 0 const options(*nopass:*omit)
+     d   c33scale                     5i 0 const options(*nopass:*omit)
+     d   c34col                       5i 0 const options(*nopass)
+     d   c34data                       *   const options(*nopass)
+     d   c34atype                     5i 0 const options(*nopass:*omit)
+     d   c34len                      10i 0 const options(*nopass:*omit)
+     d   c34scale                     5i 0 const options(*nopass:*omit)
+     d   c35col                       5i 0 const options(*nopass)
+     d   c35data                       *   const options(*nopass)
+     d   c35atype                     5i 0 const options(*nopass:*omit)
+     d   c35len                      10i 0 const options(*nopass:*omit)
+     d   c35scale                     5i 0 const options(*nopass:*omit)
+     d   c36col                       5i 0 const options(*nopass)
+     d   c36data                       *   const options(*nopass)
+     d   c36atype                     5i 0 const options(*nopass:*omit)
+     d   c36len                      10i 0 const options(*nopass:*omit)
+     d   c36scale                     5i 0 const options(*nopass:*omit)
+     d   c37col                       5i 0 const options(*nopass)
+     d   c37data                       *   const options(*nopass)
+     d   c37atype                     5i 0 const options(*nopass:*omit)
+     d   c37len                      10i 0 const options(*nopass:*omit)
+     d   c37scale                     5i 0 const options(*nopass:*omit)
+     d   c38col                       5i 0 const options(*nopass)
+     d   c38data                       *   const options(*nopass)
+     d   c38atype                     5i 0 const options(*nopass:*omit)
+     d   c38len                      10i 0 const options(*nopass:*omit)
+     d   c38scale                     5i 0 const options(*nopass:*omit)
+     d   c39col                       5i 0 const options(*nopass)
+     d   c39data                       *   const options(*nopass)
+     d   c39atype                     5i 0 const options(*nopass:*omit)
+     d   c39len                      10i 0 const options(*nopass:*omit)
+     d   c39scale                     5i 0 const options(*nopass:*omit)
+     d   c40col                       5i 0 const options(*nopass)
+     d   c40data                       *   const options(*nopass)
+     d   c40atype                     5i 0 const options(*nopass:*omit)
+     d   c40len                      10i 0 const options(*nopass:*omit)
+     d   c40scale                     5i 0 const options(*nopass:*omit)
+     d   c41col                       5i 0 const options(*nopass)
+     d   c41data                       *   const options(*nopass)
+     d   c41atype                     5i 0 const options(*nopass:*omit)
+     d   c41len                      10i 0 const options(*nopass:*omit)
+     d   c41scale                     5i 0 const options(*nopass:*omit)
+     d   c42col                       5i 0 const options(*nopass)
+     d   c42data                       *   const options(*nopass)
+     d   c42atype                     5i 0 const options(*nopass:*omit)
+     d   c42len                      10i 0 const options(*nopass:*omit)
+     d   c42scale                     5i 0 const options(*nopass:*omit)
+     d   c43col                       5i 0 const options(*nopass)
+     d   c43data                       *   const options(*nopass)
+     d   c43atype                     5i 0 const options(*nopass:*omit)
+     d   c43len                      10i 0 const options(*nopass:*omit)
+     d   c43scale                     5i 0 const options(*nopass:*omit)
+     d   c44col                       5i 0 const options(*nopass)
+     d   c44data                       *   const options(*nopass)
+     d   c44atype                     5i 0 const options(*nopass:*omit)
+     d   c44len                      10i 0 const options(*nopass:*omit)
+     d   c44scale                     5i 0 const options(*nopass:*omit)
+     d   c45col                       5i 0 const options(*nopass)
+     d   c45data                       *   const options(*nopass)
+     d   c45atype                     5i 0 const options(*nopass:*omit)
+     d   c45len                      10i 0 const options(*nopass:*omit)
+     d   c45scale                     5i 0 const options(*nopass:*omit)
+     d   c46col                       5i 0 const options(*nopass)
+     d   c46data                       *   const options(*nopass)
+     d   c46atype                     5i 0 const options(*nopass:*omit)
+     d   c46len                      10i 0 const options(*nopass:*omit)
+     d   c46scale                     5i 0 const options(*nopass:*omit)
+     d   c47col                       5i 0 const options(*nopass)
+     d   c47data                       *   const options(*nopass)
+     d   c47atype                     5i 0 const options(*nopass:*omit)
+     d   c47len                      10i 0 const options(*nopass:*omit)
+     d   c47scale                     5i 0 const options(*nopass:*omit)
+     d   c48col                       5i 0 const options(*nopass)
+     d   c48data                       *   const options(*nopass)
+     d   c48atype                     5i 0 const options(*nopass:*omit)
+     d   c48len                      10i 0 const options(*nopass:*omit)
+     d   c48scale                     5i 0 const options(*nopass:*omit)
+     d   c49col                       5i 0 const options(*nopass)
+     d   c49data                       *   const options(*nopass)
+     d   c49atype                     5i 0 const options(*nopass:*omit)
+     d   c49len                      10i 0 const options(*nopass:*omit)
+     d   c49scale                     5i 0 const options(*nopass:*omit)
+     d   c50col                       5i 0 const options(*nopass)
+     d   c50data                       *   const options(*nopass)
+     d   c50atype                     5i 0 const options(*nopass:*omit)
+     d   c50len                      10i 0 const options(*nopass:*omit)
+     d   c50scale                     5i 0 const options(*nopass:*omit)
+     d   c51col                       5i 0 const options(*nopass)
+     d   c51data                       *   const options(*nopass)
+     d   c51atype                     5i 0 const options(*nopass:*omit)
+     d   c51len                      10i 0 const options(*nopass:*omit)
+     d   c51scale                     5i 0 const options(*nopass:*omit)
+     d   c52col                       5i 0 const options(*nopass)
+     d   c52data                       *   const options(*nopass)
+     d   c52atype                     5i 0 const options(*nopass:*omit)
+     d   c52len                      10i 0 const options(*nopass:*omit)
+     d   c52scale                     5i 0 const options(*nopass:*omit)
+     d   c53col                       5i 0 const options(*nopass)
+     d   c53data                       *   const options(*nopass)
+     d   c53atype                     5i 0 const options(*nopass:*omit)
+     d   c53len                      10i 0 const options(*nopass:*omit)
+     d   c53scale                     5i 0 const options(*nopass:*omit)
+     d   c54col                       5i 0 const options(*nopass)
+     d   c54data                       *   const options(*nopass)
+     d   c54atype                     5i 0 const options(*nopass:*omit)
+     d   c54len                      10i 0 const options(*nopass:*omit)
+     d   c54scale                     5i 0 const options(*nopass:*omit)
+     d   c55col                       5i 0 const options(*nopass)
+     d   c55data                       *   const options(*nopass)
+     d   c55atype                     5i 0 const options(*nopass:*omit)
+     d   c55len                      10i 0 const options(*nopass:*omit)
+     d   c55scale                     5i 0 const options(*nopass:*omit)
+     d   c56col                       5i 0 const options(*nopass)
+     d   c56data                       *   const options(*nopass)
+     d   c56atype                     5i 0 const options(*nopass:*omit)
+     d   c56len                      10i 0 const options(*nopass:*omit)
+     d   c56scale                     5i 0 const options(*nopass:*omit)
+     d   c57col                       5i 0 const options(*nopass)
+     d   c57data                       *   const options(*nopass)
+     d   c57atype                     5i 0 const options(*nopass:*omit)
+     d   c57len                      10i 0 const options(*nopass:*omit)
+     d   c57scale                     5i 0 const options(*nopass:*omit)
+     d   c58col                       5i 0 const options(*nopass)
+     d   c58data                       *   const options(*nopass)
+     d   c58atype                     5i 0 const options(*nopass:*omit)
+     d   c58len                      10i 0 const options(*nopass:*omit)
+     d   c58scale                     5i 0 const options(*nopass:*omit)
+     d   c59col                       5i 0 const options(*nopass)
+     d   c59data                       *   const options(*nopass)
+     d   c59atype                     5i 0 const options(*nopass:*omit)
+     d   c59len                      10i 0 const options(*nopass:*omit)
+     d   c59scale                     5i 0 const options(*nopass:*omit)
+     d   c60col                       5i 0 const options(*nopass)
+     d   c60data                       *   const options(*nopass)
+     d   c60atype                     5i 0 const options(*nopass:*omit)
+     d   c60len                      10i 0 const options(*nopass:*omit)
+     d   c60scale                     5i 0 const options(*nopass:*omit)
+     d   c61col                       5i 0 const options(*nopass)
+     d   c61data                       *   const options(*nopass)
+     d   c61atype                     5i 0 const options(*nopass:*omit)
+     d   c61len                      10i 0 const options(*nopass:*omit)
+     d   c61scale                     5i 0 const options(*nopass:*omit)
+     d   c62col                       5i 0 const options(*nopass)
+     d   c62data                       *   const options(*nopass)
+     d   c62atype                     5i 0 const options(*nopass:*omit)
+     d   c62len                      10i 0 const options(*nopass:*omit)
+     d   c62scale                     5i 0 const options(*nopass:*omit)
+
+       // SqlsFetch - Fetch
+       // Fetch the next row from the cursor associated with "handle".
+       // Return *on if the operation was successful, else return *off.
+       // Return *off if the cursor does not exist (SqlsStatus=-101).
+       // Return *on if end of data has been reached (SqlsStatus=100).
+       //
+       // For this procedure to have any effect, one or more columns must
+       // be bound first with "SqlsBindCols".
+       //
+       // "SqlsStatus" is set to 100 in case no data was found.
+       //
+       // !!! ALWAYS CHECK IF "SqlsStatus" EQUALS 100 !!!
+       //
+       // When "SqlsStatus" equals 100 no data has been fetched and the
+       // program variables that were bound to the result set columns do
+       // not contain valid data, and "SqlsColIsNull" always returns *on
+       // for these columns.
+       //
+       // When "SqlsFetch" has been called, "SqlsColIsNull" or "SqlsColIsNTS"
+       // can be used to check whether the data for a specific column is NULL,
+       // or a null-terminated string.
+       //
+       // The cursor should be closed with "SqlsCloseCurs" or "SqlsCloseConn"
+       // when the cursor is not needed anymore.
+       //
+       // Optional parameters "cpos" and "cposnum" can be given to position
+       // the cursor before the next row is fetched. Parameter "cpos" can
+       // have one of the following values:
+       //   '*FIRST' : position on the first row (ignore "cposnum");
+       //    '*LAST' : position on the last row (ignore "cposnum");
+       //   '*PRIOR' : position on the previous row (ignore "cposnum");
+       //     '*REL' : position the cursor "cposnum" rows further:
+       //                > 0 : advance n rows
+       //                < 0 : back up n rows
+       //                = 0 : no effect
+       //      other : no effect
+       // Parameter "cposnum" defaults to 1.
+     d SqlsFetch       pr              n   extproc('SqlsFetch')
+     d   handle                       5i 0 const
+     d   cpos                        10    const options(*nopass)
+     d   cposnum                      5i 0 const options(*nopass)
+
+       // SqlsUnbindAllCols - Unbind All Columns
+       // Unbind ALL columns for the cursor associated with "handle".
+       // Return *on if the operation was successful, else return *off.
+       // Return *off if the cursor does not exist (SqlsStatus=-101).
+     d SqlsUnbindAllCols...
+     d                 pr              n   extproc('SqlsUnbindAllCols')
+     d   handle                       5i 0 const
+
+       // SqlsColIsNull - Column Is Null
+       // Return *on if the fetched data for column "col" for cursor
+       // "handle" is NULL, else return *off. Return *on if the cursor
+       // does not exist (SqlsStatus=-101), or if "col" is not in the
+       // range 1-999 (SqlsStatus=-102).
+     d SqlsColIsNull   pr              n   extproc('SqlsColIsNull')
+     d   handle                       5i 0 const
+     d   col                          5i 0 const
+
+       // SqlsColIsNTS - Column Is Null-Terminated String
+       // Return *on if the fetched data for column "col" for cursor
+       // "handle" is a null-terminated string, else return *off. Return
+       // *off if the cursor does not exist (SqlsStatus=-101), or if
+       // "col" is not in the range 1-999 (SqlsStatus=-102).
+     d SqlsColIsNTS    pr              n   extproc('SqlsColIsNTS')
+     d   handle                       5i 0 const
+     d   col                          5i 0 const
+
+       // SqlsCloseConn - Close Connection
+       // Close connection "conn" and free all associated resources. All
+       // cursor associated with the connection are closed. Return *on if
+       // the operation was successful, else return *off.
+       // Parameter "conn" is optional; if not given connection 1 is assumed.
+     d SqlsCloseConn   pr              n   extproc('SqlsCloseConn')
+     d   conn                         5i 0 const options(*nopass)
+
+       // SqlsCloseCurs - Close Cursor
+       // Close cursor "handle" and free all associated resources. Return
+       // *on if the operation was successful, else return *off. Return
+       // *off if the cursor does not exist (SqlsStatus=-101).
+     d SqlsCloseCurs   pr              n   extproc('SqlsCloseCurs')
+     d   handle                       5i 0 const
+
+       // SqlsStatusAsChar - SqlsStatus Character format
+       // Return the "SqlsStatus" field as a 4-character field.
+     d SqlsStatusAsChar...
+     d                 pr             4
+     d                                     extproc('SqlsStatusAsChar')
+

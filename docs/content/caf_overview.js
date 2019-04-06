@@ -1,7 +1,6 @@
 document.write('\
 \
-<h1first id="caf_overview">CAF Overview</h1first>\
-<br>\
+<h1 id="caf_overview">CAF Overview</h1>\
 <p>\
 CAF (Common Application Framework) is a framework for building IBM i (AS/400) ILE RPGIV \
 programs. It consists of several service programs in a layered structure containing common \
@@ -22,7 +21,10 @@ about the code.\
 <p>\
 CAF is compatible with V5R4 and up.\
 </p>\
-<p>CAF has the following components:</p>\
+<p>\
+CAF has the following components:\
+</p>\
+<br>\
 <div style="position: relative; left: 5%;">\
 <img src="images/caf_overview.png">\
 </div>\

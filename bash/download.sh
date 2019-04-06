@@ -110,7 +110,7 @@ esac
 function mbr {
   case "$SKIPS" in
     X ) ;;
-    * ) echo "get /QSYS.LIB/$HLIB.LIB/$1.FILE/$2.MBR $SRCDIR/$1/$2.MBR" >> $FTPS ;;
+    * ) echo "get /QSYS.LIB/$HLIB.LIB/$1.FILE/$2.MBR $SRCDIR/$1/$2.$3" >> $FTPS ;;
   esac
 }
 source $SCRDIR/incl_mbrs.sh

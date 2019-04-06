@@ -1,15 +1,15 @@
- 
+
 /*
                  --  BUILD CAF v0.93.0  --
- 
- 
+
+
           This Source Was Automatically Generated
- 
- 
+
+
           To start the build run:
           STRREXPRC SRCMBR(CAFBUILD) SRCFILE(CAF0930/TOOLSRC)
 */
- 
+
 trace off
 signal off error
 say ' '
@@ -35,11 +35,11 @@ call ex 'CRTBNDCL   PGM(CAF0930/CORPGPGM)   SRCFILE(CAF0930/TOOLSRC)'
 call ex 'CRTCLPGM   PGM(CAF0930/RDICO0)     SRCFILE(CAF0930/TOOLSRC)'
 call ex 'CRTBNDRPG  PGM(CAF0930/COPSCC)     SRCFILE(CAF0930/TOOLSRC)'
 call ex 'CRTBNDCL   PGM(CAF0930/CAFBUILDT)  SRCFILE(CAF0930/TOOLSRC)'
-call bsp 'CSYSBASE'
-call bsp 'CSYSSQLS'
-call bsp 'CAPPBASE'
-call bsp 'CAPPSSAM'
-call bsp 'CAPPDISP'
+call bsp 'CSYSBASE', 'q'
+call bsp 'CSYSSQLS', 'q'
+call bsp 'CAPPBASE', 'q'
+call bsp 'CAPPSSAM', 'q'
+call bsp 'CAPPDISP', 'q'
 say ' '
 say 'COMPILING TOOLS 2 . . .'
 call ex 'CALL CAF0930/CAFBUILDT CAF0930'

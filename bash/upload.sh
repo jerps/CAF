@@ -134,7 +134,7 @@ function mbr {
   echo "quote rcmd ADDPFM FILE($HLIB/$1) MBR($2) SRCTYPE($3) TEXT('$4')" >> $FTPS
   case "$SKIPS" in
     X ) ;;
-    * ) echo "put $SRCDIR/$1/$2.MBR /QSYS.LIB/$HLIB.LIB/$1.FILE/$2.MBR" >> $FTPS ;;
+    * ) echo "put $SRCDIR/$1/$2.$3 /QSYS.LIB/$HLIB.LIB/$1.FILE/$2.MBR" >> $FTPS ;;
   esac
 }
 source $SCRDIR/incl_mbrs.sh
