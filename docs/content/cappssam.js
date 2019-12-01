@@ -56,55 +56,60 @@ Implements procedures that are not categorized (yet) into another module. For ex
 <b>OBJECTS</b>:<br>\
 <br>\
 <span style="display: grid; grid-template-columns: 7ch auto; grid-template-rows: auto; grid-gap: 0.8rem;">\
-<span class="g11"><span class="bullet1">&#9679;</span>&nbsp;CH</span>\
+<span class="g11"><span class="bullet1">&#9679;</span>&nbsp;A0</span>\
 <span class="g12">\
+<span class="spodesc">Data Area 0</span><br>\
+Contains menu control data. Is also used (*locked) to sync access to menu data.\
+</span>\
+<span class="g21"><span class="bullet1">&#9679;</span>&nbsp;CH</span>\
+<span class="g22">\
 <span class="spodesc">Command Handler Program</span><br>\
 When performing a menu option, a command can be executed directly (<code>QCMDEXC</code>) or by calling intermediate program CAPPSSAMCH.\
 </span>\
-<span class="g21"><span class="bullet1">&#9679;</span>&nbsp;FR</span>\
-<span class="g22">\
+<span class="g31"><span class="bullet1">&#9679;</span>&nbsp;FR</span>\
+<span class="g32">\
 <span class="spodesc">Field Reference File</span><br>\
 Defines attribute types <code>TAM_...</code>.\
 </span>\
-<span class="g31"><span class="bullet1">&#9679;</span>&nbsp;F1</span>\
-<span class="g32">\
+<span class="g41"><span class="bullet1">&#9679;</span>&nbsp;F1</span>\
+<span class="g42">\
 <span class="spodesc">File 1: Slots</span><br>\
 Contains all slots (headers & options) of the menu, the menu attributes and the attributes of all pages. This file is maintained through module MO.\
 </span>\
-<span class="g41"><span class="bullet1">&#9679;</span>&nbsp;F2</span>\
-<span class="g42">\
+<span class="g51"><span class="bullet1">&#9679;</span>&nbsp;F2</span>\
+<span class="g52">\
 <span class="spodesc">File 2: Slot/Groups</span><br>\
 Contains the groups of all slots (headers & options), the menu and all pages. This file is maintained through module MO.\
 </span>\
-<span class="g51"><span class="bullet1">&#9679;</span>&nbsp;F3</span>\
-<span class="g52">\
+<span class="g61"><span class="bullet1">&#9679;</span>&nbsp;F3</span>\
+<span class="g62">\
 <span class="spodesc">File 3: Groups</span><br>\
 Contains all groups. This file is maintained through module DC.\
 </span>\
-<span class="g61"><span class="bullet1">&#9679;</span>&nbsp;F4</span>\
-<span class="g62">\
+<span class="g71"><span class="bullet1">&#9679;</span>&nbsp;F4</span>\
+<span class="g72">\
 <span class="spodesc">File 4: Members/Groups (Group Members)</span><br>\
 Contains all group members. This file is maintained through module DC.\
 </span>\
-<span class="g71"><span class="bullet1">&#9679;</span>&nbsp;F5</span>\
-<span class="g72">\
+<span class="g81"><span class="bullet1">&#9679;</span>&nbsp;F5</span>\
+<span class="g82">\
 <span class="spodesc">File 5: Index on F2</span><br>\
 Key: bin, group, page, slot.\
 </span>\
-<span class="g81"><span class="bullet1">&#9679;</span>&nbsp;F6</span>\
-<span class="g82">\
+<span class="g91"><span class="bullet1">&#9679;</span>&nbsp;F6</span>\
+<span class="g92">\
 <span class="spodesc">File 6: Index on F4</span><br>\
 Key: group, member type, member name.\
 </span>\
-<span class="g91"><span class="bullet1">&#9679;</span>&nbsp;P0</span>\
-<span class="g92">\
+<span class="g101"><span class="bullet1">&#9679;</span>&nbsp;P0</span>\
+<span class="g102">\
 <span class="spodesc">Program 0: Load Initial Data</span><br>\
 When the service program is built then this program is called to load files F3 and F4 with \
 initial data. I.e. group <b>*ADMIN</b> is created with user <b>QSECOFR</b>. Files that already \
 exist when build program CAPPSSAMB1 is called are not affected.\
 </span>\
-<span class="g101"><span class="bullet1">&#9679;</span>&nbsp;P1</span>\
-<span class="g102">\
+<span class="g111"><span class="bullet1">&#9679;</span>&nbsp;P1</span>\
+<span class="g112">\
 <span class="spodesc">Program 1: Add user to group</span><br>\
 Utility program that can be called to add a user to a group.\
 </span>\
