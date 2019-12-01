@@ -72,7 +72,7 @@
              CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CAPPDISPP0) +
                           TGTLIB(&TLIB)
 
-             /* INITIAL DATA LOAD */
+             /* LOAD INITIAL DATA */
              CALL       PGM(CAPPDISPP0) PARM(&INIF1)
 
              /*----- BUILD END -----*/

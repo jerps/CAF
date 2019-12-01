@@ -5,27 +5,40 @@
                                                                              +
 */                                                                           +
 
-             PGM        PARM(&CAFLIB &OWNER &AUTLNF &AUTLNFGR +
-                          &AUTLPFLF &AUTLPFLFGR &PUBAUTNF +
-                          &PUBAUTPFLF &INCLMDAUT &INCLSPFAUT +
-                          &MNUADM &MNUADMGR)
+             PGM        PARM(&CAFLIB &OWNER &PUBAUTNPL &PUBAUTPL +
+                          &USRAUTNPL &USRAUTPL &AUTLNPL &AUTLPL +
+                          &INCLMN &INCLSF &MNUADMAUT)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&OWNER) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLNF) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLNFGR) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLPFLF) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLPFLFGR) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&PUBAUTNF) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&PUBAUTPFLF) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&INCLMDAUT) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&INCLSPFAUT) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&MNUADM) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&MNUADMGR) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTNPL) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTPL) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLNPL) TYPE(*CHAR) LEN(20)
+             DCL        VAR(&AUTLPL) TYPE(*CHAR) LEN(20)
+             DCL        VAR(&USRAUTNPL) TYPE(*CHAR) LEN(30)
+             DCL        VAR(&USRAUTPL) TYPE(*CHAR) LEN(30)
+             DCL        VAR(&INCLMN) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLSF) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADMAUT) TYPE(*CHAR) LEN(20)
+
+             DCL        VAR(&USRAUTNPL1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USRAUTNPL2) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USRAUTNPL3) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USRAUTPL1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USRAUTPL2) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USRAUTPL3) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLNPL1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLNPL2) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLPL1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&AUTLPL2) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADMAUT1) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MNUADMAUT2) TYPE(*CHAR) LEN(10)
 
              DCL        VAR(&NUM1) TYPE(*DEC) LEN(4 0) VALUE(0)
              DCL        VAR(&NUM2) TYPE(*DEC) LEN(5 0) VALUE(0)
+             DCL        VAR(&NUM3) TYPE(*DEC) LEN(5 0) VALUE(0)
              DCL        VAR(&NUM1A) TYPE(*CHAR) LEN(4) VALUE('????')
              DCL        VAR(&NUM2A) TYPE(*CHAR) LEN(5) VALUE('?????')
+             DCL        VAR(&NUM3A) TYPE(*CHAR) LEN(5) VALUE('?????')
 
              DCL        VAR(&ERRMSGID) TYPE(*CHAR) LEN(7)
              DCL        VAR(&ERRMSGDTA) TYPE(*CHAR) LEN(256)
@@ -36,6 +49,19 @@
              MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
 
 
+             CHGVAR     VAR(&USRAUTNPL1) VALUE(%SST(&USRAUTNPL 1 10))
+             CHGVAR     VAR(&USRAUTNPL2) VALUE(%SST(&USRAUTNPL 11 10))
+             CHGVAR     VAR(&USRAUTNPL3) VALUE(%SST(&USRAUTNPL 21 10))
+             CHGVAR     VAR(&USRAUTPL1) VALUE(%SST(&USRAUTPL 1 10))
+             CHGVAR     VAR(&USRAUTPL2) VALUE(%SST(&USRAUTPL 11 10))
+             CHGVAR     VAR(&USRAUTPL3) VALUE(%SST(&USRAUTPL 21 10))
+             CHGVAR     VAR(&AUTLNPL1) VALUE(%SST(&AUTLNPL 1 10))
+             CHGVAR     VAR(&AUTLNPL2) VALUE(%SST(&AUTLNPL 11 10))
+             CHGVAR     VAR(&AUTLPL1) VALUE(%SST(&AUTLPL 1 10))
+             CHGVAR     VAR(&AUTLPL2) VALUE(%SST(&AUTLPL 11 10))
+             CHGVAR     VAR(&MNUADMAUT1) VALUE(%SST(&MNUADMAUT 1 10))
+             CHGVAR     VAR(&MNUADMAUT2) VALUE(%SST(&MNUADMAUT 11 10))
+
              CALL       PGM(RTVDFTCAFL) PARM(&CAFLIB)
 
              DLTF       FILE(QTEMP/SETCAFAUT0)
@@ -45,31 +71,38 @@
 
              IF         COND(&OWNER *NE *SAME) THEN(CALL +
                           PGM(&CAFLIB/SETCAFAUT1) PARM(&CAFLIB +
-                          &OWNER &NUM1 &NUM2))
+                          &OWNER &INCLMN &INCLSF &NUM1 &NUM2 &NUM3))
 
-             IF         COND(&AUTLNF *NE *SAME *OR &AUTLPFLF *NE +
+             IF         COND(&PUBAUTNPL *NE *SAME *OR &PUBAUTPL *NE +
                           *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT2) +
-                          PARM(&CAFLIB &AUTLNF &AUTLNFGR &AUTLPFLF +
-                          &AUTLPFLFGR &INCLMDAUT &INCLSPFAUT &NUM1 +
-                          &NUM2))
+                          PARM(&CAFLIB &PUBAUTNPL &PUBAUTPL &INCLMN +
+                          &INCLSF &NUM1 &NUM2 &NUM3))
 
-             IF         COND(&PUBAUTNF *NE *SAME *OR &PUBAUTPFLF *NE +
-                          *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT3) +
-                          PARM(&CAFLIB &PUBAUTNF &PUBAUTPFLF +
-                          &INCLMDAUT &INCLSPFAUT &NUM1 &NUM2))
+             IF         COND(&USRAUTNPL1 *NE *SAME *OR &USRAUTPL1 +
+                          *NE *SAME) THEN(CALL +
+                          PGM(&CAFLIB/SETCAFAUT3) PARM(&CAFLIB +
+                          &USRAUTNPL1 &USRAUTNPL2 &USRAUTNPL3 +
+                          &USRAUTPL1 &USRAUTPL2 &USRAUTPL3 &INCLMN +
+                          &INCLSF &NUM1 &NUM2 &NUM3))
 
-             IF         COND(&MNUADM *NE *SAME) THEN(CALL +
-                          PGM(&CAFLIB/SETCAFAUT4) PARM(&CAFLIB +
-                          &MNUADM &MNUADMGR &NUM1 &NUM2))
+             IF         COND(&AUTLNPL1 *NE *SAME *OR &AUTLPL1 *NE +
+                          *SAME) THEN(CALL PGM(&CAFLIB/SETCAFAUT4) +
+                          PARM(&CAFLIB &AUTLNPL1 &AUTLNPL2 &AUTLPL1 +
+                          &AUTLPL2 &INCLMN &INCLSF &NUM1 &NUM2 &NUM3))
+
+             IF         COND(&MNUADMAUT1 *NE *SAME) THEN(CALL +
+                          PGM(&CAFLIB/SETCAFAUT5) PARM(&CAFLIB +
+                          &MNUADMAUT1 &MNUADMAUT2 &NUM1 &NUM2 &NUM3))
 
              DLTF       FILE(QTEMP/SETCAFAUT0)
              MONMSG     MSGID(CPF0000)
 
              CALL       PGM(SETCAFAUT8) PARM(' ' &NUM1 &NUM2 &NUM1A +
-                          &NUM2A)
-             SNDPGMMSG  MSG('Performed ' *CAT &NUM2A *BCAT +
-                          'authorization operations on ' *CAT +
-                          &NUM1A *BCAT 'objects.') MSGTYPE(*COMP)
+                          &NUM2A &NUM3 &NUM3A)
+             SNDPGMMSG  MSG('Performed ' *CAT &NUM2A *BCAT 'auth. +
+                          operations on ' *CAT &NUM1A *BCAT +
+                          'objects (' *CAT &NUM3A *BCAT 'errors).') +
+                          MSGTYPE(*COMP)
 
              RETURN
 

@@ -6,25 +6,29 @@
       /include QINCSRC,PGM_HEAD2
 
 
-     d names           s             10    dim(9999)
+     d names           s             20    dim(9999)
      d flag1           s               n
      d flag2           s               n
 
 
      d Main            pr                  extpgm('SETCAFAUT8')
-     d   objnm                       10    const
+     d   objnm                       20    const
      d   num1                         4  0
      d   num2                         5  0
      d   num1a                        4
      d   num2a                        5
+     d   num3                         5  0
+     d   num3a                        5
 
 
      d Main            pi
-     d   objnm                       10    const
+     d   objnm                       20    const
      d   num1                         4  0
      d   num2                         5  0
      d   num1a                        4
      d   num2a                        5
+     d   num3                         5  0
+     d   num3a                        5
 
      d i               s             10i 0
 
@@ -42,6 +46,7 @@
          else;
            num2a = %char(num2);
          endif;
+         num3a = %char(num3);
        else;
          if num1 = 0;
            clear names;

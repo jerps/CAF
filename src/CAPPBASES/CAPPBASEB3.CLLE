@@ -6,6 +6,8 @@
                                                                              +
      BUILD SERVICEPROGRAM                                                    +
                                                                              +
+                                                                             +
+     Data area QTEMP/CO_TGTRLS (10A), if present, contains the target rls.   +
 */
 
              PGM        PARM(&TGTLIB &SRCLIB)
@@ -20,6 +22,8 @@
              DCL        VAR(&TLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
              DCL        VAR(&SLIB) TYPE(*CHAR) LEN(10) VALUE(' ')
              DCL        VAR(&SPTEXT) TYPE(*CHAR) LEN(50)
+
+             DCL        VAR(&TGTRLS) TYPE(*CHAR) LEN(10)
 
              DCL        VAR(&ERRMSGID) TYPE(*CHAR) LEN(7)
              DCL        VAR(&ERRMSGDTA) TYPE(*CHAR) LEN(256)
@@ -36,6 +40,12 @@
              IF         COND(&SLIB *EQ ' ') THEN(CHGVAR VAR(&SLIB) +
                           VALUE(&TLIB))
 
+             CHGVAR     VAR(&TGTRLS) VALUE('*CURRENT')
+             CHKOBJ     OBJ(QTEMP/CO_TGTRLS) OBJTYPE(*DTAARA)
+             MONMSG     MSGID(CPF9801) EXEC(GOTO CMDLBL(NOTGTRLS))
+             RTVDTAARA  DTAARA(QTEMP/CO_TGTRLS *ALL) RTNVAR(&TGTRLS)
+NOTGTRLS:
+
              /*----- BUILD BEGIN -----*/
 
              RTVMBRD    FILE(&SLIB/&SRCFILE) MBR(&SRCBIND) +
@@ -45,7 +55,7 @@
                           CAPPBASEIR CAPPBASEMS CAPPBASEXX +
                           CAPPBASEVA CAPPBASEAM CAPPBASERM) +
                           SRCFILE(&SLIB/&SRCFILE) SRCMBR(&SRCBIND) +
-                          TEXT(&SPTEXT) ACTGRP(*CALLER)
+                          TEXT(&SPTEXT) ACTGRP(*CALLER) TGTRLS(&TGTRLS)
 
              /*----- BUILD END -----*/
 

@@ -7,7 +7,7 @@ programs. It consists of several service programs in a layered structure contain
 code (components / generic functions) for (interactive) applications, providing an extensible \
 structure on which applications can be build. Part of the common code is generic and can be \
 used in any program, such as date handling. Other common code is specifically geared towards \
-implementing interactive 5250 applications utilizing a specific code structure and organisation.\
+implementing interactive 5250 applications utilizing a specific code structure and organization.\
 </p>\
 <p>\
 Several 5250 applications are included, such as a menu system, which utilize the framework. \

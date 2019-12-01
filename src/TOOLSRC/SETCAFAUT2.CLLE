@@ -5,20 +5,23 @@
                                                                              +
 */                                                                           +
 
-             PGM        PARM(&CAFLIB &AUTLNF &AUTLNFGR &AUTLPFLF +
-                          &AUTLPFLFGR &INCLMDAUT &INCLSPFAUT &NUM1 +
-                          &NUM2)
+             PGM        PARM(&CAFLIB &PUBAUTNPL &PUBAUTPL &INCLMN +
+                          &INCLSF &NUM1 &NUM2 &NUM3)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLNF) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLNFGR) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLPFLF) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&AUTLPFLFGR) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&INCLMDAUT) TYPE(*CHAR) LEN(10)
-             DCL        VAR(&INCLSPFAUT) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTNPL) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PUBAUTPL) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLMN) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLSF) TYPE(*CHAR) LEN(10)
              DCL        VAR(&NUM1) TYPE(*DEC) LEN(4 0)
              DCL        VAR(&NUM2) TYPE(*DEC) LEN(5 0)
+             DCL        VAR(&NUM3) TYPE(*DEC) LEN(5 0)
 
-             DCL        VAR(&IND) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&MN) TYPE(*LGL)
+             DCL        VAR(&SF) TYPE(*LGL)
+             DCL        VAR(&PL) TYPE(*LGL)
+             DCL        VAR(&A) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&F) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&OBJN) TYPE(*CHAR) LEN(20)
 
              DCLF       FILE(QTEMP/SETCAFAUT0)
 
@@ -31,43 +34,43 @@
              MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
 
 
-             IF         COND(&INCLMDAUT *EQ *ONLY *AND &INCLSPFAUT +
-                          *EQ *ONLY) THEN(RETURN)
-
  READ:       RCVF
              MONMSG     MSGID(CPF0864) EXEC(GOTO CMDLBL(ENDREAD))
-             IF         COND(&ODOBTP *EQ *FILE *AND %SST(&ODOBNM 1 +
-                          9) *EQ CAPPSSAMF *OR &ODOBTP *EQ *DTAARA +
-                          *AND %SST(&ODOBNM 1 9) *EQ CAPPSSAMD) +
-                          THEN(CHGVAR VAR(&IND) VALUE('1'))
-             ELSE       CMD(CHGVAR VAR(&IND) VALUE('0'))
-             IF         COND(&INCLMDAUT *EQ *YES *OR &INCLMDAUT *EQ +
-                          *NO *AND &IND *EQ '0' *OR &INCLMDAUT *EQ +
-                          *ONLY *AND &IND *EQ '1') THEN(DO)
-             IF         COND(&AUTLNF *NE *SAME *AND &ODOBTP *NE +
-                          *FILE) THEN(DO)
-             IF         COND(&AUTLNFGR *EQ *GRT) THEN(GRTOBJAUT +
-                          OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
-                          AUTL(&AUTLNF))
-             ELSE       CMD(RVKOBJAUT OBJ(&ODLBNM/&ODOBNM) +
-                          OBJTYPE(&ODOBTP) AUTL(&AUTLNF))
-             CALL       PGM(SETCAFAUT8) PARM(&ODOBNM &NUM1 &NUM2)
+             CHGVAR     VAR(&OBJN) VALUE(&ODOBNM *CAT &ODOBTP)
+             CHGVAR     VAR(&MN) VALUE(&ODOBTP *EQ *DTAARA *AND +
+                          %SST(&ODOBNM 1 9) *EQ CAPPSSAMA *OR +
+                          &ODOBTP *EQ *FILE *AND (&ODOBAT *EQ PF +
+                          *OR &ODOBAT *EQ LF) *AND %SST(&ODOBNM 1 +
+                          9) *EQ CAPPSSAMF)
+             CHGVAR     VAR(&SF) VALUE(0 *EQ 1)
+             IF         COND(&ODOBTP *EQ *FILE *AND &ODOBAT *EQ PF) +
+                          THEN(DO)
+             CALL       PGM(TIFCAFSRCF) PARM(&ODOBNM &ODLBNM &F)
+             CHGVAR     VAR(&SF) VALUE(&F *EQ '1')
              ENDDO
-             IF         COND(&AUTLPFLF *NE *SAME *AND &ODOBTP *EQ +
-                          *FILE *AND (&ODOBAT *EQ PF *OR &ODOBAT +
-                          *EQ LF)) THEN(DO)
-             IF         COND(&INCLSPFAUT *NE *YES) THEN(CALL +
-                          PGM(TIFCAFSRCF) PARM(&ODOBNM &ODLBNM &IND))
-             IF         COND(&INCLSPFAUT *EQ *YES *OR &INCLSPFAUT +
-                          *EQ *NO *AND &IND *EQ '0' *OR &INCLSPFAUT +
-                          *EQ *ONLY *AND &IND *EQ '1') THEN(DO)
-             IF         COND(&AUTLPFLFGR *EQ *GRT) THEN(GRTOBJAUT +
-                          OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
-                          AUTL(&AUTLPFLF))
-             ELSE       CMD(RVKOBJAUT OBJ(&ODLBNM/&ODOBNM) +
-                          OBJTYPE(&ODOBTP) AUTL(&AUTLPFLF))
-             CALL       PGM(SETCAFAUT8) PARM(&ODOBNM &NUM1 &NUM2)
-             ENDDO
+             IF         COND(&MN *AND &INCLMN *NE *NO *AND &INCLSF +
+                          *NE *ONLY *OR &SF *AND &INCLSF *NE *NO +
+                          *AND &INCLMN *NE *ONLY *OR *NOT &MN *AND +
+                          *NOT &SF *AND &INCLMN *NE *ONLY *AND +
+                          &INCLSF *NE *ONLY) THEN(DO)
+             CHGVAR     VAR(&PL) VALUE(&ODOBTP *EQ *FILE *AND +
+                          (&ODOBAT *EQ PF *OR &ODOBAT *EQ LF))
+             CHGVAR     VAR(&A) VALUE('          ')
+             IF         COND(&PUBAUTNPL *NE *SAME *AND *NOT &PL) +
+                          THEN(CHGVAR VAR(&A) VALUE(&PUBAUTNPL))
+             IF         COND(&PUBAUTPL *NE *SAME *AND &PL) +
+                          THEN(CHGVAR VAR(&A) VALUE(&PUBAUTPL))
+             IF         COND(&A *NE '          ') THEN(DO)
+             RVKOBJAUT  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(*PUBLIC) AUT(*ALL)
+             MONMSG     MSGID(CPF0000) EXEC(CHGVAR VAR(&NUM3) +
+                          VALUE(&NUM3 + 1))
+             CALL       PGM(SETCAFAUT8) PARM(&OBJN &NUM1 &NUM2)
+             GRTOBJAUT  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
+                          USER(*PUBLIC) AUT(&A)
+             MONMSG     MSGID(CPF0000) EXEC(CHGVAR VAR(&NUM3) +
+                          VALUE(&NUM3 + 1))
+             CALL       PGM(SETCAFAUT8) PARM(&OBJN &NUM1 &NUM2)
              ENDDO
              ENDDO
              GOTO       CMDLBL(READ)

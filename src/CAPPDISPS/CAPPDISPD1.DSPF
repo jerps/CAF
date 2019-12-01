@@ -55,7 +55,6 @@
      A                                      SFLPAG(00013)
      A  10                                  DSPMOD(*WIDE)
      A                                      OVERLAY
-     A                                      KEEP
      A                                      WINDOW(&D__WDWROW &D__WDWCOL
      A                                              13 65 +
      A                                             *NOMSGLIN *RSTCSR)
@@ -82,5 +81,5 @@
 
      A          R DUMMY1
      A                                      ASSUME
-     A            DUMMYFLD       1   O  2  1
+     A                                  2  1' '
 

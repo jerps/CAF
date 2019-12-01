@@ -52,14 +52,14 @@
              ENDDO
 
              CHGVAR     VAR(&TGTRLS2) VALUE(&TGTRLS)
-             CHKOBJ     OBJ(QTEMP/CO@TGTRLS) OBJTYPE(*DTAARA)
+             CHKOBJ     OBJ(QTEMP/CO_TGTRLS) OBJTYPE(*DTAARA)
              MONMSG     MSGID(CPF9801) EXEC(GOTO CMDLBL(NOTGTRLS))
-             RTVDTAARA  DTAARA(QTEMP/CO@TGTRLS *ALL) RTNVAR(&TGTRLS2)
+             RTVDTAARA  DTAARA(QTEMP/CO_TGTRLS *ALL) RTNVAR(&TGTRLS2)
 NOTGTRLS:
              CHGVAR     VAR(&INCDBGSRC2) VALUE(&INCDBGSRC)
-             CHKOBJ     OBJ(QTEMP/CO@IDBGSRC) OBJTYPE(*DTAARA)
+             CHKOBJ     OBJ(QTEMP/CO_IDBGSRC) OBJTYPE(*DTAARA)
              MONMSG     MSGID(CPF9801) EXEC(GOTO CMDLBL(NOIDBGSRC))
-             RTVDTAARA  DTAARA(QTEMP/CO@IDBGSRC *ALL) +
+             RTVDTAARA  DTAARA(QTEMP/CO_IDBGSRC *ALL) +
                           RTNVAR(&INCDBGSRC2)
 NOIDBGSRC:
 
@@ -70,14 +70,14 @@ NOIDBGSRC:
                           SRCTYPE(&SRCTYPE)
 
              SNDPGMMSG  MSGID(CPF9897) MSGF(QCPFMSG) +
-                          MSGDTA('Compiling from source ' *CAT +
-                          &SRCMBR *TCAT ', type ' *CAT &SRCTYPE +
-                          *TCAT ', file ' *CAT &SLIB *TCAT '/' *CAT +
-                          &SRCFILE *TCAT ', tlib ' *CAT &TGTLIB +
-                          *TCAT ' . . .') TOPGMQ(*EXT) MSGTYPE(*STATUS)
+                          MSGDTA('Compiling source ' *CAT &SRCMBR +
+                          *TCAT ', type ' *CAT &SRCTYPE *TCAT ', +
+                          file ' *CAT &SLIB *TCAT '/' *CAT &SRCFILE +
+                          *TCAT ', tlib ' *CAT &TGTLIB *TCAT ' . . +
+                          .') TOPGMQ(*EXT) MSGTYPE(*STATUS)
 
              /* Process source compile commands BEFORE */
-             CALL       PGM(COPSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
+             CALL       PGM(CO_PSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
                           &SRCMBR B)
              CHGVAR     VAR(&PSCCA) VALUE('1')
 
@@ -176,7 +176,7 @@ NOIDBGSRC:
 
              /* Process source compile commands AFTER */
              CHGVAR     VAR(&PSCCA) VALUE('0')
-             CALL       PGM(COPSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
+             CALL       PGM(CO_PSCC) PARM(&SRCTYPE &SLIB &SRCFILE +
                           &SRCMBR A)
 
              SNDPGMMSG  MSGID(CPF9897) MSGF(QCPFMSG) MSGDTA(' ') +

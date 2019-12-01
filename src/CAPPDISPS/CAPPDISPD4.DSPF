@@ -53,7 +53,6 @@
      A                                      SFLSIZ(0010)
      A                                      SFLPAG(0009)
      A                                      OVERLAY
-     A                                      KEEP
      A                                      WINDOW( 17 2 9 126 +
      A                                             *NOMSGLIN *RSTCSR)
      A                                      WDWBORDER((*COLOR BLU))
@@ -77,4 +76,4 @@
 
      A          R DUMMY4
      A                                      ASSUME
-     A            DUMMYFLD       1   O  2  1
+     A                                  2  1' '

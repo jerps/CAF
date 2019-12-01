@@ -38,7 +38,7 @@ Implements all operations pertaining to the menu. This module reads/updates/writ
 <span class="g51"><span class="bullet1">&#9679;</span>&nbsp;RM</span>\
 <span class="g52">\
 <span class="spodesc">Resource Management</span><br>\
-Call procedure <code>RlsSpCAPPSSAM</code> to release all resources that are allocated by the service program.\
+Call procedure <code>RlsSpCAPPSSAM</code> to release all resources that are allocated by this service program.\
 </span>\
 <span class="g61"><span class="bullet1">&#9679;</span>&nbsp;VA</span>\
 <span class="g62">\
@@ -64,7 +64,7 @@ When performing a menu option, a command can be executed directly (<code>QCMDEXC
 <span class="g21"><span class="bullet1">&#9679;</span>&nbsp;FR</span>\
 <span class="g22">\
 <span class="spodesc">Field Reference File</span><br>\
-Defines attribute types <code>TAM_XXXXXX</code>.\
+Defines attribute types <code>TAM_...</code>.\
 </span>\
 <span class="g31"><span class="bullet1">&#9679;</span>&nbsp;F1</span>\
 <span class="g32">\
@@ -98,7 +98,7 @@ Key: group, member type, member name.\
 </span>\
 <span class="g91"><span class="bullet1">&#9679;</span>&nbsp;P0</span>\
 <span class="g92">\
-<span class="spodesc">Program 0: Initial Data Load</span><br>\
+<span class="spodesc">Program 0: Load Initial Data</span><br>\
 When the service program is built then this program is called to load files F3 and F4 with \
 initial data. I.e. group <b>*ADMIN</b> is created with user <b>QSECOFR</b>. Files that already \
 exist when build program CAPPSSAMB1 is called are not affected.\

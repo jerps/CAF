@@ -47,7 +47,7 @@ Implements the API for the SQL Call Level Interface.\
 <span class="g22">\
 <span class="spodesc">Resource Management</span><br>\
 If no other program in the same job is using SQL CLI resources, then procedure <code>RlsSpCSYSSQLS</code> can be called to \
-release all resources that are allocated by the service program.\
+release all resources that are allocated by this service program.\
 </span>\
 <span class="g31"><span class="bullet1">&#9679;</span>&nbsp;SS</span>\
 <span class="g32">\
@@ -80,7 +80,7 @@ or edited with command C1.\
 </span>\
 <span class="g41"><span class="bullet1">&#9679;</span>&nbsp;P0</span>\
 <span class="g42">\
-<span class="spodesc">Program 0: Initial Data Load</span><br>\
+<span class="spodesc">Program 0: Load Initial Data</span><br>\
 When the service program is built then this program is called to load file F1 with initial data. \
 Files that already exist when build program CSYSSQLSB1 is called are not affected.\
 </span>\

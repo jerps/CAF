@@ -5,11 +5,20 @@
                                                                              +
 */                                                                           +
 
-             PGM        PARM(&CAFLIB &OWNER &NUM1 &NUM2)
+             PGM        PARM(&CAFLIB &OWNER &INCLMN &INCLSF &NUM1 +
+                          &NUM2 &NUM3)
              DCL        VAR(&CAFLIB) TYPE(*CHAR) LEN(10)
              DCL        VAR(&OWNER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLMN) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&INCLSF) TYPE(*CHAR) LEN(10)
              DCL        VAR(&NUM1) TYPE(*DEC) LEN(4 0)
              DCL        VAR(&NUM2) TYPE(*DEC) LEN(5 0)
+             DCL        VAR(&NUM3) TYPE(*DEC) LEN(5 0)
+
+             DCL        VAR(&MN) TYPE(*LGL)
+             DCL        VAR(&SF) TYPE(*LGL)
+             DCL        VAR(&F) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&OBJN) TYPE(*CHAR) LEN(20)
 
              DCLF       FILE(QTEMP/SETCAFAUT0)
 
@@ -22,15 +31,37 @@
              MONMSG     MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
 
 
+             CHGOBJOWN  OBJ(&CAFLIB) OBJTYPE(*LIB) NEWOWN(&OWNER)
+             MONMSG     MSGID(CPF0000) EXEC(CHGVAR VAR(&NUM3) +
+                          VALUE(&NUM3 + 1))
+             CALL       PGM(SETCAFAUT8) PARM(' ' &NUM1 &NUM2)
  READ:       RCVF
              MONMSG     MSGID(CPF0864) EXEC(GOTO CMDLBL(ENDREAD))
+             CHGVAR     VAR(&OBJN) VALUE(&ODOBNM *CAT &ODOBTP)
+             CHGVAR     VAR(&MN) VALUE(&ODOBTP *EQ *DTAARA *AND +
+                          %SST(&ODOBNM 1 9) *EQ CAPPSSAMA *OR +
+                          &ODOBTP *EQ *FILE *AND (&ODOBAT *EQ PF +
+                          *OR &ODOBAT *EQ LF) *AND %SST(&ODOBNM 1 +
+                          9) *EQ CAPPSSAMF)
+             CHGVAR     VAR(&SF) VALUE(0 *EQ 1)
+             IF         COND(&ODOBTP *EQ *FILE *AND &ODOBAT *EQ PF) +
+                          THEN(DO)
+             CALL       PGM(TIFCAFSRCF) PARM(&ODOBNM &ODLBNM &F)
+             CHGVAR     VAR(&SF) VALUE(&F *EQ '1')
+             ENDDO
+             IF         COND(&MN *AND &INCLMN *NE *NO *AND &INCLSF +
+                          *NE *ONLY *OR &SF *AND &INCLSF *NE *NO +
+                          *AND &INCLMN *NE *ONLY *OR *NOT &MN *AND +
+                          *NOT &SF *AND &INCLMN *NE *ONLY *AND +
+                          &INCLSF *NE *ONLY) THEN(DO)
              CHGOBJOWN  OBJ(&ODLBNM/&ODOBNM) OBJTYPE(&ODOBTP) +
                           NEWOWN(&OWNER)
-             CALL       PGM(SETCAFAUT8) PARM(&ODOBNM &NUM1 &NUM2)
+             MONMSG     MSGID(CPF0000) EXEC(CHGVAR VAR(&NUM3) +
+                          VALUE(&NUM3 + 1))
+             CALL       PGM(SETCAFAUT8) PARM(&OBJN &NUM1 &NUM2)
+             ENDDO
              GOTO       CMDLBL(READ)
  ENDREAD:
-             CHGOBJOWN  OBJ(&CAFLIB) OBJTYPE(*LIB) NEWOWN(&OWNER)
-             CALL       PGM(SETCAFAUT8) PARM(' ' &NUM1 &NUM2)
 
              RETURN
 

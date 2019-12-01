@@ -30,13 +30,13 @@ a list of messages to be displayed by an application. Procedure <code>AddToDspMg
 <span class="g41"><span class="bullet1">&#9679;</span>&nbsp;PT</span>\
 <span class="g42">\
 <span class="spodesc">Presentation Texts</span><br>\
-Implements procedures which have as input a value, such as a number, and return the text that represents the value which \
-can be presented to users. For example <code>PtNumber</code> returns a presentation text for a number.\
+Implements procedures which have as input a value, such as a number, and return a text which can be presented to users. \
+For example <code>PtNumber</code> returns a presentation text for a number.\
 </span>\
 <span class="g51"><span class="bullet1">&#9679;</span>&nbsp;RM</span>\
 <span class="g52">\
 <span class="spodesc">Resource Management</span><br>\
-Call procedure <code>RlsSpCAPPBASE</code> to release all resources that are allocated by the service program.\
+Call procedure <code>RlsSpCAPPBASE</code> to release all resources that are allocated by this service program.\
 </span>\
 <span class="g61"><span class="bullet1">&#9679;</span>&nbsp;VA</span>\
 <span class="g62">\

@@ -14,7 +14,6 @@
 #    2 : User
 #    3 : Host Lib
 #    4 : P = Use passive mode instead of extended passive mode
-#    5 : X = Skip download sources
 
 
 #  Current script directory.
@@ -34,7 +33,7 @@ echo "  1. DELETE/(RE)CREATE $SRCDIR"
 echo "     and subdirs."
 echo " "
 echo "  2. DOWNLOAD sources from host lib $HLIB"
-echo "     to $SRCDIR."
+echo "     into $SRCDIR."
 echo " "
 echo "  3. Generate REXX BUILD script:"
 echo "     $BUILDMBR"
@@ -49,9 +48,7 @@ if [ -z "$HOST" -o -z "$USER" -o -z "$HLIB" ]; then
   echo " "
   echo "      3 : Host Lib (blank or x is $DFTHLIB)"
   echo " "
-  echo "      4 : P = Use passive mode instead of default extended passive mode"
-  echo " "
-  echo "      5 : X = Skip download sources"
+  echo "      4 : P = Use passive mode instead of extended passive mode"
   echo " "
   exit 0
 fi
@@ -65,18 +62,13 @@ case "$MODE" in
   P ) echo "  Mode : Passive mode instead of extended passive mode";;
   * ) echo "  Mode : Extended passive mode (default)";;
 esac
-case "$SKIPS" in
-  X ) echo " "
-      echo "  DOWNLOADING OF SOURCES IS SKIPPED!";;
-  * ) ;;
-esac
 echo " "
 
 
 read -p "  Continue (Y/.)?" choice
 case "$choice" in
   Y ) echo "  OK...";;
-  * ) exit 0;;
+  * ) exit 9;;
 esac
 
 
@@ -98,9 +90,9 @@ if [ -f $FTPS ]; then
   rm $FTPS
 fi
 
-echo "quote site namefmt 1" > $FTPS
+echo "$USER" > $FTPS
 echo "prompt" >> $FTPS
-echo "ascii" >> $FTPS
+echo "quote site namefmt 1" >> $FTPS
 
 case "$MODE" in
   P ) echo "epsv" >> $FTPS;;
@@ -108,18 +100,13 @@ case "$MODE" in
 esac
 
 function mbr {
-  case "$SKIPS" in
-    X ) ;;
-    * ) echo "get /QSYS.LIB/$HLIB.LIB/$1.FILE/$2.MBR $SRCDIR/$1/$2.$3" >> $FTPS ;;
-  esac
+  echo "get /QSYS.LIB/$HLIB.LIB/$1.FILE/$2.MBR $SRCDIR/$1/$2.$3" >> $FTPS
 }
 source $SCRDIR/incl_mbrs.sh
 
 echo "quit" >> $FTPS
 
-ftp $USER@$HOST < $FTPS
-
-rm $FTPS
+ftp $HOST --verbose < $FTPS
 
 
 source $SCRDIR/incl_genbuild.sh

@@ -33,7 +33,7 @@ are used to register non-workdays and their types.\
 <span class="g41"><span class="bullet1">&#9679;</span>&nbsp;RM</span>\
 <span class="g42">\
 <span class="spodesc">Resource Management</span><br>\
-Call procedure <code>RlsSpCSYSBASE</code> to release all resources that are allocated by the service program.\
+Call procedure <code>RlsSpCSYSBASE</code> to release all resources that are allocated by this service program.\
 </span>\
 <span class="g51"><span class="bullet1">&#9679;</span>&nbsp;TU</span>\
 <span class="g52">\
@@ -133,7 +133,7 @@ Contains non-workdays. Used by module DT. Application <a href="#cafnwd">CAFNWD</
 </span>\
 <span class="g41"><span class="bullet1">&#9679;</span>&nbsp;P0</span>\
 <span class="g42">\
-<span class="spodesc">Program 0: Initial Data Load</span><br>\
+<span class="spodesc">Program 0: Load Initial Data</span><br>\
 When the service program is built then this program is called to load files F0, F1 and F2 with initial data. \
 Files that already exist when build program CSYSBASEB1 is called are not affected.\
 </span>\

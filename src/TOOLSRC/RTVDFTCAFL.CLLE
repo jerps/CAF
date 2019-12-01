@@ -24,11 +24,7 @@
 
              RTVOBJD    OBJ(CAFVERSION) OBJTYPE(*DTAARA) +
                           RTNLIB(&RTNLIB)
-             RTVDTAARA  DTAARA(&RTNLIB/CAFVERSION *ALL) RTNVAR(&VER)
-             CHGVAR     VAR(&CAFLIB) VALUE('CAF' *CAT &VER)
-             IF         COND(&RTNLIB *NE &CAFLIB) THEN(SNDPGMMSG +
-                          MSGID(CPFAA0E) MSGF(QCPFMSG) +
-                          MSGDTA(&RTNLIB) MSGTYPE(*ESCAPE))
+             CHGVAR     VAR(&CAFLIB) VALUE(&RTNLIB)
 
  END:
              RETURN

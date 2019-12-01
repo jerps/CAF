@@ -179,13 +179,13 @@
        // Convert "text" into "xmltext" such that "xmltext" can be used as
        // XML character data by escaping characters as necessary.
      d XMLCharData     pr                  extproc('XMLCharData')
-     d   text                     16383c         varying ccsid(13488)
-     d   xmltext                  16383c         varying ccsid(13488)
+     d   text                     16383c   varying ccsid(13488)
+     d   xmltext                  16383c   varying ccsid(13488)
 
        // XMLCharData_S - XML Character Data (Single-byte)
        // Convert "text" into "xmltext" such that "xmltext" can be used as
        // XML character data by escaping characters as necessary.
      d XMLCharData_S   pr                  extproc('XMLCharData_S')
-     d   text                     32767          varying
-     d   xmltext                  32767          varying
+     d   text                     32767    varying
+     d   xmltext                  32767    varying
 

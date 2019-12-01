@@ -49,7 +49,6 @@
      A          R DFWINDOW1
      A  10                                  DSPMOD(*WIDE)
      A                                      OVERLAY
-     A                                      KEEP
      A                                      WINDOW(&D__WDWROW &D__WDWCOL
      A                                             7 41
      A                                             *NOMSGLIN *RSTCSR)
@@ -76,5 +75,5 @@
 
      A          R DUMMY9
      A                                      ASSUME
-     A            DUMMYFLD       1   O  2  1
+     A                                  2  1' '
 

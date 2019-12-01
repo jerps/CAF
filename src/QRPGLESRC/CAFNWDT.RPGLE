@@ -1916,7 +1916,6 @@
            endif;
            clear *all DFSFR1;
            exsr ClrIndDFSFR1;
-           D_CODE = 'F';
            D__STAT = 'N';
            exsr SetIndDFSFR1;
            write DFSFR1;
@@ -1991,9 +1990,9 @@ N 22001
 W 25001
 ** Text
 Non-Workday Types
-Edit Types
-Display Types
-Select Type
+Edit
+Display
+Select
 ** FunText
 F1=Help
 F2=

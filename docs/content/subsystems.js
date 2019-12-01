@@ -50,7 +50,7 @@ severity and <b>nnnn</b> is the message number which is unique within a subsyste
 </p>\
 <p>\
 The code needed to read or write/update the files for a specific subsystem is always in module DQ (Database Queries) or module DC (Database \
-Commands). A DQ module can have many queries. The typical query consists of a procedure named <code>Qds_??_XXXXX</code> where <code>??</code> \
+Commands). A DQ module can have many queries. The typical query consists of a procedure named <code>Qds_??_...</code> where <code>??</code> \
 is the subsystem id. The first parameter (output) is always a data structure having the same name as the procedure appended with a dollar \
 sign ($), which is defined just before the prototype of the query procedure. The first three fields of this "query data structure" is always \
 a return code (<code>rc</code>: 2,0) indicating the result of the query (0 = ok, <0 = error) which is also returned by the procedure, an \
@@ -59,7 +59,7 @@ the error.\
 </p>\
 <p>\
 Module DC of a subsystem service program contains the code to write / update the database files associated with the subsystem (commands). \
-Before a command writes or updates the database it validates the operation. Every command exists of a procedure named <code>DC_??_XXXXX</code> \
+Before a command writes or updates the database it validates the operation. Every command exists of a procedure named <code>DC_??_...</code> \
 where <code>??</code> is the subsystem id. The first parameter (input) is always a 10-character field containing <code>\'*ADD\'</code>, \
 <code>\'*UPDATE\'</code> or <code>\'*DELETE\'</code>. The second parameter (input/output) is always a data structure, which is defined just \
 before the procedure prototype. This data structure has the same name as the procedure appended with a dollar sign ($). It usually contains \
@@ -72,7 +72,7 @@ in for example application CAFMENUGD (and subroutine <code>AddAssocErrFlds</code
 </p>\
 <p>\
 Service programs CAPPBASE and CAPPSS?? all have a module VA containing "value arrays". These are simply compile-time arrays containing \
-<u>constant</u> values. For example the values that can be entered for an attribute. Each value array is named <code>VA??_XXX</code> where <code>??</code> \
+<u>constant</u> values. For example the values that can be entered for an attribute. Each value array is named <code>VA??_...</code> where <code>??</code> \
 is the subsystem id (<code>AB</code> for CAPPBASE). Value arrays are exported from module VA and imported by including INCL_VA.\
 </p>\
 </div>\

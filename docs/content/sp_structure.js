@@ -4,7 +4,7 @@ document.write('\
 <div class="lvl2">\
 <p>\
 All source members of a service program are contained within one source physical file which has the \
-same name as the service program name appended with "S", The service programs all have the same organisation \
+same name as the service program name appended with "S", The service programs all have the same organization \
 of source members. There is always one source member named AAAA_BBBB that contains the binder source, \
 where AAAA is the first part of the service program name (CSYS or CAPP) and BBBB is the second part of \
 the name. For example for service program CSYSBASE (source file CSYSBASES) the binder source is in \
@@ -15,8 +15,8 @@ For every object that is part of a service program there is one source member ha
 the object. These names consist of the service program name appended with a two-character id. These objects \
 are the modules that make up the service program object itself and other objects that are seen as being part \
 of the service program such as files and programs. When there are files or data areas then there is probably \
-also a P0 program which loads the files and data areas with initial data when applicable. These "initial \
-data load" programs are always called from build program B1 (prereqs). Only the files or data areas that \
+also a P0 program which loads the files and data areas with initial data when applicable. These "load initial \
+data" programs are always called from build program B1 (prereqs). Only the files or data areas that \
 did not already exist (and were created by B1) are loaded with initial data.\
 </p>\
 <p>\

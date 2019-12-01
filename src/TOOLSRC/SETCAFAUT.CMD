@@ -9,37 +9,58 @@
      This command sets several authorities of the objecs in a CAF            +
      library. It will perform the following steps in sequence.               +
                                                                              +
-     Specify *SAME to skip the respective step.                              +
+       NOTES:                                                                +
                                                                              +
-     1. The owner of the library and all objects in it can be set            +
-        to a new one.                                                        +
+       > Specify *SAME to skip the respective step.                          +
                                                                              +
-     2. An authorization list can be specified for all non-file              +
-        objects and/or PF/LF file objects. If *SAME is not specified         +
-        then specify *GRT to grant or *RVK to revoke the authorization       +
-        lists for the objects. Specify *NO for INCLMDAUT to skip the         +
-        menu file and data area objects (CAPPSSAMF* and CAPPSSAMD*).         +
-        Specify *ONLY for INCLMDAUT to *only* process the menu file          +
-        and data area objects. Specify *YES for INCLSPFAUT to include        +
-        the source PF's. Specify *ONLY to *only* process te source PF's.     +
+       > Be sure to have *ALLOBJ special authority when using this command.  +
                                                                              +
-     3. Public authority of all non-file objects and/or PF/LF file           +
-        objects can be set to *USE, *EXCLUDE or *AUTL. If set then all       +
-        public authority is first revoked. Specify *NO for INCLMDAUT         +
-        to skip the menu file and data area objects (CAPPSSAMF* and          +
-        CAPPSSAMD*). Specify *ONLY for INCLMDAUT to *only* process           +
-        the menu file and data area objects. Specify *YES for INCLSPFAUT     +
-        to include the source PF's. Specify *ONLY to *only* process the      +
-        source PF's.                                                         +
+       > Default value *DFT for CAFLIB specifies the CAF library currently   +
+         in the library list.                                                +
                                                                              +
-     4. A user profile name can be given which has the role of the           +
-        menu administrator. If *SAME is not specified then specify           +
-        *GRT to grant or *RVK to revoke *CHANGE authorization for            +
-        the menu file and data area objects (CAPPSSAMF* and CAPPSSAMD*).     +
-        Also, the user profile name is added to (*GRT) or removed from       +
+     1. OWNER                                                                +
+        Set the owner of the library and all objects inside. Specify         +
+        *NO for INCLMN to skip the menu file and menu data area objects      +
+        (CAPPSSAMF* and CAPPSSAMA*). Specify *ONLY to set the owner of       +
+        *only* the menu file and menu data area objects. Specify *NO         +
+        for INCLSF to skip the source PF's. Specify *ONLY to set the         +
+        owner of *only* the source PF's.                                     +
+                                                                             +
+     2. PUBAUTNPL, PUBAUTPL, INCLMN, INCLSF                                  +
+        Revoke *ALL public authority and then set public authority to        +
+        *ALL, *CHANGE, *USE or *EXCLUDE for every object that is >not<       +
+        a PF or LF (PUBAUTNPL), and/or for every PF/LF (PUBAUTPL).           +
+        Specify *NO for INCLMN to skip the menu file and menu data area      +
+        objects (CAPPSSAMF* and CAPPSSAMA*). Specify *ONLY to revoke &       +
+        set public authority for *only* the menu file and menu data area     +
+        objects. Specify *NO for INCLSF to skip the source PF's. Specify     +
+        *ONLY to revoke & set authority for *only* the source PF's.          +
+                                                                             +
+     3. USRAUTNPL, USRAUTPL, INCLMN, INCLSF                                  +
+        Grant (*GRT) or revoke (*RVK) authority to/from a user profile       +
+        for every object that is >not< a PF or LF (USRAUTNPL), and/or for    +
+        every PF/LF (USRAUTPL). Specify *NO for INCLMN to skip the menu      +
+        file and menu data area objects (CAPPSSAMF* and CAPPSSAMA*).         +
+        Specify *ONLY to grant or revoke authority for *only* the menu       +
+        file and menu data area objects. Specify *NO for INCLSF to skip      +
+        the source PF's. Specify *ONLY to grant or revoke authority for      +
+        *only* the source PF's.                                              +
+                                                                             +
+     4. AUTLNPL, AUTLPL, INCLMN, INCLSF                                      +
+        Grant (*GRT) or revoke (*RVK) an authorization list for every        +
+        object that is >not< a PF or LF (AUTLNPL), and/or for every PF/LF    +
+        (AUTLPL). Specify *NO for INCLMN to skip the menu file and menu      +
+        data area objects (CAPPSSAMF* and CAPPSSAMA*). Specify *ONLY to      +
+        grant or revoke an authorization list for *only* the menu file       +
+        and menu data area objects. Specify *NO for INCLSF to skip the       +
+        source PF's. Specify *ONLY to grant or revoke an authorization       +
+        list for *only* the source PF's.                                     +
+                                                                             +
+     5. MNUADMAUT                                                            +
+        Grant (*GRT) or revoke (*RVK) *CHANGE authority for the menu file    +
+        and menu data area objects (CAPPSSAMF* and CAPPSSAMA*) to a user     +
+        profile. The user profile name is added to (*GRT) or removed from    +
         (*RVK) the *ADMIN menu group.                                        +
-                                                                             +
-     Be sure to have *ALLOBJ special authority when using this command.      +
                                                                              +
 */
 
@@ -47,36 +68,52 @@
              PARM       KWD(CAFLIB) TYPE(*CHAR) LEN(10) DFT(*DFT) +
                           SPCVAL((*DFT *DFT)) MIN(0) PROMPT('CAF +
                           library')
-             PARM       KWD(OWNER) TYPE(*CHAR) LEN(10) DFT(*SAME) +
+             PARM       KWD(OWNER) TYPE(*NAME) LEN(10) DFT(*SAME) +
+                          SPCVAL((*SAME *SAME)) MIN(0) +
                           CHOICE('*SAME, user profile') PROMPT('Owner')
-             PARM       KWD(AUTLNF) TYPE(*CHAR) LEN(10) DFT(*SAME) +
-                          CHOICE('*SAME, aut list') +
-                          PROMPT('Non-file aut list')
-             PARM       KWD(AUTLNFGR) TYPE(*CHAR) LEN(10) RSTD(*YES) +
-                          DFT(*GRT) VALUES(*GRT *RVK) +
-                          PROMPT('Non-file aut list GRT/RVK')
-             PARM       KWD(AUTLPFLF) TYPE(*CHAR) LEN(10) DFT(*SAME) +
-                          CHOICE('*SAME, aut list') PROMPT('PF/LF +
-                          aut list')
-             PARM       KWD(AUTLPFLFGR) TYPE(*CHAR) LEN(10) +
-                          RSTD(*YES) DFT(*GRT) VALUES(*GRT *RVK) +
-                          PROMPT('PF/LF aut list GRT/RVK')
-             PARM       KWD(PUBAUTNF) TYPE(*CHAR) LEN(10) RSTD(*YES) +
-                          DFT(*SAME) VALUES(*SAME *USE *EXCLUDE +
-                          *AUTL) PROMPT('Public aut non-file')
-             PARM       KWD(PUBAUTPFLF) TYPE(*CHAR) LEN(10) +
-                          RSTD(*YES) DFT(*SAME) VALUES(*SAME *USE +
-                          *EXCLUDE *AUTL) PROMPT('Public aut PF/LF')
-             PARM       KWD(INCLMDAUT) TYPE(*CHAR) LEN(10) +
-                          RSTD(*YES) DFT(*YES) VALUES(*YES *NO +
-                          *ONLY) PROMPT('Include menu data aut')
-             PARM       KWD(INCLSPFAUT) TYPE(*CHAR) LEN(10) +
-                          RSTD(*YES) DFT(*NO) VALUES(*YES *NO +
-                          *ONLY) PROMPT('Include source PF aut')
-             PARM       KWD(MNUADM) TYPE(*CHAR) LEN(10) DFT(*SAME) +
-                          CHOICE('*SAME, user profile') +
-                          PROMPT('Menu adm. *CHANGE aut')
-             PARM       KWD(MNUADMGR) TYPE(*CHAR) LEN(10) RSTD(*YES) +
-                          DFT(*GRT) VALUES(*GRT *RVK) PROMPT('Menu +
-                          adm. *CHANGE aut GRT/RVK')
+             PARM       KWD(PUBAUTNPL) TYPE(*CHAR) LEN(10) +
+                          RSTD(*YES) DFT(*SAME) VALUES(*SAME +
+                          *CHANGE *USE *EXCLUDE) PROMPT('Public +
+                          auth. non-PF/LF')
+             PARM       KWD(PUBAUTPL) TYPE(*CHAR) LEN(10) RSTD(*YES) +
+                          DFT(*SAME) VALUES(*SAME *ALL *CHANGE *USE +
+                          *EXCLUDE) PROMPT('Public auth. PF/LF')
+             PARM       KWD(USRAUTNPL) TYPE(QUSRAUT) DFT(*SAME) +
+                          SNGVAL((*SAME)) PROMPT('User auth. +
+                          non-PF/LF')
+             PARM       KWD(USRAUTPL) TYPE(QUSRAUT) DFT(*SAME) +
+                          SNGVAL((*SAME)) PROMPT('User auth. PF/LF')
+             PARM       KWD(AUTLNPL) TYPE(QGRTRVKAL) DFT(*SAME) +
+                          SNGVAL((*SAME)) PROMPT('Auth. list +
+                          non-PF/LF')
+             PARM       KWD(AUTLPL) TYPE(QGRTRVKAL) DFT(*SAME) +
+                          SNGVAL((*SAME)) PROMPT('Auth. list PF/LF')
+             PARM       KWD(INCLMN) TYPE(*CHAR) LEN(10) RSTD(*YES) +
+                          DFT(*YES) VALUES(*YES *NO *ONLY) +
+                          PROMPT('Include menu')
+             PARM       KWD(INCLSF) TYPE(*CHAR) LEN(10) RSTD(*YES) +
+                          DFT(*YES) VALUES(*YES *NO *ONLY) +
+                          PROMPT('Include source PF')
+             PARM       KWD(MNUADMAUT) TYPE(QGRTRVKMA) DFT(*SAME) +
+                          SNGVAL((*SAME)) PROMPT('Menu adm. *CHANGE +
+                          auth.')
+
+ QGRTRVKAL:  QUAL       TYPE(*NAME) LEN(10) MIN(1) CHOICE('*SAME, +
+                          auth. list')
+             QUAL       TYPE(*CHAR) LEN(10) RSTD(*YES) VALUES(*GRT +
+                          *RVK) MIN(1) PROMPT('Grant or Revoke')
+ QGRTRVKMA:  QUAL       TYPE(*NAME) LEN(10) MIN(1) CHOICE('*SAME, +
+                          user profile')
+             QUAL       TYPE(*CHAR) LEN(10) RSTD(*YES) VALUES(*GRT +
+                          *RVK) MIN(1) PROMPT('Grant or Revoke')
+ QUSRAUT:    QUAL       TYPE(*NAME) LEN(10) MIN(1) CHOICE('*SAME, +
+                          user profile')
+             QUAL       TYPE(*CHAR) LEN(10) RSTD(*YES) VALUES(*ALL +
+                          *CHANGE *USE *EXCLUDE) MIN(1) +
+                          PROMPT('Authorization')
+             QUAL       TYPE(*CHAR) LEN(10) RSTD(*YES) VALUES(*GRT +
+                          *RVK) MIN(1) PROMPT('Grant or Revoke')
+
+             DEP        CTL(&INCLMN *EQ *ONLY) PARM((&INCLMN *NE +
+                          &INCLSF))
 

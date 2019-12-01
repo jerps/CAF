@@ -32,8 +32,8 @@
      Set following data-area's in QTEMP for (global) options.                +
      These override any given parameters.                                    +
                                                                              +
-       CO@TGTRLS  (10A) : Target Release                                     +
-       CO@IDBGSRC (10A) : Include Source for Debug                           +
+       CO_TGTRLS  (10A) : Target Release                                     +
+       CO_IDBGSRC (10A) : Include Source for Debug                           +
                                                                              +
 */
 
@@ -42,35 +42,31 @@
              PARM       KWD(SRCFILE) TYPE(SRCFILE) MIN(1) +
                           PROMPT('Source file')
              PARM       KWD(SRCMBR) TYPE(*NAME) LEN(10) MIN(1) +
-                          ALWVAR(*YES) PROMPT('Source member')
+                          PROMPT('Source member')
              PARM       KWD(TGTLIB) TYPE(*NAME) LEN(10) DFT(*SRCLIB) +
                           SPCVAL((*SRCLIB *SRCLIB)) MIN(0) +
-                          ALWVAR(*YES) PROMPT('Target library')
+                          PROMPT('Target library')
              PARM       KWD(TGTOBJTYPE) TYPE(*CHAR) LEN(10) +
                           RSTD(*YES) DFT(*DEFAULT) VALUES(*DEFAULT +
-                          *MODULE) MIN(0) ALWVAR(*YES) +
-                          PROMPT('Target object type')
+                          *MODULE) MIN(0) PROMPT('Target object type')
              PARM       KWD(ACTGRP) TYPE(*NAME) LEN(10) +
                           DFT(*DEFAULT) SPCVAL((*DEFAULT *DEFAULT) +
                           (*STGMDL *STGMDL) (*NEW *NEW) (*CALLER +
-                          *CALLER)) MIN(0) ALWVAR(*YES) +
-                          PROMPT('Activation group')
+                          *CALLER)) MIN(0) PROMPT('Activation group')
              PARM       KWD(TGTRLS) TYPE(*NAME) LEN(10) +
                           DFT(*CURRENT) SPCVAL((*CURRENT *CURRENT) +
-                          (*PRV *PRV)) MIN(0) ALWVAR(*YES) +
-                          PROMPT('Target release')
+                          (*PRV *PRV)) MIN(0) PROMPT('Target release')
              PARM       KWD(INCDBGSRC) TYPE(*CHAR) LEN(10) +
                           RSTD(*YES) DFT(*YES) VALUES(*YES *NO) +
-                          MIN(0) ALWVAR(*YES) PROMPT('Include +
-                          source for debug')
+                          MIN(0) PROMPT('Include source for debug')
              PARM       KWD(PARM1) TYPE(*CHAR) LEN(10) MIN(0) +
-                          ALWVAR(*YES) PROMPT('Extra parameter 1')
+                          PROMPT('Extra parameter 1')
              PARM       KWD(PARM2) TYPE(*CHAR) LEN(10) MIN(0) +
-                          ALWVAR(*YES) PROMPT('Extra parameter 2')
+                          PROMPT('Extra parameter 2')
              PARM       KWD(PARM3) TYPE(*CHAR) LEN(10) MIN(0) +
-                          ALWVAR(*YES) PROMPT('Extra parameter 3')
+                          PROMPT('Extra parameter 3')
 
- SRCFILE:    QUAL       TYPE(*NAME) LEN(10) MIN(1) ALWVAR(*YES)
+ SRCFILE:    QUAL       TYPE(*NAME) LEN(10) MIN(1)
              QUAL       TYPE(*NAME) LEN(10) DFT(*LIBL) SPCVAL((*LIBL +
-                          *LIBL)) ALWVAR(*YES) PROMPT('Library')
+                          *LIBL)) PROMPT('Library')
 

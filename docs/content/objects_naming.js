@@ -13,10 +13,10 @@ example module CSYSBASEDT is the name of the module in service program CSYSBASE 
 for working with dates and times.\
 </p>\
 <p>\
-Every service program has precisely one binding directory with the same name as the service program. The binding \
+Every service program has one binding directory with the same name as the service program. The binding \
 directory has this same name as its only entry. To use a service program from an RPG program one should simply \
-reference its binding directory using the <code>bnddir</code> keyword, and <code>/include</code> its INCL_API \
-source member.\
+reference its binding directory using the <code>bnddir</code> control header keyword, and <code>/include</code> \
+its INCL_API source member.\
 </p>\
 <p>\
 Besides modules, several other objects can be seen as being part of a service program, such as files and programs. \

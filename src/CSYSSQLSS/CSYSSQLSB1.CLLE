@@ -54,7 +54,7 @@
              CO         SRCFILE(&SLIB/&SRCFILE) SRCMBR(CSYSSQLSP0) +
                           TGTLIB(&TLIB)
 
-             /* INITIAL DATA LOAD */
+             /* LOAD INITIAL DATA */
              CALL       PGM(CSYSSQLSP0) PARM(&INIF1)
 
              /*----- BUILD END -----*/

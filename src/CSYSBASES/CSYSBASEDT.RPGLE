@@ -814,16 +814,16 @@
          return *off;
        endif;
 
+       if %rem(yyyy:100) = 0;
+         return *off;
+       endif;
+
        if %rem(yyyy:4) > 0;
          return *off;
        endif;
 
        if %rem(yyyy:400) = 0;
          return *on;
-       endif;
-
-       if %rem(yyyy:100) = 0;
-         return *off;
        endif;
 
        return *on;
