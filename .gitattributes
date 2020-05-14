@@ -4,5 +4,6 @@
 *.png binary
 *.jpg binary
 *.jpeg binary
+*.SAVF binary
 *.RPG linguist-language=RPG
 *.RPGLE linguist-language=RPG
