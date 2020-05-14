@@ -4,7 +4,7 @@ document.write('\
 <div class="lvl2">\
 <p>\
 CAF provides a simple menu system. It provides only one menu, which presents the options that are available for a specific \
-as one or more pages. Up to 999 pages with options can be specified. Each page is organized into 3 vertical strips, each \
+user as one or more pages. Up to 999 pages with options can be specified. Each page is organized into 3 vertical strips, each \
 providing 15 "slots". Each slot can be an option or a header. The slot below or above a header must be empty. So without any \
 headers up to 15 options can be specified on one vertical strip, or 45 on one page. In normal display mode only two \
 strips are displayed. In wide display mode (132 columns) all three strips are displayed.\
